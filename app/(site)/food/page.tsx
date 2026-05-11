@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Modal from '@/components/Modal'
+import { useLang } from '@/lib/lang'
 
 type Recipe = {
   id: number; title: string; description: string; ingredients: string
@@ -295,13 +296,6 @@ const MEALS: Meal[] = [
   { id:250, type:'night', name:'Cherry & walnut bowl',                 protein:'6g',  kcal:'250 kcal', time:'2 min', ingredients:'150g fresh or frozen cherries + 25g walnuts + 1 tsp honey',                                   prep:'Thaw cherries if frozen. Serve in a bowl with walnuts and honey.',                                                   tip:'Cherries are one of few natural food sources of melatonin — backed by sleep research' },
 ]
 
-const TYPE_META: Record<string, { label: string; emoji: string; color: string; bg: string }> = {
-  breakfast: { label: 'Breakfast', emoji: '☀️', color: '#d97706', bg: '#fef3c7' },
-  main:      { label: 'Main meal', emoji: '🍽️', color: '#2d6a4f', bg: '#d8f3dc' },
-  snack:     { label: 'Snack',     emoji: '🍎', color: '#6b4226', bg: '#f0e8d8' },
-  smoothie:  { label: 'Smoothie',  emoji: '🥤', color: '#40916c', bg: '#d8f3dc' },
-  night:     { label: 'Night',     emoji: '🌙', color: '#1a3a1a', bg: '#e8dcc8' },
-}
 
 const MEAL_FILTERS = ['ALL', 'breakfast', 'main', 'snack', 'smoothie', 'night']
 const RECIPE_CATS = ['ALL', 'breakfast', 'lunch', 'dinner', 'snack']
@@ -309,6 +303,15 @@ const catColor: Record<string, string> = { breakfast: '#d97706', lunch: '#2d6a4f
 const empty = { title: '', description: '', ingredients: '', instructions: '', prepTime: '', cookTime: '', servings: '', category: 'lunch' }
 
 export default function FoodPage() {
+  const { t } = useLang()
+  const TYPE_META: Record<string, { label: string; emoji: string; color: string; bg: string }> = {
+    breakfast: { label: t.typeBreakfast, emoji: '☀️', color: '#d97706', bg: '#fef3c7' },
+    main:      { label: t.typeMain,      emoji: '🍽️', color: '#2d6a4f', bg: '#d8f3dc' },
+    snack:     { label: t.typeSnack,     emoji: '🍎', color: '#6b4226', bg: '#f0e8d8' },
+    smoothie:  { label: t.typeSmoothie,  emoji: '🥤', color: '#40916c', bg: '#d8f3dc' },
+    night:     { label: t.typeNight,     emoji: '🌙', color: '#1a3a1a', bg: '#e8dcc8' },
+  }
+
   const [tab, setTab] = useState<'rotation' | 'recipes'>('rotation')
 
   const [mealFilter, setMealFilter] = useState('ALL')
@@ -360,7 +363,7 @@ export default function FoodPage() {
     await load(); setModal(false); setSaving(false)
   }
   const del = async (id: number) => {
-    if (!confirm('Delete this recipe?')) return
+    if (!confirm(t.deleteRecipe)) return
     await fetch(`/api/food/${id}`, { method: 'DELETE' }); await load()
     if (detail?.id === id) setDetail(null)
   }
@@ -372,7 +375,7 @@ export default function FoodPage() {
       const data = await r.json()
       setForm({ title: data.title || '', description: data.description || '', ingredients: (data.ingredients || []).join('\n'), instructions: data.instructions || '', prepTime: String(data.prepTime || ''), cookTime: String(data.cookTime || ''), servings: String(data.servings || ''), category: data.category || 'lunch' })
       setEditing(null); setModal(true)
-    } catch { alert('AI generation failed') }
+    } catch { alert(t.aiFailed) }
     setAiLoading(false)
   }
 
@@ -419,23 +422,23 @@ export default function FoodPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-3 mb-5">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: '#1a3a1a' }}>🥗 Food Plan</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: '#1a3a1a' }}>🥗 {t.foodPlan}</h1>
           <p className="text-xs sm:text-sm mt-0.5" style={{ color: '#8b5e3c' }}>
-            {tab === 'rotation' ? `${MEALS.length} meals · 30 per category` : `${recipes.length} saved recipes`}
+            {tab === 'rotation' ? t.mealsSubtitle(MEALS.length) : t.recipesSubtitle(recipes.length)}
           </p>
         </div>
         {tab === 'recipes' && (
-          <button onClick={openAdd} className="btn-glass btn-glass-green px-4 py-2.5 rounded-xl text-sm font-medium">+ Add</button>
+          <button onClick={openAdd} className="btn-glass btn-glass-green px-4 py-2.5 rounded-xl text-sm font-medium">{t.addRecipe}</button>
         )}
       </div>
 
       {/* Main tabs */}
       <div className="flex gap-2 mb-5">
-        {[{ key: 'rotation', label: '🔄 Meal Rotation' }, { key: 'recipes', label: '📖 My Recipes' }].map(t => (
-          <button key={t.key} onClick={() => setTab(t.key as 'rotation' | 'recipes')}
+        {[{ key: 'rotation', label: t.mealRotation }, { key: 'recipes', label: t.myRecipes }].map(tb => (
+          <button key={tb.key} onClick={() => setTab(tb.key as 'rotation' | 'recipes')}
             className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
-            style={{ backgroundColor: tab === t.key ? '#2d6a4f' : '#f0e8d8', color: tab === t.key ? '#fff' : '#6b4226' }}>
-            {t.label}
+            style={{ backgroundColor: tab === tb.key ? '#2d6a4f' : '#f0e8d8', color: tab === tb.key ? '#fff' : '#6b4226' }}>
+            {tb.label}
           </button>
         ))}
       </div>
@@ -473,7 +476,7 @@ export default function FoodPage() {
               style={selecting
                 ? { backgroundColor: '#2d6a4f', color: '#fff', borderColor: '#2d6a4f' }
                 : { backgroundColor: '#fff', color: '#2d6a4f', borderColor: '#2d6a4f' }}>
-              🛒 {selecting ? 'Cancel' : 'Select'}
+              🛒 {selecting ? t.selectCancel : t.selectLabel}
             </button>
           </div>
 
@@ -535,14 +538,14 @@ export default function FoodPage() {
       {tab === 'recipes' && (
         <>
           <div className="rounded-2xl p-4 mb-4 border-2" style={{ backgroundColor: '#f9f5ef', borderColor: '#d4c5a9' }}>
-            <p className="text-xs font-semibold mb-2" style={{ color: '#6b4226' }}>✨ AI Recipe Generator</p>
+            <p className="text-xs font-semibold mb-2" style={{ color: '#6b4226' }}>{t.aiGenerator}</p>
             <div className="flex flex-col sm:flex-row gap-2">
               <input value={aiIngredients} onChange={e => setAiIngredients(e.target.value)}
-                placeholder="List ingredients (e.g. chicken, rice, broccoli)..."
+                placeholder={t.aiPlaceholder}
                 className="flex-1 px-3 py-2.5 rounded-xl text-sm border outline-none" style={{ borderColor: '#d4c5a9', backgroundColor: '#fff' }} />
               <button onClick={generateAI} disabled={aiLoading}
                 className="btn-glass btn-glass-brown px-4 py-2.5 rounded-xl text-sm font-medium disabled:opacity-60">
-                {aiLoading ? 'Generating…' : 'Generate'}
+                {aiLoading ? t.generating : t.generate}
               </button>
             </div>
           </div>
@@ -560,7 +563,7 @@ export default function FoodPage() {
           {filteredRecipes.length === 0 ? (
             <div className="text-center py-16 rounded-2xl" style={{ backgroundColor: '#f9f5ef', color: '#a07850' }}>
               <p className="text-4xl mb-2">🍽️</p>
-              <p className="font-medium text-sm">No recipes yet. Add one or generate with AI!</p>
+              <p className="font-medium text-sm">{t.noRecipes}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -570,8 +573,8 @@ export default function FoodPage() {
                   <div className="flex items-start justify-between mb-2">
                     <span className="text-xs font-bold px-2.5 py-1 rounded-full text-white capitalize" style={{ backgroundColor: catColor[r.category] || '#2d6a4f' }}>{r.category}</span>
                     <div className="flex gap-1">
-                      <button onClick={e => { e.stopPropagation(); openEdit(r) }} className="text-xs px-2 py-1 rounded-lg" style={{ color: '#8b5e3c', backgroundColor: '#f0e8d8' }}>Edit</button>
-                      <button onClick={e => { e.stopPropagation(); del(r.id) }} className="text-xs px-2 py-1 rounded-lg" style={{ color: '#c0303e', backgroundColor: '#fde8ec' }}>Del</button>
+                      <button onClick={e => { e.stopPropagation(); openEdit(r) }} className="text-xs px-2 py-1 rounded-lg" style={{ color: '#8b5e3c', backgroundColor: '#f0e8d8' }}>{t.edit}</button>
+                      <button onClick={e => { e.stopPropagation(); del(r.id) }} className="text-xs px-2 py-1 rounded-lg" style={{ color: '#c0303e', backgroundColor: '#fde8ec' }}>{t.del}</button>
                     </div>
                   </div>
                   <h3 className="font-semibold text-base leading-snug mb-1" style={{ color: '#1a3a1a' }}>{r.title}</h3>
@@ -593,17 +596,17 @@ export default function FoodPage() {
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-semibold" style={{ color: '#74c69d' }}>
-                {selectedMeals.size === 0 ? 'Tap meals to select them' : `${selectedMeals.size} meal${selectedMeals.size > 1 ? 's' : ''} selected`}
+                {selectedMeals.size === 0 ? t.tapMeals : t.mealsSelected(selectedMeals.size)}
               </p>
               {selectedMeals.size > 0 && (
-                <p className="text-xs" style={{ color: '#52b788' }}>{groceryItems.length} ingredients total</p>
+                <p className="text-xs" style={{ color: '#52b788' }}>{t.ingredientsTotal(groceryItems.length)}</p>
               )}
             </div>
             <button
               onClick={openGrocery}
               disabled={selectedMeals.size === 0}
               className="btn-glass btn-glass-green px-5 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40">
-              🛒 View Grocery List
+              {t.viewGroceryList}
             </button>
           </div>
         </div>
@@ -611,9 +614,9 @@ export default function FoodPage() {
 
       {/* Grocery List Modal */}
       {groceryModal && (
-        <Modal title={`🛒 Grocery List · ${selectedMeals.size} meals`} onClose={() => setGroceryModal(false)} wide>
+        <Modal title={t.groceryModal(selectedMeals.size)} onClose={() => setGroceryModal(false)} wide>
           <p className="text-xs mb-4" style={{ color: '#a07850' }}>
-            Tap each item to cross it off as you shop. {groceryItems.length} ingredients total.
+            {t.groceryTip(groceryItems.length)}
           </p>
           <div className="space-y-1.5">
             {groceryItems.map((item, i) => {
@@ -635,16 +638,16 @@ export default function FoodPage() {
           </div>
           <div className="mt-4 pt-3 border-t flex items-center justify-between" style={{ borderColor: '#e8dcc8' }}>
             <p className="text-xs" style={{ color: '#a07850' }}>
-              {checkedItems.size}/{groceryItems.length} items ticked
+              {t.itemsTicked(checkedItems.size, groceryItems.length)}
             </p>
             <button
               onClick={() => {
                 const text = groceryItems.map((item, i) => `${checkedItems.has(i) ? '✓' : '○'} ${item}`).join('\n')
-                navigator.clipboard.writeText(text).then(() => alert('Copied to clipboard!'))
+                navigator.clipboard.writeText(text).then(() => alert(t.copied))
               }}
               className="text-xs px-3 py-1.5 rounded-lg font-medium"
               style={{ backgroundColor: '#d8f3dc', color: '#2d6a4f' }}>
-              📋 Copy list
+              {t.copyList}
             </button>
           </div>
         </Modal>
@@ -662,11 +665,11 @@ export default function FoodPage() {
             <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: '#d8f3dc', color: '#2d6a4f' }}>🔥 {mealDetail.kcal}</span>
             <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: '#fff3cd', color: '#856404' }}>⏱ {mealDetail.time}</span>
           </div>
-          <h4 className="font-semibold text-sm mb-2" style={{ color: '#1a3a1a' }}>Ingredients</h4>
+          <h4 className="font-semibold text-sm mb-2" style={{ color: '#1a3a1a' }}>{t.ingredients}</h4>
           <div className="rounded-xl p-3 mb-4 text-sm" style={{ backgroundColor: '#f9f5ef', color: '#6b4226' }}>
             {mealDetail.ingredients}
           </div>
-          <h4 className="font-semibold text-sm mb-2" style={{ color: '#1a3a1a' }}>How to prepare</h4>
+          <h4 className="font-semibold text-sm mb-2" style={{ color: '#1a3a1a' }}>{t.howToPrepare}</h4>
           <p className="text-sm mb-4" style={{ color: '#6b4226' }}>{mealDetail.prep}</p>
           <div className="rounded-xl p-3 flex gap-2 mb-5" style={{ backgroundColor: '#d8f3dc' }}>
             <span className="text-base">💡</span>
@@ -676,12 +679,12 @@ export default function FoodPage() {
             <button onClick={e => toggleFav(mealDetail.id, e)}
               className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"
               style={{ backgroundColor: favoriteMeals.has(mealDetail.id) ? '#fde8ec' : '#f0e8d8', color: favoriteMeals.has(mealDetail.id) ? '#c0303e' : '#6b4226' }}>
-              {favoriteMeals.has(mealDetail.id) ? '❤️ Saved to Favs' : '🤍 Add to Favs'}
+              {favoriteMeals.has(mealDetail.id) ? t.savedToFavs : t.addToFavs}
             </button>
             <button onClick={() => deleteMeal(mealDetail.id)}
               className="px-4 py-2.5 rounded-xl text-sm font-medium"
               style={{ backgroundColor: '#fde8ec', color: '#c0303e' }}>
-              🗑 Remove
+              {t.removeMeal}
             </button>
           </div>
         </Modal>
@@ -694,46 +697,46 @@ export default function FoodPage() {
           <div className="flex gap-4 text-sm mb-4" style={{ color: '#a07850' }}>
             <span>⏱ {detail.prepTime}m</span><span>🔥 {detail.cookTime}m</span><span>👤 {detail.servings} srv</span>
           </div>
-          <h4 className="font-semibold mb-2 text-sm" style={{ color: '#1a3a1a' }}>Ingredients</h4>
+          <h4 className="font-semibold mb-2 text-sm" style={{ color: '#1a3a1a' }}>{t.ingredients}</h4>
           <ul className="space-y-1 mb-4">
             {JSON.parse(detail.ingredients).map((ing: string, i: number) => (
               <li key={i} className="text-sm flex gap-2" style={{ color: '#6b4226' }}><span style={{ color: '#52b788' }}>•</span>{ing}</li>
             ))}
           </ul>
-          <h4 className="font-semibold mb-2 text-sm" style={{ color: '#1a3a1a' }}>Instructions</h4>
+          <h4 className="font-semibold mb-2 text-sm" style={{ color: '#1a3a1a' }}>{t.instructions}</h4>
           <p className="text-sm whitespace-pre-wrap" style={{ color: '#6b4226' }}>{detail.instructions}</p>
         </Modal>
       )}
 
       {/* Add / Edit Recipe Modal */}
       {modal && (
-        <Modal title={editing ? 'Edit Recipe' : 'New Recipe'} onClose={() => setModal(false)} wide>
+        <Modal title={editing ? t.editRecipe : t.newRecipe} onClose={() => setModal(false)} wide>
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium mb-1" style={{ color: '#6b4226' }}>Title</label>
+              <label className="block text-sm font-medium mb-1" style={{ color: '#6b4226' }}>{t.title}</label>
               <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: '#d4c5a9' }} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1" style={{ color: '#6b4226' }}>Description</label>
+              <label className="block text-sm font-medium mb-1" style={{ color: '#6b4226' }}>{t.description}</label>
               <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none" style={{ borderColor: '#d4c5a9' }} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1" style={{ color: '#6b4226' }}>Ingredients (one per line)</label>
+              <label className="block text-sm font-medium mb-1" style={{ color: '#6b4226' }}>{t.ingredientsLine}</label>
               <textarea value={form.ingredients} onChange={e => setForm(f => ({ ...f, ingredients: e.target.value }))} rows={4} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none" style={{ borderColor: '#d4c5a9' }} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1" style={{ color: '#6b4226' }}>Instructions</label>
+              <label className="block text-sm font-medium mb-1" style={{ color: '#6b4226' }}>{t.instructions}</label>
               <textarea value={form.instructions} onChange={e => setForm(f => ({ ...f, instructions: e.target.value }))} rows={4} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none" style={{ borderColor: '#d4c5a9' }} />
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {[{ label: 'Prep (min)', key: 'prepTime' }, { label: 'Cook (min)', key: 'cookTime' }, { label: 'Servings', key: 'servings' }].map(({ label, key }) => (
+              {[{ label: t.prepMin, key: 'prepTime' }, { label: t.cookMin, key: 'cookTime' }, { label: t.servings, key: 'servings' }].map(({ label, key }) => (
                 <div key={key}>
                   <label className="block text-xs font-medium mb-1" style={{ color: '#6b4226' }}>{label}</label>
                   <input type="number" value={(form as Record<string, string>)[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: '#d4c5a9' }} />
                 </div>
               ))}
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: '#6b4226' }}>Category</label>
+                <label className="block text-xs font-medium mb-1" style={{ color: '#6b4226' }}>{t.category}</label>
                 <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: '#d4c5a9' }}>
                   {['breakfast', 'lunch', 'dinner', 'snack'].map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
@@ -741,9 +744,9 @@ export default function FoodPage() {
             </div>
           </div>
           <div className="flex gap-2 mt-5">
-            <button onClick={() => setModal(false)} className="btn-glass btn-glass-neutral flex-1 py-2.5 rounded-xl text-sm font-medium">Cancel</button>
+            <button onClick={() => setModal(false)} className="btn-glass btn-glass-neutral flex-1 py-2.5 rounded-xl text-sm font-medium">{t.cancel}</button>
             <button onClick={save} disabled={saving} className="btn-glass btn-glass-green flex-1 py-2.5 rounded-xl text-sm font-medium disabled:opacity-60">
-              {saving ? 'Saving…' : 'Save Recipe'}
+              {saving ? t.saving : t.saveRecipe}
             </button>
           </div>
         </Modal>

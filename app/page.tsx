@@ -1,8 +1,11 @@
 'use client'
 
 import Link from 'next/link'
+import { useLang } from '@/lib/lang'
 
 export default function WelcomePage() {
+  const { lang, t, toggle } = useLang()
+
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden"
@@ -20,6 +23,14 @@ export default function WelcomePage() {
           style={{ background: '#74c69d', filter: 'blur(70px)' }} />
       </div>
 
+      {/* Language toggle */}
+      <button
+        onClick={toggle}
+        className="absolute top-4 right-4 z-20 text-xs font-bold px-2.5 py-1.5 rounded-lg border transition-colors"
+        style={{ borderColor: '#40916c', color: '#74c69d', backgroundColor: 'rgba(45,106,79,0.2)' }}>
+        {lang === 'en' ? 'FR' : 'EN'}
+      </button>
+
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center text-center px-6">
         {/* Logo mark */}
@@ -35,7 +46,7 @@ export default function WelcomePage() {
         </div>
 
         <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-3" style={{ color: '#d8f3dc' }}>
-          time to change ur life is now
+          {t.tagline}
         </h1>
         <p className="text-base sm:text-lg mb-10" style={{ color: '#74c69d' }}>
           Food &nbsp;·&nbsp; Fitness &nbsp;·&nbsp; Valorant &nbsp;·&nbsp; Trading
@@ -45,7 +56,7 @@ export default function WelcomePage() {
           href="/feed"
           className="btn-glass btn-glass-green px-10 py-4 rounded-2xl text-base sm:text-lg font-semibold"
         >
-          Enter →
+          {t.enter}
         </Link>
 
         <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-10">

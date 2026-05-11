@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useLang } from '@/lib/lang'
 
 const links = [
   { href: '/feed',     label: 'Feed',     emoji: '🏡' },
@@ -13,6 +14,7 @@ const links = [
 
 export default function Navbar() {
   const pathname = usePathname()
+  const { lang, toggle } = useLang()
 
   if (pathname === '/') return null
 
@@ -25,21 +27,33 @@ export default function Navbar() {
             ZK
           </Link>
 
-          {/* Desktop nav */}
-          <div className="hidden sm:flex gap-1 items-center">
-            {links.map(link => {
-              const active = pathname.startsWith(link.href)
-              return (
-                <Link key={link.href} href={link.href}
-                  className="px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5"
-                  style={{ backgroundColor: active ? '#40916c' : 'transparent', color: active ? '#fff' : '#95d5b2' }}
-                  onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.backgroundColor = '#2d6a4f' }}
-                  onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent' }}>
-                  <span>{link.emoji}</span>
-                  <span>{link.label}</span>
-                </Link>
-              )
-            })}
+          <div className="flex items-center gap-2">
+            {/* Desktop nav */}
+            <div className="hidden sm:flex gap-1 items-center">
+              {links.map(link => {
+                const active = pathname.startsWith(link.href)
+                return (
+                  <Link key={link.href} href={link.href}
+                    className="px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5"
+                    style={{ backgroundColor: active ? '#40916c' : 'transparent', color: active ? '#fff' : '#95d5b2' }}
+                    onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.backgroundColor = '#2d6a4f' }}
+                    onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent' }}>
+                    <span>{link.emoji}</span>
+                    <span>{link.label}</span>
+                  </Link>
+                )
+              })}
+            </div>
+
+            {/* Language toggle */}
+            <button
+              onClick={toggle}
+              className="text-xs font-bold px-2.5 py-1.5 rounded-lg border transition-colors"
+              style={{ borderColor: '#40916c', color: '#74c69d', backgroundColor: 'transparent' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#2d6a4f' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent' }}>
+              {lang === 'en' ? 'FR' : 'EN'}
+            </button>
           </div>
         </div>
       </nav>
