@@ -1,6 +1,6 @@
 -- CreateTable
 CREATE TABLE "Recipe" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "ingredients" TEXT NOT NULL,
@@ -10,66 +10,78 @@ CREATE TABLE "Recipe" (
     "servings" INTEGER NOT NULL,
     "category" TEXT NOT NULL,
     "imageUrl" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Recipe_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "MealPlan" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL NOT NULL,
     "date" TEXT NOT NULL,
     "breakfast" INTEGER,
     "lunch" INTEGER,
-    "dinner" INTEGER
+    "dinner" INTEGER,
+
+    CONSTRAINT "MealPlan_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "WorkoutSession" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL NOT NULL,
     "type" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "date" TEXT NOT NULL,
     "exercises" TEXT NOT NULL,
     "notes" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "WorkoutSession_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "ValorantTip" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL NOT NULL,
     "title" TEXT NOT NULL,
     "content" TEXT NOT NULL,
     "category" TEXT NOT NULL,
     "agent" TEXT,
     "drill" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ValorantTip_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Trade" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL NOT NULL,
     "date" TEXT NOT NULL,
     "instrument" TEXT NOT NULL,
     "type" TEXT NOT NULL,
-    "entry" REAL NOT NULL,
-    "exit" REAL,
-    "size" REAL NOT NULL,
-    "pnl" REAL,
+    "entry" DOUBLE PRECISION NOT NULL,
+    "exit" DOUBLE PRECISION,
+    "size" DOUBLE PRECISION NOT NULL,
+    "pnl" DOUBLE PRECISION,
     "notes" TEXT,
     "status" TEXT NOT NULL DEFAULT 'OPEN',
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Trade_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "BacktestStrategy" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "rules" TEXT NOT NULL,
     "timeframe" TEXT NOT NULL,
-    "winRate" REAL,
-    "riskReward" REAL,
+    "winRate" DOUBLE PRECISION,
+    "riskReward" DOUBLE PRECISION,
     "notes" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "BacktestStrategy_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
