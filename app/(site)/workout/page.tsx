@@ -446,6 +446,74 @@ const emptyLogForm = { type: 'PULL', title: '', date: new Date().toISOString().s
 const emptyLogEx = { name: '', sets: 3, reps: '8-10', notes: '' }
 
 // ─── Exercise Detail Overlay ──────────────────────────────────────────────────
+function PhotoEditPopup({ index, current, onSave, onClose }: {
+  index: number; current: string | null; onSave: (url: string | null) => void; onClose: () => void
+}) {
+  const [url, setUrl] = useState(current ?? '')
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = ev => { if (ev.target?.result) setUrl(ev.target.result as string) }
+    reader.readAsDataURL(file)
+  }
+
+  return (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden" style={{ backgroundColor: '#fff' }}>
+        {/* header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: '#e8dcc8' }}>
+          <span className="font-semibold text-sm" style={{ color: '#1a3a1a' }}>✏️ Photo {index + 1}</span>
+          <button onClick={onClose} className="w-7 h-7 rounded-full flex items-center justify-center text-lg font-bold"
+            style={{ backgroundColor: '#f0e8d8', color: '#6b4226' }}>×</button>
+        </div>
+        <div className="p-4 space-y-3">
+          {/* preview */}
+          {url && (
+            <div className="rounded-xl overflow-hidden border" style={{ borderColor: '#e8dcc8', aspectRatio: '4/3' }}>
+              <img src={url} alt="preview" className="w-full h-full object-cover" />
+            </div>
+          )}
+          {/* URL input */}
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: '#6b4226' }}>Image URL</label>
+            <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..."
+              className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
+              style={{ borderColor: '#d4c5a9' }} />
+          </div>
+          {/* File upload */}
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: '#6b4226' }}>Or upload a file</label>
+            <label className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border-2 border-dashed cursor-pointer text-sm font-medium transition-colors"
+              style={{ borderColor: '#d4c5a9', color: '#8b5e3c' }}>
+              📁 Choose file
+              <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
+            </label>
+          </div>
+          {/* actions */}
+          <div className="flex gap-2 pt-1">
+            {current && (
+              <button onClick={() => onSave(null)}
+                className="px-3 py-2.5 rounded-xl text-xs font-medium"
+                style={{ backgroundColor: '#fde8ec', color: '#c0303e' }}>
+                Reset
+              </button>
+            )}
+            <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-medium"
+              style={{ backgroundColor: '#f0e8d8', color: '#6b4226' }}>Cancel</button>
+            <button onClick={() => onSave(url.trim() || null)}
+              className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white"
+              style={{ backgroundColor: '#2d6a4f' }}>Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ExDetailOverlay({ ex, onClose }: { ex: ExCard; onClose: () => void }) {
   const { t, lang } = useLang()
   const [activeStep, setActiveStep] = useState(0)
@@ -453,6 +521,20 @@ function ExDetailOverlay({ ex, onClose }: { ex: ExCard; onClose: () => void }) {
   const [imgs, setImgs] = useState<string[]>([])
   const [gifUrl, setGifUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [editingPhoto, setEditingPhoto] = useState<number | null>(null)
+  const STORAGE_KEY = `workout_photos_${ex.id}`
+  const [customPhotos, setCustomPhotos] = useState<(string | null)[]>(() => {
+    if (typeof window === 'undefined') return [null, null, null]
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null') ?? [null, null, null] } catch { return [null, null, null] }
+  })
+
+  function saveCustomPhoto(index: number, url: string | null) {
+    const next = [...customPhotos]
+    next[index] = url
+    setCustomPhotos(next)
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch { /* ignore */ }
+    setEditingPhoto(null)
+  }
 
   const fr = EXERCISE_FR[ex.id]
   const steps = lang === 'fr' && fr ? fr.steps : ex.steps
@@ -552,7 +634,7 @@ function ExDetailOverlay({ ex, onClose }: { ex: ExCard; onClose: () => void }) {
                 <div key={i} className="rounded-2xl animate-pulse" style={{ aspectRatio: '4/5', backgroundColor: '#f0e8d8' }} />
               ))}
             </div>
-          ) : gifUrl ? (
+          ) : gifUrl && !customPhotos.some(p => p !== null) ? (
             /* ExerciseDB animated GIF — shows full movement */
             <div className="rounded-2xl overflow-hidden border-2" style={{ borderColor: info.color + '40' }}>
               <div className="relative">
@@ -560,44 +642,73 @@ function ExDetailOverlay({ ex, onClose }: { ex: ExCard; onClose: () => void }) {
                 <span className="absolute top-2 right-2 text-xs font-bold px-2 py-1 rounded-lg text-white" style={{ backgroundColor: info.color }}>
                   {lang === 'fr' ? 'Mouvement complet' : 'Full movement'}
                 </span>
+                <button onClick={() => setEditingPhoto(0)}
+                  className="absolute bottom-2 right-2 w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-md"
+                  style={{ backgroundColor: '#fff', color: '#2d6a4f' }}>✏️</button>
               </div>
             </div>
-          ) : imgs.length > 0 ? (
+          ) : imgs.length > 0 || customPhotos.some(p => p !== null) ? (
             /* wger exercise-specific images — 3 panels */
             <div className="grid grid-cols-3 gap-2">
-              {steps.map((stepTxt, i) => (
-                <button key={i} onClick={() => setActiveStep(i)}
-                  className="relative rounded-2xl overflow-hidden transition-all"
-                  style={{ aspectRatio: '4/5', outline: activeStep === i ? `3px solid ${info.color}` : '3px solid transparent', outlineOffset: '2px' }}>
-                  <img src={imgs[i]} alt={`${ex.name} step ${i + 1}`}
-                    className="absolute inset-0 w-full h-full object-cover" />
-                  <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.22) 50%, transparent 100%)' }} />
-                  <div className="absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-white"
-                    style={{ backgroundColor: info.color }}>{i + 1}</div>
-                  <div className="absolute bottom-0 left-0 right-0 p-2">
-                    <p className="text-white font-medium leading-tight text-left"
-                      style={{ fontSize: '10px', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                      {stepTxt}
-                    </p>
+              {steps.map((stepTxt, i) => {
+                const src = customPhotos[i] ?? imgs[i]
+                return (
+                  <div key={i} className="relative rounded-2xl overflow-hidden transition-all"
+                    style={{ aspectRatio: '4/5', outline: activeStep === i ? `3px solid ${info.color}` : '3px solid transparent', outlineOffset: '2px' }}>
+                    <button className="absolute inset-0 w-full h-full" onClick={() => setActiveStep(i)} />
+                    {src ? (
+                      <img src={src} alt={`${ex.name} step ${i + 1}`}
+                        className="absolute inset-0 w-full h-full object-cover" />
+                    ) : (
+                      <div className="absolute inset-0" style={{ backgroundColor: stepBgs[i] }} />
+                    )}
+                    <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.22) 50%, transparent 100%)' }} />
+                    <div className="absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-white pointer-events-none"
+                      style={{ backgroundColor: info.color }}>{i + 1}</div>
+                    {/* Pen button */}
+                    <button onClick={e => { e.stopPropagation(); setEditingPhoto(i) }}
+                      className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-md z-10"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.92)', color: '#2d6a4f' }}>✏️</button>
+                    <div className="absolute bottom-0 left-0 right-0 p-2 pointer-events-none">
+                      <p className="text-white font-medium leading-tight text-left"
+                        style={{ fontSize: '10px', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                        {stepTxt}
+                      </p>
+                    </div>
                   </div>
-                </button>
-              ))}
+                )
+              })}
             </div>
           ) : (
             /* Styled fallback cards — no images available */
             <div className="grid grid-cols-3 gap-2">
               {steps.map((stepTxt, i) => (
-                <button key={i} onClick={() => setActiveStep(i)}
-                  className="rounded-2xl flex flex-col items-center justify-between p-3 transition-all"
-                  style={{ aspectRatio: '4/5', backgroundColor: stepBgs[i], outline: activeStep === i ? `3px solid ${info.color}` : '3px solid transparent', outlineOffset: '2px' }}>
-                  <span className="w-8 h-8 rounded-full flex items-center justify-center text-lg font-black text-white mt-1"
-                    style={{ backgroundColor: stepColors[i] }}>{i + 1}</span>
-                  <p className="text-center leading-snug mt-auto" style={{ fontSize: '10px', color: stepColors[i], fontWeight: 600 }}>
-                    {stepTxt}
-                  </p>
-                </button>
+                <div key={i} className="relative rounded-2xl overflow-hidden transition-all"
+                  style={{ aspectRatio: '4/5', outline: activeStep === i ? `3px solid ${info.color}` : '3px solid transparent', outlineOffset: '2px', backgroundColor: stepBgs[i] }}>
+                  <button className="absolute inset-0 w-full h-full flex flex-col items-center justify-between p-3" onClick={() => setActiveStep(i)}>
+                    <span className="w-8 h-8 rounded-full flex items-center justify-center text-lg font-black text-white mt-1"
+                      style={{ backgroundColor: stepColors[i] }}>{i + 1}</span>
+                    <p className="text-center leading-snug mt-auto" style={{ fontSize: '10px', color: stepColors[i], fontWeight: 600 }}>
+                      {stepTxt}
+                    </p>
+                  </button>
+                  {/* Pen button */}
+                  <button onClick={e => { e.stopPropagation(); setEditingPhoto(i) }}
+                    className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs shadow-md z-10"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.92)', color: '#2d6a4f' }}>✏️</button>
+                </div>
               ))}
             </div>
+          )}
+
+          {/* Photo edit popup */}
+          {editingPhoto !== null && (
+            <PhotoEditPopup
+              index={editingPhoto}
+              current={customPhotos[editingPhoto] ?? null}
+              onSave={url => saveCustomPhoto(editingPhoto, url)}
+              onClose={() => setEditingPhoto(null)}
+            />
           )}
 
           {/* Active step expanded */}
