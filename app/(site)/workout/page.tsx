@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Modal from '@/components/Modal'
 import { useLang } from '@/lib/lang'
+import { EXERCISE_FR, EQUIP_FR, MUSCLE_FR } from '@/lib/exercise-fr'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ExCard = {
@@ -278,16 +279,23 @@ const emptyLogEx = { name: '', sets: 3, reps: '8-10', notes: '' }
 
 // ─── Exercise Card Component ──────────────────────────────────────────────────
 function ExCard({
-  ex, isFav, onFav, onEdit, t,
+  ex, isFav, onFav, onEdit,
 }: {
   ex: ExCard; isFav: boolean; onFav: () => void; onEdit: () => void
-  t: ReturnType<typeof useLang>['t']
 }) {
+  const { t, lang } = useLang()
   const [step, setStep] = useState(0)
   const [level, setLevel] = useState<typeof LEVELS[number]>('beginner')
   const info = TYPE_INFO_STATIC[ex.type]
   const levelKeys = LEVELS
   const levelLabels = [t.levelNovice, t.levelBeginner, t.levelIntermediate, t.levelAdvanced, t.levelElite]
+
+  const fr = EXERCISE_FR[ex.id]
+  const steps = lang === 'fr' && fr ? fr.steps : ex.steps
+  const levelText = (lk: typeof LEVELS[number]) =>
+    lang === 'fr' && fr ? fr.levels[lk] : ex.levels[lk]
+  const muscle = lang === 'fr' ? (MUSCLE_FR[ex.muscle] ?? ex.muscle) : ex.muscle
+  const equipment = lang === 'fr' ? (EQUIP_FR[ex.equipment] ?? ex.equipment) : ex.equipment
 
   return (
     <div className="rounded-2xl border-2 flex flex-col overflow-hidden shadow-sm"
@@ -297,10 +305,10 @@ function ExCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-1">
             <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: info.color }}>{info.emoji} {ex.type}</span>
-            <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: '#f0e8d8', color: '#8b5e3c' }}>{ex.equipment}</span>
+            <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: '#f0e8d8', color: '#8b5e3c' }}>{equipment}</span>
           </div>
           <h3 className="font-bold text-sm leading-tight" style={{ color: '#1a3a1a' }}>{ex.name}</h3>
-          <p className="text-xs mt-0.5" style={{ color: '#a07850' }}>{ex.muscle}</p>
+          <p className="text-xs mt-0.5" style={{ color: '#a07850' }}>{muscle}</p>
         </div>
         <div className="flex gap-1 shrink-0">
           <button onClick={onEdit} className="w-7 h-7 rounded-full flex items-center justify-center transition-all"
@@ -315,20 +323,20 @@ function ExCard({
       {/* Step Carousel */}
       <div className="mx-4 mb-2 rounded-xl p-3 relative" style={{ backgroundColor: '#f9f5ef', minHeight: 88 }}>
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-xs font-semibold" style={{ color: '#2d6a4f' }}>{t.stepLabel} {step + 1}/{ex.steps.length}</span>
+          <span className="text-xs font-semibold" style={{ color: '#2d6a4f' }}>{t.stepLabel} {step + 1}/{steps.length}</span>
           <div className="flex gap-1">
             <button onClick={() => setStep(s => Math.max(0, s - 1))} disabled={step === 0}
               className="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center disabled:opacity-30"
               style={{ backgroundColor: '#d8f3dc', color: '#2d6a4f' }}>‹</button>
-            <button onClick={() => setStep(s => Math.min(ex.steps.length - 1, s + 1))} disabled={step === ex.steps.length - 1}
+            <button onClick={() => setStep(s => Math.min(steps.length - 1, s + 1))} disabled={step === steps.length - 1}
               className="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center disabled:opacity-30"
               style={{ backgroundColor: '#d8f3dc', color: '#2d6a4f' }}>›</button>
           </div>
         </div>
-        <p className="text-xs leading-relaxed" style={{ color: '#6b4226' }}>{ex.steps[step]}</p>
+        <p className="text-xs leading-relaxed" style={{ color: '#6b4226' }}>{steps[step]}</p>
         {/* Dots */}
         <div className="flex gap-1 mt-2">
-          {ex.steps.map((_, i) => (
+          {steps.map((_, i) => (
             <button key={i} onClick={() => setStep(i)}
               className="w-1.5 h-1.5 rounded-full transition-all"
               style={{ backgroundColor: i === step ? '#2d6a4f' : '#c4a882' }} />
@@ -348,7 +356,7 @@ function ExCard({
           ))}
         </div>
         <p className="text-xs leading-relaxed rounded-xl p-2.5" style={{ backgroundColor: '#f0faf2', color: '#2d6a4f' }}>
-          {levelLabels[levelKeys.indexOf(level)]} — {ex.levels[level]}
+          {levelLabels[levelKeys.indexOf(level)]} — {levelText(level)}
         </p>
       </div>
     </div>
@@ -551,7 +559,7 @@ export default function WorkoutPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredLib.map(ex => (
                 <ExCard key={ex.id} ex={ex} isFav={favExercises.has(ex.id)}
-                  onFav={() => toggleFav(ex.id)} onEdit={() => openEdit(ex)} t={t} />
+                  onFav={() => toggleFav(ex.id)} onEdit={() => openEdit(ex)} />
               ))}
             </div>
           )}
@@ -566,7 +574,7 @@ export default function WorkoutPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {EXERCISES.filter(e => e.type === libCat && favExercises.has(e.id)).map(ex => (
                   <ExCard key={ex.id} ex={ex} isFav={true}
-                    onFav={() => toggleFav(ex.id)} onEdit={() => openEdit(ex)} t={t} />
+                    onFav={() => toggleFav(ex.id)} onEdit={() => openEdit(ex)} />
                 ))}
               </div>
             </div>
