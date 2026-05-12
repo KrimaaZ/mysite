@@ -48,10 +48,10 @@ export default function Navbar() {
             {/* Language toggle */}
             <button
               onClick={toggle}
-              className="text-xs font-bold px-2.5 py-1.5 rounded-lg border transition-colors"
-              style={{ borderColor: '#40916c', color: '#74c69d', backgroundColor: 'transparent' }}
+              className="text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
+              style={{ backgroundColor: '#40916c', color: '#fff' }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#2d6a4f' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent' }}>
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#40916c' }}>
               {lang === 'en' ? 'FR' : 'EN'}
             </button>
           </div>

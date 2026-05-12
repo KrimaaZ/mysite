@@ -312,7 +312,7 @@ export default function FoodPage() {
     night:     { label: t.typeNight,     emoji: '🌙', color: '#1a3a1a', bg: '#e8dcc8' },
   }
 
-  const [tab, setTab] = useState<'rotation' | 'recipes'>('rotation')
+  const [tab, setTab] = useState<'rotation' | 'recipes' | 'week'>('rotation')
 
   const [mealFilter, setMealFilter] = useState('ALL')
   const [mealDetail, setMealDetail] = useState<Meal | null>(null)
@@ -322,6 +322,9 @@ export default function FoodPage() {
   const [checkedItems, setCheckedItems] = useState<Set<number>>(new Set())
   const [hiddenMeals, setHiddenMeals] = useState<Set<number>>(new Set())
   const [favoriteMeals, setFavoriteMeals] = useState<Set<number>>(new Set())
+  const [weekPlan, setWeekPlan] = useState<Set<number>>(new Set())
+  const [weekGroceryModal, setWeekGroceryModal] = useState(false)
+  const [weekChecked, setWeekChecked] = useState<Set<number>>(new Set())
 
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [recipeFilter, setRecipeFilter] = useState('ALL')
@@ -339,6 +342,7 @@ export default function FoodPage() {
     try {
       setHiddenMeals(new Set(JSON.parse(localStorage.getItem('hiddenMeals') || '[]')))
       setFavoriteMeals(new Set(JSON.parse(localStorage.getItem('favoriteMeals') || '[]')))
+      setWeekPlan(new Set(JSON.parse(localStorage.getItem('weekPlan') || '[]')))
     } catch {}
   }, [])
 
@@ -417,6 +421,29 @@ export default function FoodPage() {
   })
   const exitSelect = () => { setSelecting(false); setSelectedMeals(new Set()) }
 
+  const saveToWeek = () => {
+    const next = new Set([...weekPlan, ...selectedMeals])
+    setWeekPlan(next)
+    localStorage.setItem('weekPlan', JSON.stringify([...next]))
+    exitSelect()
+  }
+  const removeFromWeek = (id: number) => {
+    const next = new Set(weekPlan); next.delete(id)
+    setWeekPlan(next)
+    localStorage.setItem('weekPlan', JSON.stringify([...next]))
+  }
+  const clearWeekPlan = () => {
+    setWeekPlan(new Set())
+    localStorage.removeItem('weekPlan')
+  }
+
+  const weekMeals = useMemo(() => MEALS.filter(m => weekPlan.has(m.id)), [weekPlan])
+  const weekGroceryItems = useMemo(() => {
+    const raw: string[] = []
+    weekMeals.forEach(m => m.ingredients.split(' + ').forEach(i => raw.push(i.trim())))
+    return raw.sort((a, b) => a.localeCompare(b))
+  }, [weekMeals])
+
   return (
     <div>
       {/* Header */}
@@ -424,7 +451,7 @@ export default function FoodPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: '#1a3a1a' }}>🥗 {t.foodPlan}</h1>
           <p className="text-xs sm:text-sm mt-0.5" style={{ color: '#8b5e3c' }}>
-            {tab === 'rotation' ? t.mealsSubtitle(MEALS.length) : t.recipesSubtitle(recipes.length)}
+            {tab === 'rotation' ? t.mealsSubtitle(MEALS.length) : tab === 'week' ? t.weekSubtitle(weekPlan.size) : t.recipesSubtitle(recipes.length)}
           </p>
         </div>
         {tab === 'recipes' && (
@@ -434,11 +461,15 @@ export default function FoodPage() {
 
       {/* Main tabs */}
       <div className="flex gap-2 mb-5">
-        {[{ key: 'rotation', label: t.mealRotation }, { key: 'recipes', label: t.myRecipes }].map(tb => (
-          <button key={tb.key} onClick={() => setTab(tb.key as 'rotation' | 'recipes')}
-            className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+        {[{ key: 'rotation', label: t.mealRotation }, { key: 'week', label: t.weekTab }, { key: 'recipes', label: t.myRecipes }].map(tb => (
+          <button key={tb.key} onClick={() => setTab(tb.key as 'rotation' | 'recipes' | 'week')}
+            className="px-4 py-2 rounded-xl text-sm font-medium transition-all relative"
             style={{ backgroundColor: tab === tb.key ? '#2d6a4f' : '#f0e8d8', color: tab === tb.key ? '#fff' : '#6b4226' }}>
             {tb.label}
+            {tb.key === 'week' && weekPlan.size > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-white flex items-center justify-center font-bold"
+                style={{ backgroundColor: '#c0303e', fontSize: '9px' }}>{weekPlan.size}</span>
+            )}
           </button>
         ))}
       </div>
@@ -589,12 +620,66 @@ export default function FoodPage() {
         </>
       )}
 
+      {/* ── WEEK PLAN ── */}
+      {tab === 'week' && (
+        <>
+          {weekMeals.length === 0 ? (
+            <div className="text-center py-16 rounded-2xl" style={{ backgroundColor: '#f9f5ef', color: '#a07850' }}>
+              <p className="text-4xl mb-3">📅</p>
+              <p className="font-medium text-sm px-4">{t.weekEmpty}</p>
+            </div>
+          ) : (
+            <>
+              <div className="flex gap-2 mb-4 flex-wrap">
+                <button
+                  onClick={() => { setWeekChecked(new Set()); setWeekGroceryModal(true) }}
+                  className="btn-glass btn-glass-green px-4 py-2.5 rounded-xl text-sm font-medium">
+                  {t.weekGrocery}
+                </button>
+                <button
+                  onClick={clearWeekPlan}
+                  className="px-4 py-2.5 rounded-xl text-sm font-medium"
+                  style={{ backgroundColor: '#fde8ec', color: '#c0303e' }}>
+                  {t.clearWeek}
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {weekMeals.map(m => {
+                  const meta = TYPE_META[m.type]
+                  return (
+                    <div key={m.id} className="rounded-2xl border-2 p-4 shadow-sm relative"
+                      style={{ backgroundColor: '#fff', borderColor: '#e8dcc8' }}>
+                      <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full mb-3"
+                        style={{ backgroundColor: meta.bg, color: meta.color }}>
+                        {meta.emoji} {meta.label}
+                      </span>
+                      <h3 className="font-semibold text-sm leading-snug mb-3 pr-2" style={{ color: '#1a3a1a' }}>{m.name}</h3>
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: '#e8f4fd', color: '#1a56db' }}>💪 {m.protein}</span>
+                        <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: '#d8f3dc', color: '#2d6a4f' }}>🔥 {m.kcal}</span>
+                        <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: '#fff3cd', color: '#856404' }}>⏱ {m.time}</span>
+                      </div>
+                      <button
+                        onClick={() => removeFromWeek(m.id)}
+                        className="w-full py-2 rounded-xl text-sm font-semibold transition-all"
+                        style={{ backgroundColor: '#d8f3dc', color: '#2d6a4f' }}>
+                        {t.markDone}
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+        </>
+      )}
+
       {/* Sticky grocery bar (selection mode) */}
       {selecting && (
         <div className="fixed bottom-16 sm:bottom-0 left-0 right-0 z-40 px-4 py-3 border-t shadow-2xl"
           style={{ backgroundColor: '#1a3a1a', borderColor: '#2d6a4f' }}>
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
-            <div>
+            <div className="shrink-0">
               <p className="text-sm font-semibold" style={{ color: '#74c69d' }}>
                 {selectedMeals.size === 0 ? t.tapMeals : t.mealsSelected(selectedMeals.size)}
               </p>
@@ -602,12 +687,21 @@ export default function FoodPage() {
                 <p className="text-xs" style={{ color: '#52b788' }}>{t.ingredientsTotal(groceryItems.length)}</p>
               )}
             </div>
-            <button
-              onClick={openGrocery}
-              disabled={selectedMeals.size === 0}
-              className="btn-glass btn-glass-green px-5 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40">
-              {t.viewGroceryList}
-            </button>
+            <div className="flex gap-2 shrink-0">
+              <button
+                onClick={openGrocery}
+                disabled={selectedMeals.size === 0}
+                className="px-3 py-2 rounded-xl text-xs font-semibold disabled:opacity-40 border"
+                style={{ borderColor: '#40916c', color: '#74c69d', backgroundColor: 'transparent' }}>
+                {t.viewGroceryList}
+              </button>
+              <button
+                onClick={saveToWeek}
+                disabled={selectedMeals.size === 0}
+                className="btn-glass btn-glass-green px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-40">
+                {t.addToWeek}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -747,6 +841,45 @@ export default function FoodPage() {
             <button onClick={() => setModal(false)} className="btn-glass btn-glass-neutral flex-1 py-2.5 rounded-xl text-sm font-medium">{t.cancel}</button>
             <button onClick={save} disabled={saving} className="btn-glass btn-glass-green flex-1 py-2.5 rounded-xl text-sm font-medium disabled:opacity-60">
               {saving ? t.saving : t.saveRecipe}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Week Grocery Modal */}
+      {weekGroceryModal && (
+        <Modal title={t.weekGrocery} onClose={() => setWeekGroceryModal(false)} wide>
+          <p className="text-xs mb-4" style={{ color: '#a07850' }}>
+            {t.groceryTip(weekGroceryItems.length)}
+          </p>
+          <div className="space-y-1.5">
+            {weekGroceryItems.map((item, i) => {
+              const checked = weekChecked.has(i)
+              return (
+                <button key={i} onClick={() => setWeekChecked(prev => { const next = new Set(prev); if (next.has(i)) next.delete(i); else next.add(i); return next })}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all"
+                  style={{ backgroundColor: checked ? '#f0e8d8' : '#f9f5ef' }}>
+                  <div className="w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center"
+                    style={{ backgroundColor: checked ? '#2d6a4f' : '#fff', borderColor: checked ? '#2d6a4f' : '#c4a882' }}>
+                    {checked && <span className="text-white text-xs font-bold">✓</span>}
+                  </div>
+                  <span className="text-sm flex-1" style={{ color: checked ? '#a07850' : '#1a3a1a', textDecoration: checked ? 'line-through' : 'none' }}>
+                    {item}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          <div className="mt-4 pt-3 border-t flex items-center justify-between" style={{ borderColor: '#e8dcc8' }}>
+            <p className="text-xs" style={{ color: '#a07850' }}>{t.itemsTicked(weekChecked.size, weekGroceryItems.length)}</p>
+            <button
+              onClick={() => {
+                const text = weekGroceryItems.map((item, i) => `${weekChecked.has(i) ? '✓' : '○'} ${item}`).join('\n')
+                navigator.clipboard.writeText(text).then(() => alert(t.copied))
+              }}
+              className="text-xs px-3 py-1.5 rounded-lg font-medium"
+              style={{ backgroundColor: '#d8f3dc', color: '#2d6a4f' }}>
+              {t.copyList}
             </button>
           </div>
         </Modal>

@@ -15,9 +15,10 @@ type T = {
   welcomeBack: string; latestActivity: string; nothingYet: string; nothingYetSub: string
   foodPlan: string; workout: string
   // Food
-  mealRotation: string; myRecipes: string
+  mealRotation: string; myRecipes: string; weekTab: string
   mealsSubtitle: (n: number) => string
   recipesSubtitle: (n: number) => string
+  weekSubtitle: (n: number) => string
   favs: string; selectCancel: string; selectLabel: string
   tapMeals: string
   mealsSelected: (n: number) => string
@@ -29,6 +30,7 @@ type T = {
   itemsTicked: (checked: number, total: number) => string
   ingredients: string; howToPrepare: string
   addToFavs: string; savedToFavs: string; removeMeal: string
+  addToWeek: string; weekEmpty: string; markDone: string; clearWeek: string; weekGrocery: string
   noRecipes: string; addRecipe: string
   aiGenerator: string; aiPlaceholder: string; generate: string; generating: string
   editRecipe: string; newRecipe: string; ingredientsLine: string; instructions: string
@@ -67,9 +69,10 @@ const en: T = {
   welcomeBack: 'Welcome back, ZK', latestActivity: 'Latest Activity',
   nothingYet: 'Nothing here yet', nothingYetSub: 'Start adding content in any section above.',
   foodPlan: 'Food Plan', workout: 'Workout',
-  mealRotation: '🔄 Meal Rotation', myRecipes: '📖 My Recipes',
+  mealRotation: '🔄 Meal Rotation', myRecipes: '📖 My Recipes', weekTab: '📅 Week',
   mealsSubtitle: n => `${n} meals · 30 per category`,
   recipesSubtitle: n => `${n} saved recipes`,
+  weekSubtitle: n => `${n} meal${n !== 1 ? 's' : ''} planned this week`,
   favs: '❤️ Favs', selectCancel: 'Cancel', selectLabel: 'Select',
   tapMeals: 'Tap meals to select them',
   mealsSelected: n => `${n} meal${n > 1 ? 's' : ''} selected`,
@@ -81,6 +84,7 @@ const en: T = {
   itemsTicked: (c, t) => `${c}/${t} items ticked`,
   ingredients: 'Ingredients', howToPrepare: 'How to prepare',
   addToFavs: '🤍 Add to Favs', savedToFavs: '❤️ Saved to Favs', removeMeal: '🗑 Remove',
+  addToWeek: '📅 Save to Week', weekEmpty: 'No meals planned this week. Select meals in Meal Rotation and tap "Save to Week".', markDone: '✓ Done', clearWeek: 'Clear All', weekGrocery: '🛒 Week Grocery List',
   noRecipes: 'No recipes yet. Add one or generate with AI!', addRecipe: '+ Add',
   aiGenerator: '✨ AI Recipe Generator',
   aiPlaceholder: 'List ingredients (e.g. chicken, rice, broccoli)...',
@@ -126,9 +130,10 @@ const fr: T = {
   welcomeBack: 'Bon retour, ZK', latestActivity: 'Activité récente',
   nothingYet: 'Rien ici pour l\'instant', nothingYetSub: 'Ajoutez du contenu dans une section ci-dessus.',
   foodPlan: 'Plan alimentaire', workout: 'Entraînement',
-  mealRotation: '🔄 Repas', myRecipes: '📖 Mes Recettes',
+  mealRotation: '🔄 Repas', myRecipes: '📖 Mes Recettes', weekTab: '📅 Semaine',
   mealsSubtitle: n => `${n} repas · 30 par catégorie`,
   recipesSubtitle: n => `${n} recettes enregistrées`,
+  weekSubtitle: n => `${n} repas planifié${n !== 1 ? 's' : ''} cette semaine`,
   favs: '❤️ Favoris', selectCancel: 'Annuler', selectLabel: 'Sélectionner',
   tapMeals: 'Appuyez pour sélectionner',
   mealsSelected: n => `${n} repas sélectionné${n > 1 ? 's' : ''}`,
@@ -140,6 +145,7 @@ const fr: T = {
   itemsTicked: (c, tt) => `${c}/${tt} cochés`,
   ingredients: 'Ingrédients', howToPrepare: 'Comment préparer',
   addToFavs: '🤍 Ajouter aux favoris', savedToFavs: '❤️ Dans les favoris', removeMeal: '🗑 Supprimer',
+  addToWeek: '📅 Ajouter à la semaine', weekEmpty: 'Aucun repas planifié. Sélectionne des repas et appuie sur "Ajouter à la semaine".', markDone: '✓ Fait', clearWeek: 'Tout effacer', weekGrocery: '🛒 Courses de la semaine',
   noRecipes: "Aucune recette. Ajoutez-en une ou générez avec l'IA !", addRecipe: '+ Ajouter',
   aiGenerator: '✨ Générateur IA',
   aiPlaceholder: 'Listez les ingrédients (ex: poulet, riz, brocoli)...',
