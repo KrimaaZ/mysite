@@ -445,11 +445,145 @@ const LEVELS = ['novice', 'beginner', 'intermediate', 'advanced', 'elite'] as co
 const emptyLogForm = { type: 'PULL', title: '', date: new Date().toISOString().split('T')[0], notes: '' }
 const emptyLogEx = { name: '', sets: 3, reps: '8-10', notes: '' }
 
+// ─── Step image backgrounds per category ────────────────────────────────────
+const STEP_IMGS: Record<string, [string, string, string]> = {
+  PULL: [
+    'https://images.unsplash.com/photo-1530822847156-5df684ec5933?w=480&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?w=480&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1581009137042-c552e485697a?w=480&h=320&fit=crop&q=80',
+  ],
+  PUSH: [
+    'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=480&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=480&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=480&h=320&fit=crop&q=80',
+  ],
+  ABS_LEGS: [
+    'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=480&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=480&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=480&h=320&fit=crop&q=80',
+  ],
+  CARDIO: [
+    'https://images.unsplash.com/photo-1486218119243-13301179e14d?w=480&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1504607798333-52a30db54a5d?w=480&h=320&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1550259979-ed79b48d2a30?w=480&h=320&fit=crop&q=80',
+  ],
+}
+
+// ─── Exercise Detail Overlay ──────────────────────────────────────────────────
+function ExDetailOverlay({ ex, onClose }: { ex: ExCard; onClose: () => void }) {
+  const { t, lang } = useLang()
+  const [activeStep, setActiveStep] = useState(0)
+  const [level, setLevel] = useState<typeof LEVELS[number]>('beginner')
+  const [imgErr, setImgErr] = useState<boolean[]>([false, false, false])
+
+  const fr = EXERCISE_FR[ex.id]
+  const steps = lang === 'fr' && fr ? fr.steps : ex.steps
+  const desc   = lang === 'fr' && fr ? fr.description : ex.description
+  const muscle   = lang === 'fr' ? (MUSCLE_FR[ex.muscle] ?? ex.muscle) : ex.muscle
+  const equipment = lang === 'fr' ? (EQUIP_FR[ex.equipment] ?? ex.equipment) : ex.equipment
+  const levelLabels = [t.levelNovice, t.levelBeginner, t.levelIntermediate, t.levelAdvanced, t.levelElite]
+  const levelText = (lk: typeof LEVELS[number]) => lang === 'fr' && fr ? fr.levels[lk] : ex.levels[lk]
+  const info = TYPE_INFO_STATIC[ex.type]
+  const imgs = STEP_IMGS[ex.type] ?? STEP_IMGS.PULL
+  const stepColors = ['#2d6a4f', '#a07850', '#6b4226']
+  const stepBgs   = ['#d8f3dc', '#fef3e2', '#fde8ec']
+
+  const markImgErr = (i: number) => setImgErr(e => { const n = [...e]; n[i] = true; return n })
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4"
+      style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="w-full sm:max-w-2xl max-h-[95vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl shadow-2xl"
+        style={{ backgroundColor: '#fff' }}>
+        {/* Header */}
+        <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-4 border-b"
+          style={{ backgroundColor: '#fff', borderColor: '#e8dcc8' }}>
+          <div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: info.color }}>{info.emoji} {ex.type}</span>
+              <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: '#f0e8d8', color: '#8b5e3c' }}>{equipment}</span>
+            </div>
+            <h2 className="font-bold text-lg" style={{ color: '#1a3a1a' }}>{ex.name}</h2>
+            <p className="text-xs" style={{ color: '#a07850' }}>{muscle}</p>
+          </div>
+          <button onClick={onClose}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0"
+            style={{ backgroundColor: '#f0e8d8', color: '#6b4226' }}>×</button>
+        </div>
+
+        <div className="px-5 py-4 space-y-5">
+          {/* 3 step image panels */}
+          <div className="grid grid-cols-3 gap-2">
+            {steps.map((stepTxt, i) => (
+              <button key={i} onClick={() => setActiveStep(i)}
+                className="relative rounded-2xl overflow-hidden flex-1 transition-all"
+                style={{ aspectRatio: '4/5', border: `2.5px solid ${activeStep === i ? info.color : 'transparent'}`, boxShadow: activeStep === i ? `0 0 0 3px ${info.color}33` : 'none' }}>
+                {/* Background image or fallback */}
+                {!imgErr[i] ? (
+                  <img src={imgs[i]} alt={`step ${i + 1}`} className="absolute inset-0 w-full h-full object-cover"
+                    onError={() => markImgErr(i)} />
+                ) : (
+                  <div className="absolute inset-0" style={{ backgroundColor: stepBgs[i] }} />
+                )}
+                {/* Gradient overlay */}
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 55%, rgba(0,0,0,0.1) 100%)' }} />
+                {/* Step number badge */}
+                <div className="absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-white"
+                  style={{ backgroundColor: info.color }}>
+                  {i + 1}
+                </div>
+                {/* Step text */}
+                <div className="absolute bottom-0 left-0 right-0 p-2">
+                  <p className="text-white font-medium leading-tight text-left" style={{ fontSize: '10px', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {stepTxt}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Active step expanded */}
+          <div className="rounded-2xl p-4" style={{ backgroundColor: stepBgs[activeStep] }}>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-white flex-shrink-0"
+                style={{ backgroundColor: stepColors[activeStep] }}>{activeStep + 1}</span>
+              <span className="text-xs font-bold uppercase tracking-wide" style={{ color: stepColors[activeStep] }}>
+                {t.stepLabel} {activeStep + 1}
+              </span>
+            </div>
+            <p className="text-sm font-medium leading-relaxed" style={{ color: '#1a3a1a' }}>{steps[activeStep]}</p>
+          </div>
+
+          {/* Description */}
+          <p className="text-sm leading-relaxed" style={{ color: '#6b4226' }}>{desc}</p>
+
+          {/* Level tabs + detail */}
+          <div>
+            <div className="flex gap-1.5 overflow-x-auto pb-1 mb-3" style={{ scrollbarWidth: 'none' }}>
+              {LEVELS.map((lk, i) => (
+                <button key={lk} onClick={() => setLevel(lk)}
+                  className="px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap flex-shrink-0 transition-all"
+                  style={{ backgroundColor: level === lk ? info.color : '#f0e8d8', color: level === lk ? '#fff' : '#6b4226' }}>
+                  {levelLabels[i]}
+                </button>
+              ))}
+            </div>
+            <div className="rounded-2xl p-3" style={{ backgroundColor: '#f0faf2' }}>
+              <p className="text-sm font-medium" style={{ color: '#2d6a4f' }}>{levelText(level)}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Exercise Card Component ──────────────────────────────────────────────────
 function ExCard({
-  ex, isFav, onFav, onEdit,
+  ex, isFav, onFav, onEdit, onView,
 }: {
-  ex: ExCard; isFav: boolean; onFav: () => void; onEdit: () => void
+  ex: ExCard; isFav: boolean; onFav: () => void; onEdit: () => void; onView: () => void
 }) {
   const { t, lang } = useLang()
   const [step, setStep] = useState(0)
@@ -470,7 +604,7 @@ function ExCard({
       style={{ backgroundColor: '#fff', borderColor: '#e8dcc8' }}>
       {/* Header */}
       <div className="px-4 pt-4 pb-2 flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={onView}>
           <div className="flex items-center gap-1.5 mb-1">
             <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: info.color }}>{info.emoji} {ex.type}</span>
             <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: '#f0e8d8', color: '#8b5e3c' }}>{equipment}</span>
@@ -479,6 +613,8 @@ function ExCard({
           <p className="text-xs mt-0.5" style={{ color: '#a07850' }}>{muscle}</p>
         </div>
         <div className="flex gap-1 shrink-0">
+          <button onClick={onView} className="w-7 h-7 rounded-full flex items-center justify-center transition-all text-xs"
+            style={{ backgroundColor: info.color, color: '#fff' }}>📸</button>
           <button onClick={onEdit} className="w-7 h-7 rounded-full flex items-center justify-center transition-all"
             style={{ backgroundColor: '#f0e8d8', color: '#8b5e3c' }}>✏️</button>
           <button onClick={onFav} className="w-7 h-7 rounded-full flex items-center justify-center transition-all"
@@ -550,6 +686,7 @@ export default function WorkoutPage() {
   const [libFilter, setLibFilter] = useState<'all' | 'favs'>('all')
   const [favExercises, setFavExercises] = useState<Set<number>>(new Set())
   const [editEx, setEditEx] = useState<ExCard | null>(null)
+  const [detailEx, setDetailEx] = useState<ExCard | null>(null)
   const [customNotes, setCustomNotes] = useState<Record<number, string>>({})
   const [noteInput, setNoteInput] = useState('')
 
@@ -727,7 +864,7 @@ export default function WorkoutPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredLib.map(ex => (
                 <ExCard key={ex.id} ex={ex} isFav={favExercises.has(ex.id)}
-                  onFav={() => toggleFav(ex.id)} onEdit={() => openEdit(ex)} />
+                  onFav={() => toggleFav(ex.id)} onEdit={() => openEdit(ex)} onView={() => setDetailEx(ex)} />
               ))}
             </div>
           )}
@@ -742,7 +879,7 @@ export default function WorkoutPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {EXERCISES.filter(e => e.type === libCat && favExercises.has(e.id)).map(ex => (
                   <ExCard key={ex.id} ex={ex} isFav={true}
-                    onFav={() => toggleFav(ex.id)} onEdit={() => openEdit(ex)} />
+                    onFav={() => toggleFav(ex.id)} onEdit={() => openEdit(ex)} onView={() => setDetailEx(ex)} />
                 ))}
               </div>
             </div>
@@ -992,6 +1129,9 @@ export default function WorkoutPage() {
           </div>
         </Modal>
       )}
+
+      {/* ── Exercise Detail Overlay ─────────────────────────────────────────── */}
+      {detailEx && <ExDetailOverlay ex={detailEx} onClose={() => setDetailEx(null)} />}
     </div>
   )
 }
