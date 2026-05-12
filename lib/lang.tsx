@@ -64,6 +64,13 @@ type T = {
   timeframe: string; winRatePct: string; rulesLabel: string
   deleteTrade: string; deleteStrategy: string; addTrade: string; addStrategy: string
   analysisLabel: string; lessonsLabel: string; ratingLabel: string
+  // Notes
+  notesPage: string
+  addCategory: string; editCategory: string; saveCategory: string; deleteCategory: string
+  catName: string; catEmoji: string; catColor: string
+  addNote: string; editNote: string; saveNote: string
+  noNotesYet: string; noteRules: string; noteExamples: string; allNotes: string
+  notesCount: (n: number) => string
 }
 
 const en: T = {
@@ -131,6 +138,13 @@ const en: T = {
   rulesLabel: '📋 Rules', deleteTrade: 'Delete trade?', deleteStrategy: 'Delete strategy?',
   addTrade: '+ Trade', addStrategy: '+ Strategy',
   analysisLabel: 'Analysis:', lessonsLabel: 'Lessons:', ratingLabel: 'Rating:',
+  notesPage: '📚 Notes',
+  addCategory: '+ Category', editCategory: 'Edit Category', saveCategory: 'Save', deleteCategory: 'Delete Category',
+  catName: 'Category name', catEmoji: 'Emoji', catColor: 'Color',
+  addNote: '+ Add Note', editNote: 'Edit Note', saveNote: 'Save Note',
+  noNotesYet: 'No notes yet. Add one with the button above.',
+  noteRules: '📋 Rules', noteExamples: '💡 Examples', allNotes: 'ALL',
+  notesCount: n => `${n} note${n !== 1 ? 's' : ''}`,
 }
 
 const fr: T = {
@@ -199,6 +213,13 @@ const fr: T = {
   rulesLabel: '📋 Règles', deleteTrade: 'Supprimer le trade ?', deleteStrategy: 'Supprimer la stratégie ?',
   addTrade: '+ Trade', addStrategy: '+ Stratégie',
   analysisLabel: 'Analyse :', lessonsLabel: 'Leçons :', ratingLabel: 'Note :',
+  notesPage: '📚 Notes',
+  addCategory: '+ Catégorie', editCategory: 'Modifier', saveCategory: 'Enregistrer', deleteCategory: 'Supprimer la catégorie',
+  catName: 'Nom de la catégorie', catEmoji: 'Emoji', catColor: 'Couleur',
+  addNote: '+ Ajouter une note', editNote: 'Modifier la note', saveNote: 'Enregistrer',
+  noNotesYet: 'Aucune note. Ajoutez-en une avec le bouton ci-dessus.',
+  noteRules: '📋 Règles', noteExamples: '💡 Exemples', allNotes: 'TOUS',
+  notesCount: n => `${n} note${n !== 1 ? 's' : ''}`,
 }
 
 const translations = { en, fr }

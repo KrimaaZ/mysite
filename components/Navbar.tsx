@@ -10,6 +10,7 @@ const links = [
   { href: '/workout',  label: 'Workout',  emoji: '💪' },
   { href: '/valorant', label: 'Valorant', emoji: '🎮' },
   { href: '/trading',  label: 'Trading',  emoji: '📈' },
+  { href: '/notes',    label: 'Notes',    emoji: '📚' },
 ]
 
 export default function Navbar() {

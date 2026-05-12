@@ -75,3 +75,20 @@ model BacktestStrategy {
   notes       String?
   createdAt   DateTime @default(now())
 }
+
+model NoteCategory {
+  id        Int      @id @default(autoincrement())
+  name      String
+  color     String   @default("#2d6a4f")
+  emoji     String   @default("📝")
+  createdAt DateTime @default(now())
+}
+
+model Note {
+  id         Int      @id @default(autoincrement())
+  categoryId Int
+  title      String
+  rules      String
+  examples   String
+  createdAt  DateTime @default(now())
+}
