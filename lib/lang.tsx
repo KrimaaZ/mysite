@@ -43,6 +43,12 @@ type T = {
   sessionTitle: string; sessionNotes: string; exercises: string; aiSuggest: string
   sets: string; reps: string; exerciseName: string
   pullDay: string; pushDay: string; absLegs: string; cardio: string
+  // Workout Library
+  libraryTab: string; workoutLogTab: string; workoutWeekTab: string
+  levelNovice: string; levelBeginner: string; levelIntermediate: string; levelAdvanced: string; levelElite: string
+  stepLabel: string; noFavExercises: string; editExercise: string; personalNotes: string; saveNotes: string
+  pickExercise: string; workoutWeekEmpty: string; markExDone: string; clearDay: string; addToDay: string
+  allExercises: string; days: string[]
   // Valorant
   tipsCount: (n: number) => string
   addBtn: string; noTips: string; newTip: string; editTip: string; saveTip: string
@@ -102,6 +108,12 @@ const en: T = {
   exercises: 'Exercises', aiSuggest: '✨ AI Suggest Exercises',
   sets: 'Sets', reps: 'Reps', exerciseName: 'Exercise name',
   pullDay: 'Pull Day', pushDay: 'Push Day', absLegs: 'Abs & Legs', cardio: 'Cardio',
+  libraryTab: '🏋️ Library', workoutLogTab: '📋 Log', workoutWeekTab: '📅 Week',
+  levelNovice: '🌱 Novice', levelBeginner: '🔰 Beginner', levelIntermediate: '💪 Intermediate', levelAdvanced: '🔥 Advanced', levelElite: '⚡ Elite',
+  stepLabel: 'Step', noFavExercises: 'No favorite exercises yet. Tap ❤️ on any exercise.', editExercise: 'Edit Exercise',
+  personalNotes: 'Personal Notes', saveNotes: 'Save', pickExercise: 'Add Exercise',
+  workoutWeekEmpty: 'No exercises planned. Tap "+ Add" to plan your day.', markExDone: '✓ Done', clearDay: 'Clear Day', addToDay: '+ Add', allExercises: 'All',
+  days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
   tipsCount: n => `${n} tips & drills`,
   addBtn: '+ Add', noTips: 'No tips yet. Add one or generate with AI!',
   newTip: 'New Tip', editTip: 'Edit Tip', saveTip: 'Save Tip',
@@ -163,6 +175,12 @@ const fr: T = {
   exercises: 'Exercices', aiSuggest: '✨ IA - Suggérer des exercices',
   sets: 'Séries', reps: 'Rép.', exerciseName: "Nom de l'exercice",
   pullDay: 'Jour Tirage', pushDay: 'Jour Poussée', absLegs: 'Abdos & Jambes', cardio: 'Cardio',
+  libraryTab: '🏋️ Biblio.', workoutLogTab: '📋 Journal', workoutWeekTab: '📅 Semaine',
+  levelNovice: '🌱 Novice', levelBeginner: '🔰 Débutant', levelIntermediate: '💪 Intermédiaire', levelAdvanced: '🔥 Avancé', levelElite: '⚡ Élite',
+  stepLabel: 'Étape', noFavExercises: 'Aucun exercice favori. Appuyez sur ❤️.', editExercise: 'Modifier',
+  personalNotes: 'Notes personnelles', saveNotes: 'Enregistrer', pickExercise: 'Ajouter un exercice',
+  workoutWeekEmpty: 'Aucun exercice planifié. Appuyez sur "+ Ajouter".', markExDone: '✓ Fait', clearDay: 'Vider', addToDay: '+ Ajouter', allExercises: 'Tous',
+  days: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
   tipsCount: n => `${n} conseils & exercices`,
   addBtn: '+ Ajouter', noTips: "Aucun conseil. Ajoutez-en un ou générez avec l'IA !",
   newTip: 'Nouveau conseil', editTip: 'Modifier le conseil', saveTip: 'Enregistrer',
