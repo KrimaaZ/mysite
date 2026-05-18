@@ -14,7 +14,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const body = await req.json()
   const note = await prisma.note.create({
-    data: { categoryId: Number(body.categoryId), title: body.title, rules: body.rules || '', examples: body.examples || '' }
+    data: { categoryId: Number(body.categoryId), title: body.title, rules: body.rules || '', examples: body.examples || '', quiz: body.quiz || null }
   })
   return NextResponse.json(note, { status: 201 })
 }

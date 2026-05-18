@@ -2,9 +2,11 @@
 
 import Link from 'next/link'
 import { useLang } from '@/lib/lang'
+import { useTheme } from '@/lib/theme'
 
 export default function WelcomePage() {
   const { lang, t, toggle } = useLang()
+  const { theme, dark, toggleDark } = useTheme()
 
   return (
     <div
@@ -23,13 +25,23 @@ export default function WelcomePage() {
           style={{ background: '#74c69d', filter: 'blur(70px)' }} />
       </div>
 
-      {/* Language toggle */}
-      <button
-        onClick={toggle}
-        className="absolute top-4 right-4 z-20 text-xs font-bold px-2.5 py-1.5 rounded-lg border transition-colors"
-        style={{ borderColor: '#40916c', color: '#74c69d', backgroundColor: 'rgba(45,106,79,0.2)' }}>
-        {lang === 'en' ? 'FR' : 'EN'}
-      </button>
+      {/* Top-right controls */}
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+        <button
+          onClick={toggleDark}
+          className="text-base w-9 h-9 rounded-lg border flex items-center justify-center transition-colors"
+          style={{ borderColor: '#40916c', backgroundColor: 'rgba(45,106,79,0.2)' }}
+          title={dark ? 'Mode clair' : 'Mode sombre'}
+        >
+          {dark ? '☀️' : '🌙'}
+        </button>
+        <button
+          onClick={toggle}
+          className="text-xs font-bold px-2.5 py-1.5 rounded-lg border transition-colors"
+          style={{ borderColor: '#40916c', color: '#74c69d', backgroundColor: 'rgba(45,106,79,0.2)' }}>
+          {lang === 'en' ? 'FR' : 'EN'}
+        </button>
+      </div>
 
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center text-center px-6">
@@ -42,7 +54,7 @@ export default function WelcomePage() {
             boxShadow: '0 8px 40px rgba(26,58,26,0.5), inset 0 1px 0 rgba(255,255,255,0.15)',
           }}
         >
-          <span className="font-bold text-4xl sm:text-5xl tracking-tighter" style={{ color: '#74c69d' }}>ZK</span>
+          <span className="font-bold text-4xl sm:text-5xl tracking-tighter" style={{ color: '#74c69d' }}>{theme === 'sb' ? 'SB' : 'ZK'}</span>
         </div>
 
         <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-3" style={{ color: '#d8f3dc' }}>

@@ -1,12 +1,29 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Modal from '@/components/Modal'
 import { useLang } from '@/lib/lang'
 
 type Recipe = {
   id: number; title: string; description: string; ingredients: string
   instructions: string; prepTime: number; cookTime: number; servings: number; category: string
+}
+
+// ── Week schedule types ───────────────────────────────────────────────────
+type SlotKey = 'breakfast' | 'snack' | 'lunch' | 'juice'
+type ScheduleEntry = { id: string; name: string } | null
+type WeekSchedule = { [day: string]: { [slot in SlotKey]: ScheduleEntry } }
+
+const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+const SLOTS: { key: SlotKey; label: string; emoji: string; mealTypes: string[] }[] = [
+  { key: 'breakfast', label: 'Breakfast', emoji: '🌅', mealTypes: ['breakfast'] },
+  { key: 'snack',     label: 'Snack',     emoji: '🍎', mealTypes: ['snack'] },
+  { key: 'lunch',     label: 'Lunch',     emoji: '🍽️', mealTypes: ['main'] },
+  { key: 'juice',     label: 'Juice',     emoji: '🥤', mealTypes: ['smoothie'] },
+]
+const WEEK_KEY = 'week-schedule-v2'
+function emptySchedule(): WeekSchedule {
+  return Object.fromEntries(DAYS.map(d => [d, { breakfast: null, snack: null, lunch: null, juice: null }]))
 }
 
 type Meal = {
@@ -151,39 +168,7 @@ const MEALS: Meal[] = [
   { id:134, type:'smoothie', name:'Pumpkin spice protein shake',       protein:'12g', kcal:'380 kcal', time:'4 min', ingredients:'3 tbsp pumpkin puree + 300ml milk + 1 banana + 40g oats + 1 tsp pumpkin spice + 1 tsp honey',           prep:'Blend all until smooth and creamy.',                                                                                  tip:'Pumpkin is high in beta-carotene and potassium — great for endurance recovery' },
   { id:135, type:'smoothie', name:'Melon lime cooler',                 protein:'3g',  kcal:'130 kcal', time:'3 min', ingredients:'400g melon (honeydew or cantaloupe) + juice of 1 lime + handful mint + 200ml cold water + ice',         prep:'Blend everything. Serve immediately over ice.',                                                                      tip:'One of the most hydrating smoothies — great before or after cardio in heat' },
 
-  // ── NIGHT FOOD (15) ─────────────────────────────────────────────────────────
-  { id:61, type:'night', name:'Yogurt & banana night bowl',         protein:'18g', kcal:'320 kcal', time:'2 min', ingredients:'250g plain full-fat yogurt + 1 banana + 1 tsp honey + crushed walnuts',                                   prep:'Slice banana into yogurt, drizzle honey, add nuts.',                                                                     tip:'Casein-rich — digests slowly overnight for muscle repair' },
-  { id:62, type:'night', name:'Oat & peanut butter night bowl',     protein:'16g', kcal:'420 kcal', time:'5 min', ingredients:'60g oats + 300ml warm milk + 1 tbsp peanut butter + 1 banana (sliced)',                                  prep:'Cook oats in milk 2 min. Stir in peanut butter, top with banana.',                                                       tip:'Slow-digesting carbs fuel overnight muscle protein synthesis' },
-  { id:63, type:'night', name:'Apple & peanut butter night snack',  protein:'8g',  kcal:'280 kcal', time:'1 min', ingredients:'1 large apple + 2 tbsp peanut butter',                                                                   prep:'Slice apple, dip in peanut butter.',                                                                                     tip:'The fat in PB slows digestion — no hunger at night' },
-  { id:64, type:'night', name:'Banana dark chocolate square',       protein:'5g',  kcal:'250 kcal', time:'1 min', ingredients:'1 banana + 2 squares dark chocolate (70%+)',                                                             prep:'Eat together. That is it.',                                                                                              tip:'Dark chocolate magnesium helps muscle recovery and sleep quality' },
-  { id:65, type:'night', name:'Yogurt & fruit salad bowl',          protein:'15g', kcal:'290 kcal', time:'4 min', ingredients:'200g plain yogurt + 1 banana + 1 orange + 5 dates + drizzle honey',                                     prep:'Chop fruit, mix into yogurt, drizzle honey.',                                                                            tip:'Ends the day with protein, natural sugar, and micronutrients' },
-  { id:66, type:'night', name:'Cottage cheese & honey',             protein:'20g', kcal:'220 kcal', time:'1 min', ingredients:'250g cottage cheese + 1 tbsp honey + pinch cinnamon',                                                   prep:'Spoon cottage cheese into a bowl, drizzle honey, dust with cinnamon.',                                                   tip:'Cottage cheese is pure casein — the best slow-release protein source for night' },
-  { id:67, type:'night', name:'Warm milk & honey',                  protein:'8g',  kcal:'180 kcal', time:'3 min', ingredients:'300ml whole milk + 1 tbsp honey + pinch nutmeg',                                                        prep:'Heat milk until steaming. Stir in honey and nutmeg. Drink slowly.',                                                      tip:'Warm milk raises tryptophan levels — genuinely helps with falling asleep' },
-  { id:68, type:'night', name:'Rice pudding with cinnamon',         protein:'10g', kcal:'350 kcal', time:'10 min',ingredients:'60g short-grain rice + 400ml milk + 1 tbsp sugar + 1 tsp cinnamon + pinch vanilla',                     prep:'Simmer rice in milk on low heat 10 min, stirring often. Add sugar and cinnamon.',                                        tip:'Make a large batch and refrigerate — lasts 3 days and tastes better cold' },
-  { id:69, type:'night', name:'Egg white & avocado bowl',           protein:'18g', kcal:'260 kcal', time:'5 min', ingredients:'4 egg whites + ½ avocado + cherry tomatoes + lemon + salt + herbs',                                    prep:'Scramble egg whites in non-stick pan. Plate with sliced avocado and tomatoes.',                                          tip:'Egg whites at night = pure protein with almost zero fat or carbs' },
-  { id:70, type:'night', name:'Mixed nuts & raisins',               protein:'8g',  kcal:'280 kcal', time:'1 min', ingredients:'30g mixed nuts + 20g raisins',                                                                          prep:'Mix in a small bowl or eat straight from a bag.',                                                                        tip:'Raisins provide natural melatonin — can improve sleep quality' },
-  { id:71, type:'night', name:'Banana honey toast',                 protein:'6g',  kcal:'310 kcal', time:'2 min', ingredients:'2 slices whole grain bread + 1 banana + 1 tbsp honey',                                                  prep:'Toast bread, slice banana on top, drizzle honey.',                                                                       tip:'Carbs + banana tryptophan = natural sleep aid combination' },
-  { id:72, type:'night', name:'Greek yogurt with walnuts',          protein:'18g', kcal:'300 kcal', time:'2 min', ingredients:'200g Greek yogurt + 30g walnuts + 1 tsp honey',                                                         prep:'Spoon yogurt into a bowl, top with walnuts and a honey drizzle.',                                                        tip:'Walnuts contain melatonin — one of the few foods that does' },
-  { id:73, type:'night', name:'Peanut butter crispbread',           protein:'10g', kcal:'290 kcal', time:'2 min', ingredients:'3 rye crispbreads + 2 tbsp peanut butter',                                                              prep:'Spread peanut butter on crispbreads.',                                                                                   tip:'Slow carbs from rye + fat from PB = stable blood sugar overnight' },
-  { id:74, type:'night', name:'Cheese & apple plate',               protein:'14g', kcal:'300 kcal', time:'3 min', ingredients:'60g aged cheese (cheddar or gouda) + 1 apple + 5 walnuts',                                             prep:'Slice cheese and apple, arrange on a plate with walnuts.',                                                               tip:'Cheese tryptophan + apple fiber = one of the best natural sleep combos' },
-  { id:75, type:'night', name:'Warm oat milk & cinnamon',           protein:'6g',  kcal:'160 kcal', time:'5 min', ingredients:'300ml oat milk + ½ tsp cinnamon + 1 tsp honey + pinch cardamom',                                       prep:'Warm oat milk gently. Stir in cinnamon, honey, cardamom. Serve hot.',                                                    tip:'Lowest-calorie night option — perfect if your daily calories are already met' },
 
-  // ── NIGHT FOOD cont. (16–30) ────────────────────────────────────────────────
-  { id:136, type:'night', name:'Warm chamomile & honey',              protein:'2g',  kcal:'80 kcal',  time:'3 min', ingredients:'1 chamomile tea bag + 300ml hot water + 1 tbsp honey + 1 slice lemon',                                    prep:'Brew tea 4 min. Add honey and lemon. Sip slowly 30 min before bed.',                                                   tip:'Chamomile apigenin binds sleep receptors — one of the most researched sleep aids' },
-  { id:137, type:'night', name:'Almond butter & banana toast',        protein:'10g', kcal:'320 kcal', time:'3 min', ingredients:'2 slices whole grain bread + 2 tbsp almond butter + ½ banana (sliced)',                                  prep:'Toast bread, spread almond butter, top with banana.',                                                                  tip:'Almond butter has more magnesium than peanut butter — better for sleep quality' },
-  { id:138, type:'night', name:'Cottage cheese & chives bowl',        protein:'20g', kcal:'160 kcal', time:'2 min', ingredients:'250g cottage cheese + 1 tbsp fresh chives + pinch salt + pepper + drizzle olive oil',                   prep:'Season cottage cheese with chives, salt, pepper. Drizzle a tiny amount of olive oil.',                                 tip:'Pure casein protein with almost no carbs — the ideal night protein if cutting calories' },
-  { id:139, type:'night', name:'Tuna & cucumber bites',               protein:'22g', kcal:'180 kcal', time:'5 min', ingredients:'1 tin tuna + 1 cucumber + 1 tbsp Greek yogurt + lemon + dill + salt',                                  prep:'Mix tuna with yogurt, lemon, dill. Slice cucumber into thick rounds. Spoon tuna mix on each.',                         tip:'Refrigerate tuna mix ahead of time — even better the next evening' },
-  { id:140, type:'night', name:'Banana cinnamon warm mash',           protein:'4g',  kcal:'200 kcal', time:'3 min', ingredients:'1 banana + pinch cinnamon + 1 tsp honey + 1 tbsp crushed walnuts',                                     prep:'Mash banana with a fork. Warm 20 sec in microwave. Top with cinnamon, honey, walnuts.',                                tip:'Warm banana triggers more tryptophan release than cold banana' },
-  { id:141, type:'night', name:'Kefir with honey',                    protein:'8g',  kcal:'170 kcal', time:'1 min', ingredients:'250ml plain kefir + 1 tsp honey',                                                                      prep:'Pour kefir into a glass. Stir in honey. Drink slowly.',                                                                tip:'Kefir is richer in probiotics than yogurt — supports gut repair during overnight fast' },
-  { id:142, type:'night', name:'Dark chocolate & almonds',            protein:'6g',  kcal:'270 kcal', time:'1 min', ingredients:'20g dark chocolate (70%+) + 20g almonds',                                                              prep:'No prep. Eat slowly.',                                                                                                 tip:'Eat mindfully — this portion is satisfying if eaten slowly, not if rushed' },
-  { id:143, type:'night', name:'Tahini & honey crispbread',           protein:'8g',  kcal:'260 kcal', time:'2 min', ingredients:'3 rye crispbreads + 1 tbsp tahini + 1 tsp honey + pinch sesame seeds',                                  prep:'Spread tahini on crispbreads, drizzle honey, sprinkle sesame seeds.',                                                  tip:'Tahini is rich in tryptophan — the amino acid your body converts to serotonin and melatonin' },
-  { id:144, type:'night', name:'Light tomato soup',                   protein:'6g',  kcal:'180 kcal', time:'8 min', ingredients:'400g crushed tomatoes + 1 garlic clove + 1 tbsp olive oil + basil + salt + pepper',                    prep:'Heat garlic in oil 1 min. Add tomatoes, season, simmer 5 min. Blend smooth.',                                          tip:'A warm liquid before bed promotes relaxation — much lighter than a solid snack' },
-  { id:145, type:'night', name:'Ricotta & berry toast',               protein:'12g', kcal:'310 kcal', time:'4 min', ingredients:'2 slices whole grain toast + 80g ricotta + 100g mixed berries + 1 tsp honey',                          prep:'Toast bread, spread ricotta, top with berries and honey drizzle.',                                                     tip:'Ricotta has a naturally mild sweetness — barely needs honey at all' },
-  { id:146, type:'night', name:'Melon & mint plate',                  protein:'3g',  kcal:'100 kcal', time:'3 min', ingredients:'½ melon (cantaloupe or honeydew) + handful fresh mint + juice of ½ lime',                             prep:'Slice melon, arrange on a plate with mint and a squeeze of lime.',                                                     tip:'One of the most hydrating night snacks — great if you sweat a lot during training' },
-  { id:147, type:'night', name:'Steamed broccoli with parmesan',      protein:'10g', kcal:'160 kcal', time:'8 min', ingredients:'200g broccoli florets + 20g grated parmesan + olive oil + garlic + salt',                             prep:'Steam broccoli 5 min. Drizzle olive oil, rub with garlic, top with parmesan.',                                         tip:'Broccoli has more protein per calorie than most vegetables — often overlooked' },
-  { id:148, type:'night', name:'Egg white & spinach scramble',        protein:'20g', kcal:'180 kcal', time:'5 min', ingredients:'5 egg whites + 2 handfuls spinach + olive oil + salt + pepper + pinch nutmeg',                        prep:'Sauté spinach 1 min. Add egg whites, scramble gently on low heat. Season.',                                            tip:'Pure protein, almost zero fat — the lightest high-protein night option on this list' },
-  { id:149, type:'night', name:'Warm lemon & honey water',            protein:'0g',  kcal:'40 kcal',  time:'2 min', ingredients:'300ml warm water + juice of ½ lemon + 1 tbsp honey',                                                  prep:'Mix in a mug. Drink warm before bed.',                                                                                 tip:'The lightest possible night option — great if dinner was already high in calories' },
-  { id:150, type:'night', name:'Oat & cinnamon cookies (x2)',         protein:'6g',  kcal:'290 kcal', time:'15 min',ingredients:'100g oats + 1 banana + 1 tbsp peanut butter + 1 tsp cinnamon + pinch salt + chocolate chips',         prep:'Mash banana, mix all together. Form 8 small cookies on baking sheet. Bake 180°C 12 min.',                              tip:'Make a full batch and freeze — grab 2 per night all week' },
 
   // ── BREAKFAST extra 20 (151–170) ────────────────────────────────────────────
   { id:151, type:'breakfast', name:'Smashed avocado & 2 eggs on toast',   protein:'18g', kcal:'460 kcal', time:'8 min',  ingredients:'2 eggs + 1 avocado + 2 slices sourdough + lemon + chili flakes + salt',                              prep:'Toast bread. Mash avocado with lemon. Fry eggs to preference. Pile on toast.',                                         tip:'Add red chili flakes — capsaicin boosts metabolism first thing in the morning' },
@@ -205,20 +190,8 @@ const MEALS: Meal[] = [
   { id:167, type:'breakfast', name:'Egg & feta scramble',                  protein:'24g', kcal:'390 kcal', time:'8 min',  ingredients:'3 eggs + 50g feta + handful cherry tomatoes + olive oil + oregano + black pepper',                  prep:'Scramble eggs with tomatoes in olive oil. Crumble feta in at the end. Season.',                                        tip:'Add feta at the end off heat — it warms without fully melting and stays creamy' },
   { id:168, type:'breakfast', name:'Sardine & tomato toast',               protein:'28g', kcal:'420 kcal', time:'5 min',  ingredients:'1 tin sardines + 2 slices sourdough + 2 ripe tomatoes + olive oil + basil + salt',                  prep:'Toast bread. Rub with tomato halves. Top with sardines, drizzle oil, add basil.',                                      tip:'Rubbing raw tomato on bread is the Spanish pan con tomate technique — better than slicing' },
   { id:169, type:'breakfast', name:'Warm rice congee with egg',            protein:'14g', kcal:'360 kcal', time:'15 min', ingredients:'80g white rice + 600ml water or stock + 2 eggs + ginger + soy sauce + sesame oil + spring onion',  prep:'Simmer rice in stock 12 min until thick. Crack eggs in, stir. Season with soy, sesame, ginger.',                      tip:'Asian comfort food — extremely easy to digest, great after a rough night\'s sleep' },
-  { id:170, type:'breakfast', name:'Full egg & veggie power bowl',         protein:'28g', kcal:'420 kcal', time:'12 min', ingredients:'3 eggs + cherry tomatoes + ½ avocado + spinach + 2 slices toast + olive oil + salt',               prep:'Pan-fry eggs. Assemble bowl with wilted spinach, tomatoes, avocado. Serve with toast.',                                tip:'Everything in one bowl — 28g protein without touching any supplements' },
 
   // ── MAIN extra 20 (171–190) ─────────────────────────────────────────────────
-  { id:171, type:'main', name:'Tuna & white bean salad',              protein:'40g', kcal:'580 kcal', time:'5 min',  ingredients:'2 tins tuna + 1 tin white beans + red onion + olive oil + lemon + parsley + salt',                       prep:'Drain tuna and beans. Toss with sliced onion, olive oil, lemon and parsley.',                                          tip:'Zero cooking needed — one of the fastest 40g protein meals you can make' },
-  { id:172, type:'main', name:'Red lentil dal with rice',             protein:'28g', kcal:'620 kcal', time:'20 min', ingredients:'200g red lentils + 200g rice + 1 tin tomatoes + onion + garlic + cumin + turmeric + coconut milk',      prep:'Fry onion and spices. Add lentils, tomatoes, coconut milk, 400ml water. Simmer 15 min. Serve over rice.',              tip:'Red lentils dissolve into the sauce — no soaking needed, ready in under 20 min' },
-  { id:173, type:'main', name:'Sardine & tomato pasta',               protein:'38g', kcal:'660 kcal', time:'12 min', ingredients:'200g pasta + 2 tins sardines + 400g crushed tomatoes + garlic + chili + olive oil + basil',             prep:'Cook pasta. Fry garlic and chili 1 min. Add tomatoes, simmer 5 min. Flake in sardines. Toss with pasta.',              tip:'Sardines break down into the sauce completely — skeptics love this dish' },
-  { id:174, type:'main', name:'Tuna stuffed bell peppers',            protein:'36g', kcal:'520 kcal', time:'15 min', ingredients:'2 bell peppers + 2 tins tuna + 100g cooked rice + corn + tomato + olive oil + herbs',                  prep:'Halve peppers. Mix tuna, rice, corn, tomato. Fill peppers. Bake 200°C 12 min.',                                        tip:'Works cold as meal prep — great lunch straight from the fridge the next day' },
-  { id:175, type:'main', name:'Black bean & egg power bowl',          protein:'30g', kcal:'590 kcal', time:'10 min', ingredients:'1 tin black beans + 2 eggs + 200g rice + salsa + avocado + lime + cumin + oil',                        prep:'Warm beans with cumin. Fry eggs. Assemble bowl with rice, beans, eggs, avocado, salsa.',                               tip:'Black beans have the highest fiber of all legumes — best for long-term fullness' },
-  { id:176, type:'main', name:'Tuna & corn quesadilla',               protein:'34g', kcal:'580 kcal', time:'10 min', ingredients:'2 flour tortillas + 1 tin tuna + 50g cheese + corn + tomato + jalapeño + oil',                        prep:'Fill one tortilla with tuna, cheese, corn. Top with second tortilla. Pan-fry 2 min per side.',                         tip:'Press down firmly while cooking to seal the edges and get even crispiness' },
-  { id:177, type:'main', name:'Chickpea patties with yogurt sauce',   protein:'22g', kcal:'500 kcal', time:'15 min', ingredients:'1 tin chickpeas + 1 egg + garlic + cumin + parsley + breadcrumbs + oil + 100g yogurt + lemon',         prep:'Mash chickpeas, mix in egg, garlic, cumin, parsley, breadcrumbs. Form patties. Pan-fry 3 min per side. Serve with yogurt.',  tip:'Chill the mix 10 min before frying so the patties hold their shape' },
-  { id:178, type:'main', name:'Pasta aglio e olio with tuna',         protein:'40g', kcal:'680 kcal', time:'12 min', ingredients:'200g pasta + 2 tins tuna + 4 garlic cloves + olive oil + chili flakes + parsley + pepper',            prep:'Cook pasta. Fry sliced garlic in oil until golden. Toss pasta, tuna, chili and parsley together.',                     tip:'Reserve a cup of pasta water before draining — add a splash to loosen the sauce' },
-  { id:179, type:'main', name:'Chickpea & spinach stew',              protein:'24g', kcal:'540 kcal', time:'20 min', ingredients:'2 tins chickpeas + 200g spinach + 1 tin tomatoes + onion + garlic + smoked paprika + olive oil + lemon', prep:'Fry onion and garlic. Add paprika, tomatoes, chickpeas. Simmer 12 min. Stir in spinach until wilted.',                 tip:'A squeeze of lemon at the end lifts the whole dish — do not skip it' },
-  { id:180, type:'main', name:'Egg & bean taco bowl',                 protein:'30g', kcal:'600 kcal', time:'12 min', ingredients:'3 eggs + 1 tin kidney beans + 200g rice + tomato + avocado + sour cream + cumin + chili powder',       prep:'Scramble eggs with cumin and chili. Warm beans. Assemble bowl with rice, beans, eggs, tomato, avocado.',               tip:'Deconstructed taco in a bowl — all the flavors, none of the shell mess' },
-  { id:181, type:'main', name:'Sardine & avocado open sandwich',      protein:'34g', kcal:'560 kcal', time:'8 min',  ingredients:'2 slices sourdough + 2 tins sardines + 1 avocado + lemon + capers + chili + olive oil',               prep:'Toast bread. Mash avocado with lemon. Top with sardines, capers and chili.',                                            tip:'Best served open-face so you taste every layer — the capers are the key' },
   { id:182, type:'main', name:'Tuna niçoise bowl',                    protein:'38g', kcal:'540 kcal', time:'10 min', ingredients:'2 tins tuna + 2 boiled eggs + green beans + cherry tomatoes + olives + olive oil + lemon + mustard',   prep:'Blanch beans 3 min. Arrange all components in a bowl. Whisk oil, lemon and mustard for dressing.',                     tip:'Classic French salad — elegant but incredibly simple to put together' },
   { id:183, type:'main', name:'Egg drop soup with noodles',           protein:'18g', kcal:'380 kcal', time:'10 min', ingredients:'3 eggs + 100g noodles + 1L chicken or vegetable stock + soy sauce + sesame oil + spring onion + ginger', prep:'Bring stock to boil with ginger. Add noodles, cook 3 min. Slowly drizzle beaten eggs while stirring. Season.',         tip:'Pour the egg in a very thin stream while stirring — that creates the silky ribbons' },
   { id:184, type:'main', name:'Loaded baked potato with tuna',        protein:'36g', kcal:'600 kcal', time:'15 min', ingredients:'1 large potato + 2 tins tuna + 2 tbsp Greek yogurt + chives + lemon + salt + pepper',                 prep:'Microwave potato 8 min until soft. Split open. Mix tuna with yogurt and lemon. Fill potato.',                          tip:'Microwave instead of oven baking saves 45 minutes with identical results' },
@@ -230,20 +203,7 @@ const MEALS: Meal[] = [
   { id:190, type:'main', name:'Egg & vegetable stir fry rice',        protein:'24g', kcal:'480 kcal', time:'12 min', ingredients:'3 eggs + 200g cooked rice + bell pepper + carrot + onion + soy sauce + sesame oil + garlic',          prep:'Stir fry veggies 4 min. Push to side, scramble eggs. Add cold rice and soy sauce. Toss everything.',                  tip:'Cold leftover rice is essential — fresh warm rice turns mushy when fried' },
 
   // ── SNACK extra 20 (191–210) ────────────────────────────────────────────────
-  { id:191, type:'snack', name:'Edamame with sea salt',               protein:'12g', kcal:'180 kcal', time:'5 min',  ingredients:'200g frozen edamame + sea salt + optional chili flakes',                                               prep:'Microwave edamame 3 min or boil 5 min. Drain and sprinkle with salt.',                                                 tip:'One of the cheapest high-protein plant snacks — buy frozen in bulk' },
-  { id:192, type:'snack', name:'Celery & peanut butter boats',        protein:'7g',  kcal:'200 kcal', time:'2 min',  ingredients:'4 celery sticks + 2 tbsp peanut butter + optional raisins',                                           prep:'Fill celery grooves with peanut butter. Add raisins on top for extra sweetness.',                                      tip:'Celery is 95% water — you stay hydrated while snacking' },
   { id:193, type:'snack', name:'Aged cheese & grain crackers',        protein:'14g', kcal:'280 kcal', time:'2 min',  ingredients:'40g aged cheddar or gouda + 6 whole grain crackers + optional pickles or grapes',                    prep:'Slice cheese, arrange on crackers with your choice of accompaniment.',                                                 tip:'Aged cheese has more protein per gram than young or fresh cheese varieties' },
-  { id:194, type:'snack', name:'Date & nut energy balls',             protein:'8g',  kcal:'310 kcal', time:'10 min', ingredients:'8 Medjool dates + 60g mixed nuts + 1 tbsp cocoa + 1 tbsp peanut butter + pinch salt',                prep:'Blend dates and nuts. Add cocoa and PB. Roll into balls. Refrigerate 20 min.',                                         tip:'Freeze half the batch — they taste like chocolate truffles straight from the freezer' },
-  { id:195, type:'snack', name:'Cucumber & hummus bites',             protein:'6g',  kcal:'160 kcal', time:'5 min',  ingredients:'1 large cucumber + 4 tbsp hummus + paprika + olive oil',                                             prep:'Slice cucumber into thick rounds. Top each with hummus and a dusting of paprika.',                                     tip:'Lowest calorie snack on the rotation — great for evenings when calories are tight' },
-  { id:196, type:'snack', name:'Popcorn with nutritional yeast',      protein:'6g',  kcal:'190 kcal', time:'5 min',  ingredients:'30g popping corn + 1 tbsp olive oil + 2 tbsp nutritional yeast + salt',                             prep:'Pop corn in a lidded pan with oil. Toss with nutritional yeast and salt.',                                             tip:'Nutritional yeast gives a cheesy flavor plus B vitamins rare in plant foods' },
-  { id:197, type:'snack', name:'Sunflower seeds & raisins',           protein:'8g',  kcal:'270 kcal', time:'1 min',  ingredients:'30g sunflower seeds + 30g raisins',                                                                  prep:'Mix and eat.',                                                                                                        tip:'Sunflower seeds are rich in vitamin E and magnesium — great for workout recovery' },
-  { id:198, type:'snack', name:'Pistachios & dried apricots',         protein:'8g',  kcal:'300 kcal', time:'1 min',  ingredients:'30g pistachios + 6 dried apricots',                                                                  prep:'Grab and eat. No prep needed.',                                                                                       tip:'Pistachios are the most protein-dense nut by volume — best value per handful' },
-  { id:199, type:'snack', name:'Avocado & salt rice cake',            protein:'4g',  kcal:'240 kcal', time:'3 min',  ingredients:'3 rice cakes + ½ avocado + lemon juice + sea salt + chili flakes',                                  prep:'Mash avocado with lemon. Spread on rice cakes. Season with salt and chili.',                                          tip:'Eat immediately — avocado oxidizes fast once mashed' },
-  { id:200, type:'snack', name:'Mini baked egg cups',                 protein:'18g', kcal:'200 kcal', time:'15 min', ingredients:'4 eggs + salt + pepper + dried herbs + optional cheese or diced vegetables',                        prep:'Oil a muffin tin. Crack one egg per cup, season. Bake 180°C 12 min until just set.',                                  tip:'Batch bake 6 every Sunday — eat cold, no reheating needed all week' },
-  { id:201, type:'snack', name:'Yogurt with hemp seeds',              protein:'18g', kcal:'260 kcal', time:'2 min',  ingredients:'200g plain yogurt + 2 tbsp hemp seeds + 1 tsp honey',                                               prep:'Mix hemp seeds into yogurt, drizzle honey.',                                                                          tip:'Hemp seeds have the ideal omega-3 to omega-6 ratio of any seed' },
-  { id:202, type:'snack', name:'Pear & almond butter',                protein:'5g',  kcal:'250 kcal', time:'2 min',  ingredients:'1 ripe pear + 2 tbsp almond butter',                                                                prep:'Slice pear, dip in almond butter.',                                                                                   tip:'Pears are gentler on digestion than apples — good for sensitive stomachs' },
-  { id:203, type:'snack', name:'Crispy roasted chickpeas',            protein:'10g', kcal:'220 kcal', time:'30 min', ingredients:'1 tin chickpeas + 1 tbsp olive oil + paprika + cumin + salt + garlic powder',                       prep:'Pat chickpeas completely dry. Toss with oil and spices. Roast 200°C 25 min until crunchy.',                            tip:'They must be bone-dry before roasting — any moisture makes them go soft' },
-  { id:204, type:'snack', name:'Banana oat energy bites',             protein:'8g',  kcal:'320 kcal', time:'10 min', ingredients:'2 bananas + 100g oats + 2 tbsp peanut butter + 1 tbsp honey + dark chocolate chips',               prep:'Mash bananas, mix in oats, PB, honey, chips. Roll into balls. Refrigerate 15 min.',                                   tip:'No oven needed — bananas and oats bind together naturally when chilled' },
   { id:205, type:'snack', name:'Mozzarella & tomato skewers',         protein:'10g', kcal:'180 kcal', time:'4 min',  ingredients:'100g fresh mozzarella + 10 cherry tomatoes + basil leaves + olive oil + salt + balsamic',           prep:'Thread mozzarella, tomato and basil alternately on small skewers. Drizzle oil and balsamic.',                          tip:'Mini caprese on a stick — easiest impressive snack you can serve to anyone' },
   { id:206, type:'snack', name:'Tuna on crackers',                    protein:'22g', kcal:'220 kcal', time:'3 min',  ingredients:'1 tin tuna + 6 whole grain crackers + 1 tsp mustard + lemon + pepper',                              prep:'Mix tuna with mustard and lemon. Spoon onto crackers.',                                                                tip:'22g protein for under 220 calories — one of the best protein-to-calorie ratios' },
   { id:207, type:'snack', name:'Banana & tahini drizzle',             protein:'8g',  kcal:'290 kcal', time:'2 min',  ingredients:'1 banana + 1 tbsp tahini + pinch sesame seeds',                                                    prep:'Slice banana, drizzle tahini over, sprinkle sesame seeds.',                                                            tip:'Tahini adds calcium and tryptophan — better sleep aid than plain peanut butter' },
@@ -252,20 +212,7 @@ const MEALS: Meal[] = [
   { id:210, type:'snack', name:'Boiled egg & sriracha',               protein:'12g', kcal:'200 kcal', time:'10 min', ingredients:'2 boiled eggs + sriracha sauce + pinch salt + optional sesame seeds',                              prep:'Boil eggs 8 min. Halve them. Add a few drops of sriracha on each yolk.',                                               tip:'Spice increases metabolism temporarily — good pre-workout snack variation' },
 
   // ── SMOOTHIE extra 20 (211–230) ─────────────────────────────────────────────
-  { id:211, type:'smoothie', name:'Pineapple coconut recovery shake',  protein:'6g',  kcal:'290 kcal', time:'3 min', ingredients:'200g frozen pineapple + 300ml coconut milk + 1 banana + 1cm ginger + pinch turmeric',                prep:'Blend all until smooth.',                                                                                             tip:'Pineapple bromelain is proven to reduce post-workout muscle soreness' },
-  { id:212, type:'smoothie', name:'Blueberry almond milk shake',       protein:'8g',  kcal:'280 kcal', time:'3 min', ingredients:'150g frozen blueberries + 300ml almond milk + 40g oats + 1 tbsp almond butter + 1 tsp honey',       prep:'Blend everything until smooth.',                                                                                     tip:'Blueberries have the highest antioxidant count of any common fruit' },
-  { id:213, type:'smoothie', name:'Kale apple detox blend',            protein:'4g',  kcal:'160 kcal', time:'3 min', ingredients:'2 kale leaves + 2 apples + ½ lemon (juiced) + 1cm ginger + 300ml cold water + ice',               prep:'Blend kale with water first. Add remaining ingredients and blend again.',                                              tip:'Always blend leafy greens with liquid first to fully break them down' },
   { id:214, type:'smoothie', name:'Peach & oat smoothie',              protein:'14g', kcal:'350 kcal', time:'3 min', ingredients:'200g frozen peaches + 200g plain yogurt + 40g oats + 200ml milk + 1 tsp honey + pinch vanilla',    prep:'Blend all until creamy.',                                                                                             tip:'Frozen peaches give a sorbet-like texture far better than fresh for smoothies' },
-  { id:215, type:'smoothie', name:'Espresso banana energy shake',      protein:'16g', kcal:'420 kcal', time:'3 min', ingredients:'2 bananas + 1 shot espresso (cooled) + 300ml milk + 40g oats + 1 tbsp peanut butter',              prep:'Cool espresso first then blend everything together.',                                                                 tip:'Caffeine plus complex oat carbs is the best pre-morning-workout combination' },
-  { id:216, type:'smoothie', name:'Fig & honey smoothie',              protein:'10g', kcal:'380 kcal', time:'3 min', ingredients:'4 figs (fresh or dried soaked) + 200g Greek yogurt + 200ml milk + 1 tbsp honey + pinch cinnamon',  prep:'Blend all until smooth.',                                                                                             tip:'Figs are rich in calcium and iron — rare nutrients in most smoothies' },
-  { id:217, type:'smoothie', name:'Papaya ginger tropical blend',      protein:'5g',  kcal:'200 kcal', time:'3 min', ingredients:'300g papaya + 1 banana + 1cm ginger + juice of 1 lime + 200ml coconut water',                     prep:'Blend all until smooth.',                                                                                             tip:'Papaya enzymes help digest protein — great post-meal or post-workout' },
-  { id:218, type:'smoothie', name:'Cherry banana anti-inflammatory',   protein:'8g',  kcal:'300 kcal', time:'3 min', ingredients:'150g frozen tart cherries + 1 banana + 200ml milk + 1 tbsp cocoa + ½ tsp cinnamon',               prep:'Blend all until smooth.',                                                                                             tip:'Tart cherry is one of the most studied foods for reducing exercise inflammation' },
-  { id:219, type:'smoothie', name:'Tahini date power shake',           protein:'14g', kcal:'450 kcal', time:'3 min', ingredients:'5 Medjool dates + 2 tbsp tahini + 400ml milk + 1 banana + pinch cardamom + cinnamon',              prep:'Soak dates 5 min in warm water then blend everything until smooth.',                                                  tip:'Tahini is 25% protein — richer and nuttier than peanut butter in shakes' },
-  { id:220, type:'smoothie', name:'Blackberry yogurt blend',           protein:'16g', kcal:'340 kcal', time:'3 min', ingredients:'150g frozen blackberries + 200g plain yogurt + 200ml milk + 1 banana + 1 tsp honey',               prep:'Blend all until smooth.',                                                                                             tip:'Blackberries have 3x more vitamin C than oranges by weight' },
-  { id:221, type:'smoothie', name:'Orange carrot immunity boost',      protein:'5g',  kcal:'190 kcal', time:'3 min', ingredients:'3 oranges (juiced) + 2 carrots + 1 banana + 1cm turmeric + 200ml water',                         prep:'Juice or blend all. Strain for a cleaner drink.',                                                                    tip:'Vitamin C from oranges boosts iron absorption from carrots — smart pairing' },
-  { id:222, type:'smoothie', name:'Lemon ginger zing shot',            protein:'3g',  kcal:'100 kcal', time:'3 min', ingredients:'2 lemons (juiced) + 2cm ginger + 1 tsp honey + 1 tsp apple cider vinegar + 200ml water',          prep:'Blend or shake all together. Drink immediately.',                                                                    tip:'Drink this before breakfast on an empty stomach to kick-start digestion' },
-  { id:223, type:'smoothie', name:'Pumpkin spice protein shake',       protein:'12g', kcal:'380 kcal', time:'4 min', ingredients:'3 tbsp pumpkin puree + 300ml milk + 1 banana + 40g oats + 1 tsp pumpkin spice + 1 tsp honey',     prep:'Blend all until smooth and creamy.',                                                                                  tip:'Pumpkin is high in beta-carotene and potassium — great for endurance recovery' },
-  { id:224, type:'smoothie', name:'Melon lime cooler',                 protein:'3g',  kcal:'130 kcal', time:'3 min', ingredients:'400g melon + juice of 1 lime + handful mint + 200ml cold water + ice',                           prep:'Blend everything. Serve immediately over ice.',                                                                      tip:'One of the most hydrating smoothies — perfect before or after cardio in heat' },
   { id:225, type:'smoothie', name:'Matcha banana latte shake',         protein:'8g',  kcal:'280 kcal', time:'3 min', ingredients:'1 tsp matcha powder + 2 bananas + 300ml milk + 1 tbsp honey + pinch vanilla',                     prep:'Dissolve matcha in a splash of hot water first. Add remaining ingredients, blend cold.',                               tip:'Matcha provides sustained caffeine without the espresso jitter spike' },
   { id:226, type:'smoothie', name:'Raspberry & oat shake',             protein:'14g', kcal:'340 kcal', time:'3 min', ingredients:'150g frozen raspberries + 200g plain yogurt + 40g oats + 200ml milk + 1 tsp honey',               prep:'Blend all until smooth.',                                                                                             tip:'Raspberries have the highest fiber content of any common berry' },
   { id:227, type:'smoothie', name:'Avocado & cocoa smoothie',          protein:'10g', kcal:'400 kcal', time:'3 min', ingredients:'1 ripe avocado + 1 tbsp cocoa powder + 400ml milk + 1 banana + 1 tsp honey',                     prep:'Blend all until completely smooth and creamy.',                                                                      tip:'Avocado fat carries the cocoa flavor beautifully — richer than any chocolate milk' },
@@ -273,31 +220,10 @@ const MEALS: Meal[] = [
   { id:229, type:'smoothie', name:'Banana & spirulina power blend',    protein:'14g', kcal:'330 kcal', time:'3 min', ingredients:'2 bananas + 1 tsp spirulina + 300ml milk + 40g oats + 1 tbsp honey',                            prep:'Blend all. Spirulina turns it vivid green — normal and harmless.',                                                    tip:'Spirulina has the highest protein density of any plant food by weight' },
   { id:230, type:'smoothie', name:'Strawberry & chia smoothie',        protein:'10g', kcal:'280 kcal', time:'3 min', ingredients:'150g frozen strawberries + 200g plain yogurt + 2 tbsp chia seeds + 200ml milk + 1 tsp honey',    prep:'Blend all. Let stand 2 min so chia starts to thicken slightly.',                                                     tip:'Chia adds omega-3 and fiber — turns an ordinary smoothie into a functional meal' },
 
-  // ── NIGHT extra 20 (231–250) ────────────────────────────────────────────────
-  { id:231, type:'night', name:'Warm chamomile & honey tea',           protein:'2g',  kcal:'80 kcal',  time:'3 min', ingredients:'1 chamomile tea bag + 300ml hot water + 1 tbsp honey + 1 slice lemon',                             prep:'Brew tea 4 min. Stir in honey and lemon. Sip slowly before bed.',                                                    tip:'Chamomile apigenin binds the same receptors as mild sedatives — genuinely effective' },
-  { id:232, type:'night', name:'Almond butter & banana toast',         protein:'10g', kcal:'320 kcal', time:'3 min', ingredients:'2 slices whole grain bread + 2 tbsp almond butter + ½ banana (sliced)',                          prep:'Toast bread, spread almond butter, top with banana slices.',                                                          tip:'Almond butter has more magnesium than PB — magnesium is critical for sleep quality' },
-  { id:233, type:'night', name:'Cottage cheese & chives bowl',         protein:'20g', kcal:'160 kcal', time:'2 min', ingredients:'250g cottage cheese + 1 tbsp chives + pinch salt + pepper + drizzle olive oil',                  prep:'Season cottage cheese with chives, salt, pepper and a tiny drizzle of oil.',                                         tip:'Pure casein with almost no carbs — ideal night protein when cutting calories' },
-  { id:234, type:'night', name:'Tuna & cucumber bites',                protein:'22g', kcal:'180 kcal', time:'5 min', ingredients:'1 tin tuna + 1 cucumber + 1 tbsp Greek yogurt + lemon + dill + salt',                           prep:'Mix tuna with yogurt, lemon and dill. Slice cucumber into rounds. Spoon mix onto each.',                              tip:'Prep the tuna mix the night before — even better after sitting in the fridge' },
-  { id:235, type:'night', name:'Warm banana cinnamon mash',            protein:'4g',  kcal:'200 kcal', time:'3 min', ingredients:'1 banana + pinch cinnamon + 1 tsp honey + 1 tbsp crushed walnuts',                              prep:'Mash banana with a fork. Warm 20 sec in microwave. Top with cinnamon, honey and walnuts.',                           tip:'Warm banana releases more tryptophan than cold — genuinely helps sleep' },
-  { id:236, type:'night', name:'Kefir & honey glass',                  protein:'8g',  kcal:'170 kcal', time:'1 min', ingredients:'250ml plain kefir + 1 tsp honey',                                                               prep:'Pour kefir into a glass. Stir in honey. Drink slowly.',                                                              tip:'Kefir has more probiotic strains than yogurt — best for overnight gut repair' },
-  { id:237, type:'night', name:'Dark chocolate & almonds',             protein:'6g',  kcal:'270 kcal', time:'1 min', ingredients:'20g dark chocolate (70%+) + 20g almonds',                                                       prep:'No prep. Eat slowly and mindfully.',                                                                                 tip:'Eating slowly makes this portion genuinely satisfying — do not rush it' },
-  { id:238, type:'night', name:'Tahini & honey crispbread',            protein:'8g',  kcal:'260 kcal', time:'2 min', ingredients:'3 rye crispbreads + 1 tbsp tahini + 1 tsp honey + pinch sesame seeds',                         prep:'Spread tahini on crispbreads, drizzle honey, sprinkle sesame seeds.',                                                tip:'Tahini tryptophan converts to serotonin and then melatonin — genuine sleep food' },
-  { id:239, type:'night', name:'Light blended tomato soup',            protein:'6g',  kcal:'180 kcal', time:'8 min', ingredients:'400g crushed tomatoes + 1 garlic clove + 1 tbsp olive oil + basil + salt + pepper',             prep:'Heat garlic in oil 1 min. Add tomatoes, season, simmer 5 min. Blend smooth.',                                        tip:'Warm liquids before bed promote physical and mental relaxation' },
-  { id:240, type:'night', name:'Ricotta & berry toast',                protein:'12g', kcal:'310 kcal', time:'4 min', ingredients:'2 slices whole grain toast + 80g ricotta + 100g mixed berries + 1 tsp honey',                  prep:'Toast bread, spread ricotta, top with berries and a honey drizzle.',                                                 tip:'Ricotta casein digests slowly overnight — better than cream cheese for muscle repair' },
-  { id:241, type:'night', name:'Melon & mint plate',                   protein:'3g',  kcal:'100 kcal', time:'3 min', ingredients:'½ melon (cantaloupe or honeydew) + handful fresh mint + juice of ½ lime',                      prep:'Slice melon, arrange on plate with mint and lime squeeze.',                                                          tip:'One of the most hydrating night snacks — great after heavy cardio training days' },
-  { id:242, type:'night', name:'Steamed broccoli with parmesan',       protein:'10g', kcal:'160 kcal', time:'8 min', ingredients:'200g broccoli florets + 20g grated parmesan + olive oil + garlic + salt',                      prep:'Steam broccoli 5 min. Drizzle oil, rub with garlic, top with parmesan.',                                             tip:'Broccoli has more protein per calorie than almost any vegetable' },
-  { id:243, type:'night', name:'Egg white & spinach scramble',         protein:'20g', kcal:'180 kcal', time:'5 min', ingredients:'5 egg whites + 2 handfuls spinach + olive oil + salt + pepper + pinch nutmeg',                  prep:'Sauté spinach 1 min. Add egg whites, scramble gently on low heat until just set.',                                   tip:'Zero fat, almost zero carbs, 20g protein — the purest night protein option' },
-  { id:244, type:'night', name:'Warm lemon honey water',               protein:'0g',  kcal:'40 kcal',  time:'2 min', ingredients:'300ml warm water + juice of ½ lemon + 1 tbsp honey',                                           prep:'Mix in a mug. Drink warm before bed.',                                                                               tip:'Perfect when dinner was heavy and you need something that feels like a snack' },
-  { id:245, type:'night', name:'Oat milk cinnamon latte',              protein:'6g',  kcal:'160 kcal', time:'5 min', ingredients:'300ml oat milk + ½ tsp cinnamon + 1 tsp honey + pinch cardamom + pinch nutmeg',                prep:'Warm oat milk gently. Stir in all spices and honey. Froth if you like.',                                             tip:'Blend of spices all support sleep — cinnamon, cardamom and nutmeg together' },
-  { id:246, type:'night', name:'Warm ginger lemon shot',               protein:'0g',  kcal:'30 kcal',  time:'3 min', ingredients:'300ml warm water + 2cm ginger (grated) + juice of 1 lemon + 1 tsp honey',                     prep:'Steep grated ginger in warm water 3 min. Add lemon and honey. Strain and drink.',                                    tip:'Anti-inflammatory before sleep — especially good on heavy training days' },
-  { id:247, type:'night', name:'Greek yogurt & pistachio bowl',        protein:'18g', kcal:'310 kcal', time:'2 min', ingredients:'200g Greek yogurt + 25g pistachios + 1 tsp honey + pinch cinnamon',                            prep:'Spoon yogurt into a bowl, top with crushed pistachios, honey and cinnamon.',                                         tip:'Pistachios contain melatonin — one of very few foods that directly supplies it' },
-  { id:248, type:'night', name:'Egg salad on rye crackers',            protein:'16g', kcal:'240 kcal', time:'5 min', ingredients:'2 boiled eggs + 1 tsp mayo + 1 tsp mustard + chives + 4 rye crackers + salt + pepper',         prep:'Mash boiled eggs with mayo, mustard, chives. Season. Spoon onto crackers.',                                          tip:'Batch make egg salad on Sunday — keeps 3 days refrigerated in a sealed jar' },
-  { id:249, type:'night', name:'Warm peanut butter milk',              protein:'12g', kcal:'280 kcal', time:'4 min', ingredients:'300ml whole milk + 1 tbsp peanut butter + 1 tsp honey + pinch cinnamon',                      prep:'Warm milk until steaming. Blend in peanut butter, honey and cinnamon.',                                              tip:'PB fat slows milk protein absorption — slow sustained release through the night' },
-  { id:250, type:'night', name:'Cherry & walnut bowl',                 protein:'6g',  kcal:'250 kcal', time:'2 min', ingredients:'150g fresh or frozen cherries + 25g walnuts + 1 tsp honey',                                   prep:'Thaw cherries if frozen. Serve in a bowl with walnuts and honey.',                                                   tip:'Cherries are one of few natural food sources of melatonin — backed by sleep research' },
 ]
 
 
-const MEAL_FILTERS = ['ALL', 'breakfast', 'main', 'snack', 'smoothie', 'night']
+const MEAL_FILTERS = ['ALL', 'breakfast', 'main', 'snack', 'smoothie']
 const RECIPE_CATS = ['ALL', 'breakfast', 'lunch', 'dinner', 'snack']
 const catColor: Record<string, string> = { breakfast: '#d97706', lunch: '#2d6a4f', dinner: '#6b4226', snack: '#40916c' }
 const empty = { title: '', description: '', ingredients: '', instructions: '', prepTime: '', cookTime: '', servings: '', category: 'lunch' }
@@ -309,13 +235,78 @@ export default function FoodPage() {
     main:      { label: t.typeMain,      emoji: '🍽️', color: '#2d6a4f', bg: '#d8f3dc' },
     snack:     { label: t.typeSnack,     emoji: '🍎', color: '#6b4226', bg: '#f0e8d8' },
     smoothie:  { label: t.typeSmoothie,  emoji: '🥤', color: '#40916c', bg: '#d8f3dc' },
-    night:     { label: t.typeNight,     emoji: '🌙', color: '#1a3a1a', bg: '#e8dcc8' },
   }
 
-  const [tab, setTab] = useState<'rotation' | 'recipes' | 'week'>('rotation')
+  const [tab, setTab] = useState<'rotation' | 'recipes' | 'week' | 'videos' | 'list'>('rotation')
+
+  // ── Week schedule state ──────────────────────────────────────────────────
+  const [weekSchedule, setWeekSchedule] = useState<WeekSchedule>(emptySchedule)
+  const [picker, setPicker] = useState<{ day: string; slot: SlotKey } | null>(null)
+  const [pickerTab, setPickerTab] = useState<'rotation' | 'recipes' | 'custom'>('rotation')
+  const [pickerSearch, setPickerSearch] = useState('')
+  const [customMeal, setCustomMeal] = useState('')
+  const [shoppingList, setShoppingList] = useState<string[]>([])
+  const [shoppingModal, setShoppingModal] = useState(false)
+  const [shoppingChecked, setShoppingChecked] = useState<Set<number>>(new Set())
+  const [shoppingCopied, setShoppingCopied] = useState(false)
+
+  // ── Buy list (persistent tab) ─────────────────────────────────────────────
+  const [buyItems, setBuyItems] = useState<{ text: string; checked: boolean }[]>([])
+  const [buyInput, setBuyInput] = useState('')
+  const [buyAdding, setBuyAdding] = useState(false)
+  const [buyConfirmIdx, setBuyConfirmIdx] = useState<number | null>(null)
+  const [buyCopied, setBuyCopied] = useState(false)
+  const buyInputRef = useRef<HTMLInputElement>(null)
+  const [syncingCloud, setSyncingCloud] = useState(false)
+  const [syncDone, setSyncDone] = useState(false)
+
+  const forceSyncToCloud = async () => {
+    setSyncingCloud(true)
+    try {
+      // Push week schedule
+      await fetch('/api/week-schedule', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: JSON.stringify(weekSchedule) }) })
+      // Push buy list
+      await fetch('/api/buy-list', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: JSON.stringify(buyItems) }) })
+      // Push preferences
+      await fetch('/api/preferences', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'hiddenMeals', value: JSON.stringify([...hiddenMeals]) }) })
+      await fetch('/api/preferences', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'favoriteMeals', value: JSON.stringify([...favoriteMeals]) }) })
+      await fetch('/api/preferences', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'weekPlan', value: JSON.stringify([...weekPlan]) }) })
+      await fetch('/api/preferences', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'hiddenEditBadges', value: JSON.stringify([...hiddenEditBadges]) }) })
+      setSyncDone(true)
+      setTimeout(() => setSyncDone(false), 3000)
+    } catch {}
+    setSyncingCloud(false)
+  }
+  const saveBuy = (items: { text: string; checked: boolean }[]) => {
+    setBuyItems(items)
+    fetch('/api/buy-list', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: JSON.stringify(items) }) }).catch(() => {})
+  }
+  const addBuyItem = () => {
+    const v = buyInput.trim()
+    if (!v) return
+    saveBuy([...buyItems, { text: v, checked: false }])
+    setBuyInput('')
+    setBuyAdding(false)
+  }
+  const toggleBuyItem = (i: number) => {
+    const next = buyItems.map((it, idx) => idx === i ? { ...it, checked: !it.checked } : it)
+    saveBuy(next)
+  }
+  const deleteBuyItem = (i: number) => { saveBuy(buyItems.filter((_, idx) => idx !== i)); setBuyConfirmIdx(null) }
+  const clearCheckedBuy = () => saveBuy(buyItems.filter(it => !it.checked))
+
+  // ── Food videos state ────────────────────────────────────────────────────────
+  type FoodVideoEntry = { id: number | string; name: string; url: string; types: string[] }
+  const [foodVideos, setFoodVideos] = useState<FoodVideoEntry[]>([])
+  const [addingFV, setAddingFV] = useState(false)
+  const [fvForm, setFvForm] = useState({ name: '', url: '', types: [] as string[] })
+  const [fvUrlStatus, setFvUrlStatus] = useState<'idle' | 'ok' | 'bad'>('idle')
 
   const [mealFilter, setMealFilter] = useState('ALL')
   const [mealDetail, setMealDetail] = useState<Meal | null>(null)
+  const [mealEditForm, setMealEditForm] = useState<Meal | null>(null)
+  const [mealOverrides, setMealOverrides] = useState<Record<number, Partial<Meal>>>({})
+  const [hiddenEditBadges, setHiddenEditBadges] = useState<Set<number>>(new Set())
   const [selecting, setSelecting] = useState(false)
   const [selectedMeals, setSelectedMeals] = useState<Set<number>>(new Set())
   const [groceryModal, setGroceryModal] = useState(false)
@@ -324,6 +315,7 @@ export default function FoodPage() {
   const [favoriteMeals, setFavoriteMeals] = useState<Set<number>>(new Set())
   const [weekPlan, setWeekPlan] = useState<Set<number>>(new Set())
   const [weekGroceryModal, setWeekGroceryModal] = useState(false)
+  const [weekCellDetail, setWeekCellDetail] = useState<{ id: string; name: string } | null>(null)
   const [weekChecked, setWeekChecked] = useState<Set<number>>(new Set())
 
   const [recipes, setRecipes] = useState<Recipe[]>([])
@@ -331,22 +323,118 @@ export default function FoodPage() {
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState(empty)
   const [editing, setEditing] = useState<number | null>(null)
-  const [detail, setDetail] = useState<Recipe | null>(null)
+  const [inlineForm, setInlineForm] = useState(empty)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiIngredients, setAiIngredients] = useState('')
   const [saving, setSaving] = useState(false)
+  const [inlineSaving, setInlineSaving] = useState(false)
 
   const load = () => fetch('/api/food').then(r => r.json()).then(setRecipes)
   useEffect(() => {
     load()
-    try {
-      setHiddenMeals(new Set(JSON.parse(localStorage.getItem('hiddenMeals') || '[]')))
-      setFavoriteMeals(new Set(JSON.parse(localStorage.getItem('favoriteMeals') || '[]')))
-      setWeekPlan(new Set(JSON.parse(localStorage.getItem('weekPlan') || '[]')))
-    } catch {}
+    fetch('/api/meal-overrides')
+      .then(r => r.json())
+      .then((data: Record<string, { name?: string; type?: string; protein?: string; kcal?: string; time?: string; ingredients?: string; prep?: string; tip?: string }>) => {
+        const parsed: Record<number, Partial<Meal>> = {}
+        Object.entries(data).forEach(([key, val]) => { parsed[Number(key)] = val })
+        setMealOverrides(parsed)
+      })
+      .catch(() => {})
+    // ── Load prefs from DB, migrate from localStorage if DB is empty ──
+    fetch('/api/preferences?keys=hiddenMeals,favoriteMeals,weekPlan,hiddenEditBadges')
+      .then(r => r.json())
+      .then((prefs: Record<string, string>) => {
+        const migrate = (key: string, lsKey: string, setter: (s: Set<number>) => void) => {
+          const dbVal = JSON.parse(prefs[key] || '[]') as number[]
+          if (dbVal.length === 0) {
+            // DB empty — try migrate from localStorage
+            try {
+              const lsRaw = localStorage.getItem(lsKey)
+              if (lsRaw) {
+                const lsVal = JSON.parse(lsRaw) as number[]
+                if (lsVal.length > 0) {
+                  setter(new Set(lsVal))
+                  fetch('/api/preferences', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key, value: JSON.stringify(lsVal) }) }).catch(() => {})
+                  return
+                }
+              }
+            } catch {}
+          }
+          setter(new Set(dbVal))
+        }
+        migrate('hiddenMeals',     'hiddenMeals',     setHiddenMeals)
+        migrate('favoriteMeals',   'favoriteMeals',   setFavoriteMeals)
+        migrate('weekPlan',        'weekPlan',        setWeekPlan)
+        migrate('hiddenEditBadges','hiddenEditBadges', setHiddenEditBadges)
+      }).catch(() => {})
+
+    // ── Load week schedule from DB, migrate from localStorage if DB is empty ──
+    fetch('/api/week-schedule').then(r => r.json()).then(({ data }) => {
+      try {
+        const parsed = JSON.parse(data)
+        const isEmpty = !parsed || Object.keys(parsed).length === 0
+        if (isEmpty) {
+          const lsRaw = localStorage.getItem('week-schedule-v2')
+          if (lsRaw) {
+            const lsParsed = JSON.parse(lsRaw)
+            setWeekSchedule(lsParsed)
+            fetch('/api/week-schedule', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: lsRaw }) }).catch(() => {})
+            return
+          }
+        }
+        if (parsed && typeof parsed === 'object') setWeekSchedule(parsed)
+      } catch {}
+    }).catch(() => {})
+
+    // ── Load buy list from DB, migrate from localStorage if DB is empty ──
+    fetch('/api/buy-list').then(r => r.json()).then(({ items }) => {
+      try {
+        const parsed = JSON.parse(items)
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+          const lsRaw = localStorage.getItem('food-buy-list')
+          if (lsRaw) {
+            const lsParsed = JSON.parse(lsRaw)
+            if (Array.isArray(lsParsed) && lsParsed.length > 0) {
+              setBuyItems(lsParsed)
+              fetch('/api/buy-list', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: lsRaw }) }).catch(() => {})
+              return
+            }
+          }
+        }
+        if (Array.isArray(parsed)) setBuyItems(parsed)
+      } catch {}
+    }).catch(() => {})
+    fetch('/api/food-videos').then(r => r.json()).then(setFoodVideos).catch(() => {})
   }, [])
 
-  const visibleMeals = useMemo(() => MEALS.filter(m => !hiddenMeals.has(m.id)), [hiddenMeals])
+  const savePref = (key: string, value: unknown[]) =>
+    fetch('/api/preferences', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key, value: JSON.stringify(value) }) }).catch(() => {})
+
+  const getMeal = (m: Meal): Meal => ({ ...m, ...mealOverrides[m.id] })
+
+  const openMealEdit = (m: Meal) => {
+    const meal = getMeal(m)
+    setMealEditForm({ ...meal, ingredients: splitIngredients(meal.ingredients).join('\n') })
+  }
+
+  const saveMealEdit = async () => {
+    if (!mealEditForm) return
+    const { id } = mealEditForm
+    await fetch('/api/meal-overrides', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mealId: id, ...mealEditForm }),
+    })
+    const nextOverrides = { ...mealOverrides, [id]: mealEditForm }
+    setMealOverrides(nextOverrides)
+    const nextBadges = new Set(hiddenEditBadges)
+    nextBadges.delete(id)
+    setHiddenEditBadges(nextBadges)
+    savePref('hiddenEditBadges', [...nextBadges])
+    setMealEditForm(null)
+  }
+
+  const visibleMeals = useMemo(() => MEALS.filter(m => !hiddenMeals.has(m.id)).map(getMeal), [hiddenMeals, mealOverrides])
 
   const filteredMeals = useMemo(() => {
     if (mealFilter === 'favs') return visibleMeals.filter(m => favoriteMeals.has(m.id))
@@ -366,10 +454,19 @@ export default function FoodPage() {
     await fetch(editing ? `/api/food/${editing}` : '/api/food', { method: editing ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
     await load(); setModal(false); setSaving(false)
   }
+  const saveInline = async () => {
+    if (!inlineForm.title.trim()) return
+    setInlineSaving(true)
+    const payload = { ...inlineForm, ingredients: inlineForm.ingredients.split('\n').filter(Boolean) }
+    await fetch('/api/food', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+    await load()
+    setInlineForm(empty)
+    setInlineSaving(false)
+  }
+
   const del = async (id: number) => {
     if (!confirm(t.deleteRecipe)) return
     await fetch(`/api/food/${id}`, { method: 'DELETE' }); await load()
-    if (detail?.id === id) setDetail(null)
   }
   const generateAI = async () => {
     if (!aiIngredients.trim()) return
@@ -377,15 +474,14 @@ export default function FoodPage() {
     try {
       const r = await fetch('/api/ai', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'recipe', data: { ingredients: aiIngredients } }) })
       const data = await r.json()
-      setForm({ title: data.title || '', description: data.description || '', ingredients: (data.ingredients || []).join('\n'), instructions: data.instructions || '', prepTime: String(data.prepTime || ''), cookTime: String(data.cookTime || ''), servings: String(data.servings || ''), category: data.category || 'lunch' })
-      setEditing(null); setModal(true)
+      setInlineForm({ title: data.title || '', description: data.description || '', ingredients: (data.ingredients || []).join('\n'), instructions: data.instructions || '', prepTime: String(data.prepTime || ''), cookTime: String(data.cookTime || ''), servings: String(data.servings || ''), category: data.category || 'lunch' })
     } catch { alert(t.aiFailed) }
     setAiLoading(false)
   }
 
   const deleteMeal = (id: number) => {
     const next = new Set(hiddenMeals); next.add(id)
-    setHiddenMeals(next); localStorage.setItem('hiddenMeals', JSON.stringify([...next]))
+    setHiddenMeals(next); savePref('hiddenMeals', [...next])
     setMealDetail(null)
   }
 
@@ -393,7 +489,7 @@ export default function FoodPage() {
     e.stopPropagation()
     const next = new Set(favoriteMeals)
     if (next.has(id)) next.delete(id); else next.add(id)
-    setFavoriteMeals(next); localStorage.setItem('favoriteMeals', JSON.stringify([...next]))
+    setFavoriteMeals(next); savePref('favoriteMeals', [...next])
   }
 
   const mealCountByType = (type: string) => visibleMeals.filter(m => m.type === type).length
@@ -407,13 +503,59 @@ export default function FoodPage() {
     })
   }
 
+  const splitIngredients = (str: string) =>
+    str.split(/\n|\s\+\s/).map(i => i.trim()).filter(Boolean)
+
+  const UNITS_RX = /^(ml|cl|l|g|kg|tbsp|tsp|cups?|pieces?|slices?|handful|handfuls|pinch|cloves?|cans?|sticks?|oz|lbs?|bunch|tranches?)\b\s*/i
+
+  const parseIngredient = (raw: string) => {
+    const s = raw.trim()
+    // leading number: int, decimal, or fraction (e.g. 1/2)
+    const numM = s.match(/^(\d+(?:[.,]\d+)?|\d+\/\d+)\s*/)
+    let qty: number | null = null
+    let after = s
+    if (numM) {
+      const n = numM[1]
+      qty = n.includes('/') ? Number(n.split('/')[0]) / Number(n.split('/')[1]) : parseFloat(n.replace(',', '.'))
+      after = s.slice(numM[0].length)
+    }
+    const unitM = after.match(UNITS_RX)
+    let unit = ''
+    if (unitM) { unit = unitM[1].toLowerCase().replace(/s$/, ''); after = after.slice(unitM[0].length) }
+    return { qty, unit, baseName: after.toLowerCase().trim() }
+  }
+
+  const groupIngredients = (raw: string[]): { name: string; count: number }[] => {
+    const map = new Map<string, { qty: number | null; unit: string; baseName: string; count: number }>()
+    raw.forEach(r => {
+      const { qty, unit, baseName } = parseIngredient(r)
+      const key = `${baseName}__${unit}`
+      const ex = map.get(key)
+      if (ex) {
+        if (qty !== null && ex.qty !== null) ex.qty += qty
+        else ex.count++
+      } else {
+        map.set(key, { qty, unit, baseName, count: 1 })
+      }
+    })
+    return Array.from(map.values())
+      .sort((a, b) => a.baseName.localeCompare(b.baseName))
+      .map(({ qty, unit, baseName, count }) => {
+        if (qty !== null) {
+          const qStr = Number.isInteger(qty) ? String(qty) : qty.toFixed(1)
+          return { name: `${qStr}${unit ? ' ' + unit : ''} ${baseName}`.trim(), count: 1 }
+        }
+        return { name: baseName, count }
+      })
+  }
+
   const groceryItems = useMemo(() => {
     const raw: string[] = []
     MEALS.filter(m => selectedMeals.has(m.id)).forEach(m => {
-      m.ingredients.split(' + ').forEach(i => raw.push(i.trim()))
+      splitIngredients(getMeal(m).ingredients).forEach(i => raw.push(i))
     })
-    return raw.sort((a, b) => a.localeCompare(b))
-  }, [selectedMeals])
+    return groupIngredients(raw)
+  }, [selectedMeals, mealOverrides])
 
   const openGrocery = () => { setCheckedItems(new Set()); setGroceryModal(true) }
   const toggleCheck = (i: number) => setCheckedItems(prev => {
@@ -424,51 +566,81 @@ export default function FoodPage() {
   const saveToWeek = () => {
     const next = new Set([...weekPlan, ...selectedMeals])
     setWeekPlan(next)
-    localStorage.setItem('weekPlan', JSON.stringify([...next]))
+    savePref('weekPlan', [...next])
     exitSelect()
   }
   const removeFromWeek = (id: number) => {
     const next = new Set(weekPlan); next.delete(id)
     setWeekPlan(next)
-    localStorage.setItem('weekPlan', JSON.stringify([...next]))
+    savePref('weekPlan', [...next])
   }
-  const clearWeekPlan = () => {
-    setWeekPlan(new Set())
-    localStorage.removeItem('weekPlan')
+  // ── Week schedule helpers ────────────────────────────────────────────────
+  const saveWeekSchedule = (next: WeekSchedule) => {
+    setWeekSchedule(next)
+    fetch('/api/week-schedule', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: JSON.stringify(next) }) }).catch(() => {})
+  }
+  const setCell = (day: string, slot: SlotKey, entry: ScheduleEntry) => {
+    const next = { ...weekSchedule, [day]: { ...weekSchedule[day], [slot]: entry } }
+    saveWeekSchedule(next)
+    setPicker(null); setPickerSearch(''); setCustomMeal('')
+  }
+  const clearCell = (day: string, slot: SlotKey) => setCell(day, slot, null)
+  const openPicker = (day: string, slot: SlotKey) => {
+    setPicker({ day, slot }); setPickerTab('rotation'); setPickerSearch(''); setCustomMeal('')
   }
 
-  const weekMeals = useMemo(() => MEALS.filter(m => weekPlan.has(m.id)), [weekPlan])
+  const clearWeekPlan = () => {
+    setWeekPlan(new Set())
+    savePref('weekPlan', [])
+  }
+
+  const weekMeals = useMemo(() => MEALS.filter(m => weekPlan.has(m.id)).map(getMeal), [weekPlan, mealOverrides])
   const weekGroceryItems = useMemo(() => {
     const raw: string[] = []
-    weekMeals.forEach(m => m.ingredients.split(' + ').forEach(i => raw.push(i.trim())))
-    return raw.sort((a, b) => a.localeCompare(b))
+    weekMeals.forEach(m => splitIngredients(m.ingredients).forEach(i => raw.push(i)))
+    return groupIngredients(raw)
   }, [weekMeals])
 
   return (
     <div>
+      {/* ── Hero last activity ── */}
+      {recipes.length > 0 && (
+        <div className="rounded-2xl p-5 mb-5 relative overflow-hidden"
+          style={{ background: 'linear-gradient(135deg, var(--t-hero-from) 0%, var(--t-hero-mid) 55%, var(--t-hero-to) 100%)' }}>
+          <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.07)' }} />
+          <span className="inline-block text-xs font-bold uppercase tracking-widest px-2.5 py-1 rounded-full mb-3"
+            style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'var(--t-hero-text)' }}>
+            🥗 Dernière recette
+          </span>
+          <p className="text-white font-bold text-lg leading-snug mb-1">{recipes[0].title}</p>
+          <p className="text-sm" style={{ color: 'var(--t-hero-text)' }}>{recipes[0].category} · {recipes[0].prepTime + recipes[0].cookTime} min · {recipes[0].servings} pers.</p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between gap-3 mb-5">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: '#1a3a1a' }}>🥗 {t.foodPlan}</h1>
-          <p className="text-xs sm:text-sm mt-0.5" style={{ color: '#8b5e3c' }}>
-            {tab === 'rotation' ? t.mealsSubtitle(MEALS.length) : tab === 'week' ? t.weekSubtitle(weekPlan.size) : t.recipesSubtitle(recipes.length)}
+          <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: 'var(--t-text-main)' }}>🥗 {t.foodPlan}</h1>
+          <p className="text-xs sm:text-sm mt-0.5" style={{ color: 'var(--t-text-muted)' }}>
+            {tab === 'rotation' ? t.mealsSubtitle(MEALS.length + recipes.length) : tab === 'week' ? t.weekSubtitle(weekPlan.size) : tab === 'recipes' ? 'Ajouter une recette à la rotation' : tab === 'list' ? `${buyItems.length} articles · ${buyItems.filter(i => i.checked).length} cochés` : t.recipesSubtitle(recipes.length)}
           </p>
         </div>
-        {tab === 'recipes' && (
-          <button onClick={openAdd} className="btn-glass btn-glass-green px-4 py-2.5 rounded-xl text-sm font-medium">{t.addRecipe}</button>
-        )}
       </div>
 
       {/* Main tabs */}
-      <div className="flex gap-2 mb-5">
-        {[{ key: 'rotation', label: t.mealRotation }, { key: 'week', label: t.weekTab }, { key: 'recipes', label: t.myRecipes }].map(tb => (
-          <button key={tb.key} onClick={() => setTab(tb.key as 'rotation' | 'recipes' | 'week')}
-            className="px-4 py-2 rounded-xl text-sm font-medium transition-all relative"
-            style={{ backgroundColor: tab === tb.key ? '#2d6a4f' : '#f0e8d8', color: tab === tb.key ? '#fff' : '#6b4226' }}>
+      <div className="flex gap-2 mb-5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+        {[{ key: 'rotation', label: t.mealRotation }, { key: 'week', label: t.weekTab }, { key: 'recipes', label: t.myRecipes }, { key: 'videos', label: '🎬 Vidéos' }, { key: 'list', label: '🛒 Liste' }].map(tb => (
+          <button key={tb.key} onClick={() => setTab(tb.key as 'rotation' | 'recipes' | 'week' | 'videos' | 'list')}
+            className="px-4 py-2 rounded-xl text-sm font-medium transition-all relative whitespace-nowrap"
+            style={{ backgroundColor: tab === tb.key ? '#2d6a4f' : 'var(--t-item-bg)', color: tab === tb.key ? '#fff' : 'var(--t-text-muted)' }}>
             {tb.label}
             {tb.key === 'week' && weekPlan.size > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-white flex items-center justify-center font-bold"
-                style={{ backgroundColor: '#c0303e', fontSize: '9px' }}>{weekPlan.size}</span>
+              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full font-bold ml-1 align-middle"
+                style={{ backgroundColor: '#c0303e', color: '#fff', fontSize: '9px' }}>{weekPlan.size}</span>
+            )}
+            {tb.key === 'list' && buyItems.filter(i => !i.checked).length > 0 && (
+              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full font-bold ml-1 align-middle"
+                style={{ backgroundColor: '#c0303e', color: '#fff', fontSize: '9px' }}>{buyItems.filter(i => !i.checked).length}</span>
             )}
           </button>
         ))}
@@ -487,7 +659,7 @@ export default function FoodPage() {
                 return (
                   <button key={f} onClick={() => setMealFilter(f)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all"
-                    style={{ backgroundColor: active ? (meta?.color ?? '#1a3a1a') : '#f0e8d8', color: active ? '#fff' : '#6b4226' }}>
+                    style={{ backgroundColor: active ? (meta?.color ?? '#1a3a1a') : 'var(--t-item-bg)', color: active ? '#fff' : 'var(--t-text-muted)' }}>
                     {meta ? `${meta.emoji} ${meta.label}` : 'ALL'}
                     <span className="text-xs opacity-75">({count})</span>
                   </button>
@@ -501,12 +673,25 @@ export default function FoodPage() {
                 <span className="text-xs opacity-75">({favoriteMeals.size})</span>
               </button>
             </div>
+            {Object.keys(mealOverrides).some(id => !hiddenEditBadges.has(Number(id))) && (
+              <button
+                onClick={() => {
+                  const allEdited = new Set(Object.keys(mealOverrides).map(Number))
+                  setHiddenEditBadges(allEdited)
+                  savePref('hiddenEditBadges', [...allEdited])
+                }}
+                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all border"
+                style={{ backgroundColor: 'var(--t-card-bg)', color: 'var(--t-text-muted)', borderColor: 'var(--t-border-soft)' }}
+                title="Réinitialiser les modifications">
+                🔄 Reset
+              </button>
+            )}
             <button
               onClick={() => selecting ? exitSelect() : setSelecting(true)}
               className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all border"
               style={selecting
                 ? { backgroundColor: '#2d6a4f', color: '#fff', borderColor: '#2d6a4f' }
-                : { backgroundColor: '#fff', color: '#2d6a4f', borderColor: '#2d6a4f' }}>
+                : { backgroundColor: 'var(--t-card-bg)', color: '#2d6a4f', borderColor: '#2d6a4f' }}>
               🛒 {selecting ? t.selectCancel : t.selectLabel}
             </button>
           </div>
@@ -516,35 +701,43 @@ export default function FoodPage() {
             {filteredMeals.map(m => {
               const meta = TYPE_META[m.type]
               const isSelected = selectedMeals.has(m.id)
+              const isEdited = !!mealOverrides[m.id] && !hiddenEditBadges.has(m.id)
               return (
                 <div key={m.id}
                   className="rounded-2xl border-2 p-4 shadow-sm cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5 active:scale-95 relative"
                   style={{
-                    backgroundColor: isSelected ? '#f0faf2' : '#fff',
-                    borderColor: isSelected ? '#2d6a4f' : '#e8dcc8',
+                    backgroundColor: isSelected ? 'var(--t-item-bg)' : 'var(--t-card-bg)',
+                    borderColor: isSelected ? '#2d6a4f' : 'var(--t-border-soft)',
                     boxShadow: isSelected ? '0 0 0 1px #2d6a4f' : undefined,
                   }}
-                  onClick={e => selecting ? toggleMealSelect(m.id, e) : setMealDetail(m)}>
-                  {/* Fav button (always visible) / Checkbox (select mode) */}
+                  onClick={e => selecting ? toggleMealSelect(m.id, e) : openMealEdit(m)}>
                   <div className="absolute top-3 right-3">
                     {selecting ? (
                       <div className="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all"
-                        style={{ backgroundColor: isSelected ? '#2d6a4f' : '#fff', borderColor: isSelected ? '#2d6a4f' : '#c4a882' }}>
+                        style={{ backgroundColor: isSelected ? '#2d6a4f' : 'var(--t-card-bg)', borderColor: isSelected ? '#2d6a4f' : '#c4a882' }}>
                         {isSelected && <span className="text-white text-xs font-bold">✓</span>}
                       </div>
                     ) : (
                       <button onClick={e => toggleFav(m.id, e)}
                         className="w-7 h-7 rounded-full flex items-center justify-center transition-all"
-                        style={{ backgroundColor: favoriteMeals.has(m.id) ? '#fde8ec' : '#f0e8d8' }}>
+                        style={{ backgroundColor: favoriteMeals.has(m.id) ? '#fde8ec' : 'var(--t-item-bg)' }}>
                         <span style={{ fontSize: 14 }}>{favoriteMeals.has(m.id) ? '❤️' : '🤍'}</span>
                       </button>
                     )}
                   </div>
-                  <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full mb-3"
-                    style={{ backgroundColor: meta.bg, color: meta.color }}>
-                    {meta.emoji} {meta.label}
-                  </span>
-                  <h3 className="font-semibold text-sm sm:text-base leading-snug mb-3 pr-6" style={{ color: '#1a3a1a' }}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full"
+                      style={{ backgroundColor: meta.bg, color: meta.color }}>
+                      {meta.emoji} {meta.label}
+                    </span>
+                    {isEdited && (
+                      <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: '#ede9fe', color: '#7c3aed' }}>
+                        ✏️ edited
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="font-semibold text-sm sm:text-base leading-snug mb-3 pr-6" style={{ color: 'var(--t-text-main)' }}>
                     {m.name}
                   </h3>
                   <div className="flex flex-wrap gap-2">
@@ -561,122 +754,410 @@ export default function FoodPage() {
                 </div>
               )
             })}
+
+            {/* ── User recipes in rotation ── */}
+            {(mealFilter === 'ALL'
+              ? recipes
+              : recipes.filter(r => {
+                  if (mealFilter === 'main') return ['lunch','dinner'].includes(r.category)
+                  if (mealFilter === 'favs') return false
+                  return r.category === mealFilter
+                })
+            ).map(r => {
+              const rMeta = TYPE_META[r.category] ?? TYPE_META[['lunch','dinner'].includes(r.category) ? 'main' : 'snack']
+              return (
+              <div key={`recipe-${r.id}`}
+                className="rounded-2xl border-2 p-4 shadow-sm cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5 active:scale-95 relative"
+                style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}
+                onClick={() => openEdit(r)}>
+                <div className="absolute top-3 right-3 flex gap-1">
+                  <button onClick={e => { e.stopPropagation(); del(r.id) }}
+                    className="w-7 h-7 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: '#fde8ec', fontSize: 12, color: '#c0303e' }}>✕</button>
+                </div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full"
+                    style={{ backgroundColor: rMeta.bg, color: rMeta.color }}>
+                    {rMeta.emoji} {rMeta.label}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full"
+                    style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>
+                    👤 custom
+                  </span>
+                </div>
+                <h3 className="font-semibold text-sm sm:text-base leading-snug mb-3 pr-8" style={{ color: 'var(--t-text-main)' }}>
+                  {r.title}
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>
+                    ⏱ {r.prepTime + r.cookTime} min
+                  </span>
+                  <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>
+                    👤 {r.servings} pers
+                  </span>
+                </div>
+                <p className="text-xs mt-2 line-clamp-2" style={{ color: 'var(--t-text-soft)' }}>{r.description}</p>
+              </div>
+            )})}
+
           </div>
         </>
       )}
 
-      {/* ── MY RECIPES ── */}
+      {/* ── ADD RECIPE (→ Meal Rotation) ── */}
       {tab === 'recipes' && (
-        <>
-          <div className="rounded-2xl p-4 mb-4 border-2" style={{ backgroundColor: '#f9f5ef', borderColor: '#d4c5a9' }}>
-            <p className="text-xs font-semibold mb-2" style={{ color: '#6b4226' }}>{t.aiGenerator}</p>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input value={aiIngredients} onChange={e => setAiIngredients(e.target.value)}
-                placeholder={t.aiPlaceholder}
-                className="flex-1 px-3 py-2.5 rounded-xl text-sm border outline-none" style={{ borderColor: '#d4c5a9', backgroundColor: '#fff' }} />
-              <button onClick={generateAI} disabled={aiLoading}
-                className="btn-glass btn-glass-brown px-4 py-2.5 rounded-xl text-sm font-medium disabled:opacity-60">
-                {aiLoading ? t.generating : t.generate}
-              </button>
+        <div className="space-y-4">
+          {/* Inline add form */}
+          <div className="rounded-2xl border-2 p-5 space-y-3" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
+            <p className="text-sm font-bold" style={{ color: 'var(--t-text-main)' }}>➕ Nouvelle recette</p>
+
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.title} *</label>
+              <input value={inlineForm.title} onChange={e => setInlineForm(f => ({ ...f, title: e.target.value }))}
+                placeholder="Ex: Poulet mariné citron..."
+                className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }} />
             </div>
+
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.description}</label>
+              <textarea value={inlineForm.description} onChange={e => setInlineForm(f => ({ ...f, description: e.target.value }))}
+                rows={2} placeholder="Courte description..."
+                className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none" style={{ borderColor: 'var(--t-border-soft)' }} />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.ingredientsLine}</label>
+              <textarea value={inlineForm.ingredients} onChange={e => setInlineForm(f => ({ ...f, ingredients: e.target.value }))}
+                rows={4} placeholder={"1 poulet\n2 citrons\nHuile d'olive\n..."}
+                className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none" style={{ borderColor: 'var(--t-border-soft)' }} />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.instructions}</label>
+              <textarea value={inlineForm.instructions} onChange={e => setInlineForm(f => ({ ...f, instructions: e.target.value }))}
+                rows={4} placeholder="Étapes de préparation..."
+                className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none" style={{ borderColor: 'var(--t-border-soft)' }} />
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                { label: t.prepMin,  key: 'prepTime' },
+                { label: t.cookMin,  key: 'cookTime' },
+                { label: t.servings, key: 'servings' },
+              ].map(({ label, key }) => (
+                <div key={key}>
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{label}</label>
+                  <input type="number" value={(inlineForm as Record<string, string>)[key]}
+                    onChange={e => setInlineForm(f => ({ ...f, [key]: e.target.value }))}
+                    className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }} />
+                </div>
+              ))}
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.category}</label>
+                <select value={inlineForm.category} onChange={e => setInlineForm(f => ({ ...f, category: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }}>
+                  {['breakfast', 'lunch', 'dinner', 'snack'].map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <button onClick={saveInline} disabled={inlineSaving || !inlineForm.title.trim()}
+              className="w-full py-3 rounded-2xl text-sm font-bold disabled:opacity-50 transition-all active:scale-95"
+              style={{ background: 'linear-gradient(135deg,#2d6a4f,#40916c)', color: '#fff' }}>
+              {inlineSaving ? 'Ajout en cours...' : '✓ Ajouter à la rotation'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── WEEK SCHEDULE ── */}
+      {tab === 'week' && (
+        <div>
+          {/* Action buttons */}
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => {
+                // Build ingredient list from all filled cells
+                const ingredients: string[] = []
+                DAYS.forEach(day => {
+                  SLOTS.forEach(slot => {
+                    const entry = weekSchedule[day]?.[slot.key]
+                    if (!entry) return
+                    if (entry.id.startsWith('m')) {
+                      const baseMeal = MEALS.find(m => `m${m.id}` === entry.id)
+                      if (baseMeal) splitIngredients(getMeal(baseMeal).ingredients).forEach(i => ingredients.push(i))
+                    } else if (entry.id.startsWith('r')) {
+                      const recipe = recipes.find(r => `r${r.id}` === entry.id)
+                      if (recipe) recipe.ingredients.split(',').forEach(i => ingredients.push(i.trim()))
+                    } else {
+                      ingredients.push(entry.name)
+                    }
+                  })
+                })
+                // Dedupe and show in existing grocery modal pattern via alert for now
+                const grouped = groupIngredients(ingredients.filter(Boolean))
+                setShoppingList(grouped.map(g => g.count > 1 ? `${g.name} ×${g.count}` : g.name))
+                setShoppingModal(true)
+              }}
+              className="flex-1 py-2.5 rounded-2xl text-sm font-bold transition-all active:scale-95"
+              style={{ background: 'linear-gradient(135deg,var(--t-fab-from),var(--t-fab-to))', color: '#fff' }}
+            >
+              🛒 Liste de courses
+            </button>
+            <button
+              onClick={() => {
+                const next = emptySchedule()
+                saveWeekSchedule(next)
+              }}
+              className="px-4 py-2.5 rounded-2xl text-sm font-bold transition-all active:scale-95"
+              style={{ backgroundColor: '#fee2e2', color: '#dc2626' }}
+            >
+              🗑 Vider
+            </button>
+            <button
+              onClick={forceSyncToCloud}
+              disabled={syncingCloud}
+              className="px-4 py-2.5 rounded-2xl text-sm font-bold transition-all active:scale-95"
+              style={{ backgroundColor: syncDone ? '#d8f3dc' : 'var(--t-item-bg)', color: syncDone ? '#2d6a4f' : 'var(--t-text-muted)' }}
+            >
+              {syncingCloud ? '⏳' : syncDone ? '✓ Sync !' : '☁️ Sync'}
+            </button>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-1 mb-5" style={{ scrollbarWidth: 'none' }}>
-            {RECIPE_CATS.map(c => (
-              <button key={c} onClick={() => setRecipeFilter(c)}
-                className="px-3 py-1.5 rounded-full text-sm font-medium capitalize whitespace-nowrap transition-all"
-                style={{ backgroundColor: recipeFilter === c ? '#2d6a4f' : '#f0e8d8', color: recipeFilter === c ? '#fff' : '#6b4226' }}>
-                {c}
-              </button>
-            ))}
-          </div>
+          {/* Scrollable grid */}
+          <div className="overflow-x-auto pb-2 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
+            <div style={{ minWidth: 560 }}>
+              {/* Day headers */}
+              <div className="grid mb-2" style={{ gridTemplateColumns: '72px repeat(7, 1fr)', gap: '6px' }}>
+                <div />
+                {DAYS.map(d => (
+                  <div key={d} className="text-center text-xs font-bold py-1.5 rounded-xl"
+                    style={{ backgroundColor: 'var(--t-bg-soft)', color: 'var(--t-text-accent)' }}>
+                    {d}
+                  </div>
+                ))}
+              </div>
 
-          {filteredRecipes.length === 0 ? (
-            <div className="text-center py-16 rounded-2xl" style={{ backgroundColor: '#f9f5ef', color: '#a07850' }}>
-              <p className="text-4xl mb-2">🍽️</p>
-              <p className="font-medium text-sm">{t.noRecipes}</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {filteredRecipes.map(r => (
-                <div key={r.id} className="rounded-2xl border-2 p-4 shadow-sm cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5"
-                  style={{ backgroundColor: '#fff', borderColor: '#e8dcc8' }} onClick={() => setDetail(r)}>
-                  <div className="flex items-start justify-between mb-2">
-                    <span className="text-xs font-bold px-2.5 py-1 rounded-full text-white capitalize" style={{ backgroundColor: catColor[r.category] || '#2d6a4f' }}>{r.category}</span>
-                    <div className="flex gap-1">
-                      <button onClick={e => { e.stopPropagation(); openEdit(r) }} className="text-xs px-2 py-1 rounded-lg" style={{ color: '#8b5e3c', backgroundColor: '#f0e8d8' }}>{t.edit}</button>
-                      <button onClick={e => { e.stopPropagation(); del(r.id) }} className="text-xs px-2 py-1 rounded-lg" style={{ color: '#c0303e', backgroundColor: '#fde8ec' }}>{t.del}</button>
-                    </div>
+              {/* Slot rows */}
+              {SLOTS.map(slot => (
+                <div key={slot.key} className="grid mb-2" style={{ gridTemplateColumns: '72px repeat(7, 1fr)', gap: '6px' }}>
+                  {/* Row label */}
+                  <div className="flex flex-col items-center justify-center py-2 rounded-xl text-center"
+                    style={{ backgroundColor: 'var(--t-item-bg)' }}>
+                    <span className="text-lg leading-none">{slot.emoji}</span>
+                    <span className="text-xs font-semibold mt-0.5" style={{ color: 'var(--t-text-muted)', fontSize: '9px' }}>{slot.label}</span>
                   </div>
-                  <h3 className="font-semibold text-base leading-snug mb-1" style={{ color: '#1a3a1a' }}>{r.title}</h3>
-                  <p className="text-sm line-clamp-2 mb-3" style={{ color: '#8b5e3c' }}>{r.description}</p>
-                  <div className="flex gap-3 text-xs" style={{ color: '#a07850' }}>
-                    <span>⏱ {r.prepTime}m</span><span>🔥 {r.cookTime}m</span><span>👤 {r.servings}</span>
-                  </div>
+
+                  {/* Day cells */}
+                  {DAYS.map(day => {
+                    const entry = weekSchedule[day]?.[slot.key] ?? null
+                    return (
+                      <div key={day} className="rounded-xl overflow-hidden"
+                        style={{ minHeight: 64, backgroundColor: entry ? 'var(--t-bg-soft)' : 'var(--t-item-bg)', border: '1px solid', borderColor: entry ? 'var(--t-border)' : 'var(--t-border-soft)' }}>
+                        {entry ? (
+                          <div className="p-1.5 h-full flex flex-col justify-between">
+                            <button
+                              onClick={() => setWeekCellDetail(entry)}
+                              className="text-left w-full active:opacity-70 transition-opacity">
+                              <p className="text-xs font-semibold leading-tight line-clamp-3"
+                                style={{ color: 'var(--t-text-accent)', fontSize: '10px' }}>
+                                {entry.name}
+                              </p>
+                            </button>
+                            <button onClick={() => clearCell(day, slot.key)}
+                              className="text-center w-full text-xs mt-1 opacity-40 hover:opacity-80"
+                              style={{ fontSize: '10px', color: '#dc2626' }}>✕</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => openPicker(day, slot.key)}
+                            className="w-full h-full flex items-center justify-center transition-all hover:opacity-70 active:scale-95"
+                            style={{ minHeight: 64 }}>
+                            <span className="text-xl font-light" style={{ color: 'var(--t-border-soft)' }}>+</span>
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               ))}
             </div>
-          )}
-        </>
+          </div>
+        </div>
       )}
 
-      {/* ── WEEK PLAN ── */}
-      {tab === 'week' && (
-        <>
-          {weekMeals.length === 0 ? (
-            <div className="text-center py-16 rounded-2xl" style={{ backgroundColor: '#f9f5ef', color: '#a07850' }}>
-              <p className="text-4xl mb-3">📅</p>
-              <p className="font-medium text-sm px-4">{t.weekEmpty}</p>
+      {/* ── Shopping List Modal ── */}
+      {shoppingModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
+          onClick={() => setShoppingModal(false)}>
+          <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl flex flex-col shadow-2xl"
+            style={{ backgroundColor: 'var(--t-card-bg)', maxHeight: '85vh' }}
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b shrink-0" style={{ borderColor: 'var(--t-border-soft)' }}>
+              <div>
+                <p className="text-sm font-bold" style={{ color: 'var(--t-text-main)' }}>🛒 Liste de courses</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-muted)' }}>
+                  {shoppingList.length} ingrédients · {shoppingChecked.size} cochés
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setShoppingChecked(new Set())}
+                  className="text-xs px-3 py-1.5 rounded-xl font-semibold"
+                  style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>
+                  Reset
+                </button>
+                <button
+                  onClick={() => {
+                    const text = '🛒 Liste de courses\n\n' + shoppingList.map((item, i) => `${shoppingChecked.has(i) ? '✓' : '○'} ${item}`).join('\n')
+                    navigator.clipboard.writeText(text).then(() => {
+                      setShoppingCopied(true)
+                      setTimeout(() => setShoppingCopied(false), 2000)
+                    })
+                  }}
+                  className="text-xs px-3 py-1.5 rounded-xl font-semibold transition-all"
+                  style={{ backgroundColor: shoppingCopied ? '#2d6a4f' : 'var(--t-item-bg)', color: shoppingCopied ? '#fff' : 'var(--t-text-muted)' }}>
+                  {shoppingCopied ? '✓ Copié' : '📋 Copier'}
+                </button>
+                <button onClick={() => setShoppingModal(false)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center font-bold"
+                  style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>×</button>
+              </div>
             </div>
-          ) : (
-            <>
-              <div className="flex gap-2 mb-4 flex-wrap">
-                <button
-                  onClick={() => { setWeekChecked(new Set()); setWeekGroceryModal(true) }}
-                  className="btn-glass btn-glass-green px-4 py-2.5 rounded-xl text-sm font-medium">
-                  {t.weekGrocery}
-                </button>
-                <button
-                  onClick={clearWeekPlan}
-                  className="px-4 py-2.5 rounded-xl text-sm font-medium"
-                  style={{ backgroundColor: '#fde8ec', color: '#c0303e' }}>
-                  {t.clearWeek}
-                </button>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {weekMeals.map(m => {
-                  const meta = TYPE_META[m.type]
-                  return (
-                    <div key={m.id} className="rounded-2xl border-2 p-4 shadow-sm relative"
-                      style={{ backgroundColor: '#fff', borderColor: '#e8dcc8' }}>
-                      <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full mb-3"
-                        style={{ backgroundColor: meta.bg, color: meta.color }}>
-                        {meta.emoji} {meta.label}
-                      </span>
-                      <h3 className="font-semibold text-sm leading-snug mb-3 pr-2" style={{ color: '#1a3a1a' }}>{m.name}</h3>
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: '#e8f4fd', color: '#1a56db' }}>💪 {m.protein}</span>
-                        <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: '#d8f3dc', color: '#2d6a4f' }}>🔥 {m.kcal}</span>
-                        <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: '#fff3cd', color: '#856404' }}>⏱ {m.time}</span>
-                      </div>
-                      <button
-                        onClick={() => removeFromWeek(m.id)}
-                        className="w-full py-2 rounded-xl text-sm font-semibold transition-all"
-                        style={{ backgroundColor: '#d8f3dc', color: '#2d6a4f' }}>
-                        {t.markDone}
-                      </button>
+            <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-2 min-h-0">
+              {shoppingList.length === 0 ? (
+                <p className="text-center py-12 text-sm" style={{ color: 'var(--t-text-soft)' }}>
+                  Aucun repas planifié cette semaine
+                </p>
+              ) : shoppingList.map((item, i) => {
+                const checked = shoppingChecked.has(i)
+                return (
+                  <button key={i}
+                    onClick={() => {
+                      const next = new Set(shoppingChecked)
+                      checked ? next.delete(i) : next.add(i)
+                      setShoppingChecked(next)
+                    }}
+                    className="flex items-center gap-3 px-4 py-3 rounded-2xl text-left transition-all"
+                    style={{ backgroundColor: checked ? 'var(--t-bg-soft)' : 'var(--t-item-bg)', border: '1px solid', borderColor: checked ? 'var(--t-border)' : 'var(--t-border-soft)' }}>
+                    <div className="w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center"
+                      style={{ borderColor: checked ? 'var(--t-primary)' : 'var(--t-border-soft)', backgroundColor: checked ? 'var(--t-primary)' : 'transparent' }}>
+                      {checked && <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><polyline points="2,6 5,9 10,3"/></svg>}
                     </div>
-                  )
-                })}
+                    <span className="text-sm flex-1" style={{ color: checked ? 'var(--t-text-soft)' : 'var(--t-text-main)', textDecoration: checked ? 'line-through' : 'none' }}>
+                      {item}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Meal Picker Modal ── */}
+      {picker && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
+          onClick={() => setPicker(null)}>
+          <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl flex flex-col shadow-2xl"
+            style={{ backgroundColor: 'var(--t-card-bg)', maxHeight: '85vh' }}
+            onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b shrink-0" style={{ borderColor: 'var(--t-border-soft)' }}>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--t-primary)' }}>
+                  {SLOTS.find(s => s.key === picker.slot)?.emoji} {SLOTS.find(s => s.key === picker.slot)?.label} — {picker.day}
+                </p>
+                <p className="text-sm font-bold mt-0.5" style={{ color: 'var(--t-text-main)' }}>Choisir un repas</p>
               </div>
-            </>
-          )}
-        </>
+              <button onClick={() => setPicker(null)}
+                className="w-8 h-8 rounded-full flex items-center justify-center font-bold"
+                style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>×</button>
+            </div>
+
+            {/* Search */}
+            <div className="px-4 pt-3 pb-2 shrink-0">
+              <input value={pickerSearch} onChange={e => setPickerSearch(e.target.value)}
+                placeholder="Rechercher..."
+                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none border"
+                style={{ borderColor: 'var(--t-border-soft)', backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-main)' }} />
+            </div>
+
+            {/* Tabs */}
+            <div className="flex mx-4 mb-2 rounded-xl p-1 gap-1 shrink-0" style={{ backgroundColor: 'var(--t-item-bg)' }}>
+              {(['rotation', 'recipes', 'custom'] as const).map(t => (
+                <button key={t} onClick={() => setPickerTab(t)}
+                  className="flex-1 py-1.5 rounded-lg text-xs font-bold transition-all"
+                  style={{ backgroundColor: pickerTab === t ? 'var(--t-card-bg)' : 'transparent', color: pickerTab === t ? 'var(--t-primary)' : 'var(--t-text-soft)', boxShadow: pickerTab === t ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}>
+                  {t === 'rotation' ? '🔄 Rotation' : t === 'recipes' ? '📖 Recettes' : '✏️ Perso'}
+                </button>
+              ))}
+            </div>
+
+            {/* List */}
+            <div className="flex-1 overflow-y-auto px-4 pb-6 flex flex-col gap-2 min-h-0">
+              {pickerTab === 'rotation' && (() => {
+                const slotTypes = SLOTS.find(s => s.key === picker.slot)?.mealTypes ?? []
+                const filtered = MEALS.filter(m =>
+                  !hiddenMeals.has(m.id) &&
+                  slotTypes.includes(m.type) &&
+                  (pickerSearch === '' || m.name.toLowerCase().includes(pickerSearch.toLowerCase()))
+                )
+                return filtered.length === 0
+                  ? <p className="text-center text-sm py-8" style={{ color: 'var(--t-text-soft)' }}>Aucun résultat</p>
+                  : filtered.map(m => (
+                    <button key={m.id} onClick={() => setCell(picker.day, picker.slot, { id: `m${m.id}`, name: m.name })}
+                      className="w-full text-left px-4 py-3 rounded-2xl transition-all hover:scale-[1.01] active:scale-[0.99]"
+                      style={{ backgroundColor: 'var(--t-item-bg)', border: '1px solid var(--t-border-soft)' }}>
+                      <p className="text-sm font-semibold" style={{ color: 'var(--t-text-main)' }}>{m.name}</p>
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-muted)' }}>💪 {m.protein} · 🔥 {m.kcal} · ⏱ {m.time}</p>
+                    </button>
+                  ))
+              })()}
+
+              {pickerTab === 'recipes' && (() => {
+                const filtered = recipes.filter(r =>
+                  pickerSearch === '' || r.title.toLowerCase().includes(pickerSearch.toLowerCase())
+                )
+                return filtered.length === 0
+                  ? <p className="text-center text-sm py-8" style={{ color: 'var(--t-text-soft)' }}>
+                      {recipes.length === 0 ? 'Aucune recette — ajoutes-en dans l\'onglet Recettes' : 'Aucun résultat'}
+                    </p>
+                  : filtered.map(r => (
+                    <button key={r.id} onClick={() => setCell(picker.day, picker.slot, { id: `r${r.id}`, name: r.title })}
+                      className="w-full text-left px-4 py-3 rounded-2xl transition-all hover:scale-[1.01] active:scale-[0.99]"
+                      style={{ backgroundColor: 'var(--t-item-bg)', border: '1px solid var(--t-border-soft)' }}>
+                      <p className="text-sm font-semibold" style={{ color: 'var(--t-text-main)' }}>{r.title}</p>
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-muted)' }}>{r.category} · {r.prepTime + r.cookTime} min</p>
+                    </button>
+                  ))
+              })()}
+
+              {pickerTab === 'custom' && (
+                <div className="flex flex-col gap-3 pt-1">
+                  <input value={customMeal} onChange={e => setCustomMeal(e.target.value)}
+                    placeholder="Ex: Salade niçoise maison..."
+                    className="w-full px-4 py-3 rounded-2xl text-sm outline-none border"
+                    style={{ borderColor: 'var(--t-border)', backgroundColor: 'var(--t-bg-soft)', color: 'var(--t-text-main)' }}
+                    onKeyDown={e => { if (e.key === 'Enter' && customMeal.trim()) setCell(picker.day, picker.slot, { id: `c${Date.now()}`, name: customMeal.trim() }) }} />
+                  <button
+                    onClick={() => { if (customMeal.trim()) setCell(picker.day, picker.slot, { id: `c${Date.now()}`, name: customMeal.trim() }) }}
+                    disabled={!customMeal.trim()}
+                    className="w-full py-3 rounded-2xl text-sm font-bold disabled:opacity-40"
+                    style={{ backgroundColor: 'var(--t-primary)', color: '#fff' }}>
+                    + Ajouter ce repas
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Sticky grocery bar (selection mode) */}
       {selecting && (
-        <div className="fixed bottom-16 sm:bottom-0 left-0 right-0 z-40 px-4 py-3 border-t shadow-2xl"
+        <div className="fixed bottom-16 left-0 right-0 z-40 px-4 py-3 border-t shadow-2xl"
           style={{ backgroundColor: '#1a3a1a', borderColor: '#2d6a4f' }}>
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
             <div className="shrink-0">
@@ -689,17 +1170,24 @@ export default function FoodPage() {
             </div>
             <div className="flex gap-2 shrink-0">
               <button
+                onClick={() => {
+                  if (!confirm(`Supprimer ${selectedMeals.size} repas ?`)) return
+                  const next = new Set([...hiddenMeals, ...selectedMeals])
+                  setHiddenMeals(next)
+                  savePref('hiddenMeals', [...next])
+                  exitSelect()
+                }}
+                disabled={selectedMeals.size === 0}
+                className="px-3 py-2 rounded-xl text-xs font-semibold disabled:opacity-40"
+                style={{ backgroundColor: '#7f1d1d', color: '#fca5a5' }}>
+                🗑 {selectedMeals.size > 0 ? `Supprimer (${selectedMeals.size})` : 'Supprimer'}
+              </button>
+              <button
                 onClick={openGrocery}
                 disabled={selectedMeals.size === 0}
                 className="px-3 py-2 rounded-xl text-xs font-semibold disabled:opacity-40 border"
                 style={{ borderColor: '#40916c', color: '#74c69d', backgroundColor: 'transparent' }}>
                 {t.viewGroceryList}
-              </button>
-              <button
-                onClick={saveToWeek}
-                disabled={selectedMeals.size === 0}
-                className="btn-glass btn-glass-green px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-40">
-                {t.addToWeek}
               </button>
             </div>
           </div>
@@ -709,7 +1197,7 @@ export default function FoodPage() {
       {/* Grocery List Modal */}
       {groceryModal && (
         <Modal title={t.groceryModal(selectedMeals.size)} onClose={() => setGroceryModal(false)} wide>
-          <p className="text-xs mb-4" style={{ color: '#a07850' }}>
+          <p className="text-xs mb-4" style={{ color: 'var(--t-text-soft)' }}>
             {t.groceryTip(groceryItems.length)}
           </p>
           <div className="space-y-1.5">
@@ -718,87 +1206,120 @@ export default function FoodPage() {
               return (
                 <button key={i} onClick={() => toggleCheck(i)}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all"
-                  style={{ backgroundColor: checked ? '#f0e8d8' : '#f9f5ef' }}>
+                  style={{ backgroundColor: checked ? 'var(--t-item-bg)' : 'var(--t-item-bg)' }}>
                   <div className="w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-all"
-                    style={{ backgroundColor: checked ? '#2d6a4f' : '#fff', borderColor: checked ? '#2d6a4f' : '#c4a882' }}>
+                    style={{ backgroundColor: checked ? '#2d6a4f' : 'var(--t-card-bg)', borderColor: checked ? '#2d6a4f' : '#c4a882' }}>
                     {checked && <span className="text-white text-xs font-bold">✓</span>}
                   </div>
-                  <span className="text-sm flex-1" style={{ color: checked ? '#a07850' : '#1a3a1a', textDecoration: checked ? 'line-through' : 'none' }}>
-                    {item}
+                  <span className="text-sm flex-1" style={{ color: checked ? 'var(--t-text-soft)' : 'var(--t-text-main)', textDecoration: checked ? 'line-through' : 'none' }}>
+                    {item.name}
                   </span>
+                  {item.count > 1 && (
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0"
+                      style={{ backgroundColor: '#2d6a4f', color: '#fff' }}>
+                      ×{item.count}
+                    </span>
+                  )}
                 </button>
               )
             })}
           </div>
-          <div className="mt-4 pt-3 border-t flex items-center justify-between" style={{ borderColor: '#e8dcc8' }}>
-            <p className="text-xs" style={{ color: '#a07850' }}>
+          <div className="mt-4 pt-3 border-t flex items-center justify-between" style={{ borderColor: 'var(--t-border-soft)' }}>
+            <p className="text-xs" style={{ color: 'var(--t-text-soft)' }}>
               {t.itemsTicked(checkedItems.size, groceryItems.length)}
             </p>
             <button
               onClick={() => {
-                const text = groceryItems.map((item, i) => `${checkedItems.has(i) ? '✓' : '○'} ${item}`).join('\n')
+                const text = groceryItems.map((item, i) => `${checkedItems.has(i) ? '✓' : '○'} ${item.name}${item.count > 1 ? ` ×${item.count}` : ''}`).join('\n')
                 navigator.clipboard.writeText(text).then(() => alert(t.copied))
               }}
               className="text-xs px-3 py-1.5 rounded-lg font-medium"
-              style={{ backgroundColor: '#d8f3dc', color: '#2d6a4f' }}>
+              style={{ backgroundColor: 'var(--t-primary-pale)', color: 'var(--t-primary)' }}>
               {t.copyList}
             </button>
           </div>
         </Modal>
       )}
 
-      {/* Meal Detail Modal */}
-      {mealDetail && (
-        <Modal title={mealDetail.name} onClose={() => setMealDetail(null)} wide>
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full"
-              style={{ backgroundColor: TYPE_META[mealDetail.type].bg, color: TYPE_META[mealDetail.type].color }}>
-              {TYPE_META[mealDetail.type].emoji} {TYPE_META[mealDetail.type].label}
-            </span>
-            <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: '#e8f4fd', color: '#1a56db' }}>💪 {mealDetail.protein}</span>
-            <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: '#d8f3dc', color: '#2d6a4f' }}>🔥 {mealDetail.kcal}</span>
-            <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: '#fff3cd', color: '#856404' }}>⏱ {mealDetail.time}</span>
+      {/* Meal Edit Modal */}
+      {mealEditForm && (
+        <Modal title="✏️ Modifier le repas" onClose={() => setMealEditForm(null)} wide>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>Nom</label>
+              <input value={mealEditForm.name}
+                onChange={e => setMealEditForm(f => f ? { ...f, name: e.target.value } : f)}
+                className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }} />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>Type</label>
+                <select value={mealEditForm.type}
+                  onChange={e => setMealEditForm(f => f ? { ...f, type: e.target.value } : f)}
+                  className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }}>
+                  {['breakfast','main','snack','smoothie'].map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>Temps</label>
+                <input value={mealEditForm.time}
+                  onChange={e => setMealEditForm(f => f ? { ...f, time: e.target.value } : f)}
+                  placeholder="10 min"
+                  className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>Protéines</label>
+                <input value={mealEditForm.protein}
+                  onChange={e => setMealEditForm(f => f ? { ...f, protein: e.target.value } : f)}
+                  placeholder="25g"
+                  className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>Calories</label>
+                <input value={mealEditForm.kcal}
+                  onChange={e => setMealEditForm(f => f ? { ...f, kcal: e.target.value } : f)}
+                  placeholder="450 kcal"
+                  className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }} />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.ingredients}</label>
+              <textarea value={mealEditForm.ingredients}
+                onChange={e => setMealEditForm(f => f ? { ...f, ingredients: e.target.value } : f)}
+                rows={3} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none" style={{ borderColor: 'var(--t-border-soft)' }} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.howToPrepare}</label>
+              <textarea value={mealEditForm.prep}
+                onChange={e => setMealEditForm(f => f ? { ...f, prep: e.target.value } : f)}
+                rows={3} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none" style={{ borderColor: 'var(--t-border-soft)' }} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>💡 Tip</label>
+              <textarea value={mealEditForm.tip}
+                onChange={e => setMealEditForm(f => f ? { ...f, tip: e.target.value } : f)}
+                rows={2} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none" style={{ borderColor: 'var(--t-border-soft)' }} />
+            </div>
           </div>
-          <h4 className="font-semibold text-sm mb-2" style={{ color: '#1a3a1a' }}>{t.ingredients}</h4>
-          <div className="rounded-xl p-3 mb-4 text-sm" style={{ backgroundColor: '#f9f5ef', color: '#6b4226' }}>
-            {mealDetail.ingredients}
-          </div>
-          <h4 className="font-semibold text-sm mb-2" style={{ color: '#1a3a1a' }}>{t.howToPrepare}</h4>
-          <p className="text-sm mb-4" style={{ color: '#6b4226' }}>{mealDetail.prep}</p>
-          <div className="rounded-xl p-3 flex gap-2 mb-5" style={{ backgroundColor: '#d8f3dc' }}>
-            <span className="text-base">💡</span>
-            <p className="text-sm font-medium" style={{ color: '#2d6a4f' }}>{mealDetail.tip}</p>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={e => toggleFav(mealDetail.id, e)}
-              className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"
-              style={{ backgroundColor: favoriteMeals.has(mealDetail.id) ? '#fde8ec' : '#f0e8d8', color: favoriteMeals.has(mealDetail.id) ? '#c0303e' : '#6b4226' }}>
-              {favoriteMeals.has(mealDetail.id) ? t.savedToFavs : t.addToFavs}
+          <div className="flex gap-2 mt-5">
+            <button onClick={e => { toggleFav(mealEditForm.id, e); }}
+              className="px-4 py-2.5 rounded-xl text-sm font-medium"
+              style={{ backgroundColor: favoriteMeals.has(mealEditForm.id) ? '#fde8ec' : 'var(--t-item-bg)', color: favoriteMeals.has(mealEditForm.id) ? '#c0303e' : 'var(--t-text-muted)' }}>
+              {favoriteMeals.has(mealEditForm.id) ? '❤️' : '🤍'}
             </button>
-            <button onClick={() => deleteMeal(mealDetail.id)}
+            <button onClick={() => { deleteMeal(mealEditForm.id); setMealEditForm(null) }}
               className="px-4 py-2.5 rounded-xl text-sm font-medium"
               style={{ backgroundColor: '#fde8ec', color: '#c0303e' }}>
               {t.removeMeal}
             </button>
+            <button onClick={saveMealEdit}
+              className="flex-1 py-2.5 rounded-xl text-sm font-bold"
+              style={{ background: 'linear-gradient(135deg,#2d6a4f,#40916c)', color: '#fff' }}>
+              ✓ Sauvegarder
+            </button>
           </div>
-        </Modal>
-      )}
-
-      {/* Recipe Detail Modal */}
-      {detail && (
-        <Modal title={detail.title} onClose={() => setDetail(null)} wide>
-          <p className="text-sm mb-3" style={{ color: '#8b5e3c' }}>{detail.description}</p>
-          <div className="flex gap-4 text-sm mb-4" style={{ color: '#a07850' }}>
-            <span>⏱ {detail.prepTime}m</span><span>🔥 {detail.cookTime}m</span><span>👤 {detail.servings} srv</span>
-          </div>
-          <h4 className="font-semibold mb-2 text-sm" style={{ color: '#1a3a1a' }}>{t.ingredients}</h4>
-          <ul className="space-y-1 mb-4">
-            {JSON.parse(detail.ingredients).map((ing: string, i: number) => (
-              <li key={i} className="text-sm flex gap-2" style={{ color: '#6b4226' }}><span style={{ color: '#52b788' }}>•</span>{ing}</li>
-            ))}
-          </ul>
-          <h4 className="font-semibold mb-2 text-sm" style={{ color: '#1a3a1a' }}>{t.instructions}</h4>
-          <p className="text-sm whitespace-pre-wrap" style={{ color: '#6b4226' }}>{detail.instructions}</p>
         </Modal>
       )}
 
@@ -807,31 +1328,31 @@ export default function FoodPage() {
         <Modal title={editing ? t.editRecipe : t.newRecipe} onClose={() => setModal(false)} wide>
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium mb-1" style={{ color: '#6b4226' }}>{t.title}</label>
-              <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: '#d4c5a9' }} />
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.title}</label>
+              <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1" style={{ color: '#6b4226' }}>{t.description}</label>
-              <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none" style={{ borderColor: '#d4c5a9' }} />
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.description}</label>
+              <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none" style={{ borderColor: 'var(--t-border-soft)' }} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1" style={{ color: '#6b4226' }}>{t.ingredientsLine}</label>
-              <textarea value={form.ingredients} onChange={e => setForm(f => ({ ...f, ingredients: e.target.value }))} rows={4} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none" style={{ borderColor: '#d4c5a9' }} />
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.ingredientsLine}</label>
+              <textarea value={form.ingredients} onChange={e => setForm(f => ({ ...f, ingredients: e.target.value }))} rows={4} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none" style={{ borderColor: 'var(--t-border-soft)' }} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1" style={{ color: '#6b4226' }}>{t.instructions}</label>
-              <textarea value={form.instructions} onChange={e => setForm(f => ({ ...f, instructions: e.target.value }))} rows={4} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none" style={{ borderColor: '#d4c5a9' }} />
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.instructions}</label>
+              <textarea value={form.instructions} onChange={e => setForm(f => ({ ...f, instructions: e.target.value }))} rows={4} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none" style={{ borderColor: 'var(--t-border-soft)' }} />
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[{ label: t.prepMin, key: 'prepTime' }, { label: t.cookMin, key: 'cookTime' }, { label: t.servings, key: 'servings' }].map(({ label, key }) => (
                 <div key={key}>
-                  <label className="block text-xs font-medium mb-1" style={{ color: '#6b4226' }}>{label}</label>
-                  <input type="number" value={(form as Record<string, string>)[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: '#d4c5a9' }} />
+                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{label}</label>
+                  <input type="number" value={(form as Record<string, string>)[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }} />
                 </div>
               ))}
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: '#6b4226' }}>{t.category}</label>
-                <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: '#d4c5a9' }}>
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.category}</label>
+                <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }}>
                   {['breakfast', 'lunch', 'dinner', 'snack'].map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
@@ -849,7 +1370,7 @@ export default function FoodPage() {
       {/* Week Grocery Modal */}
       {weekGroceryModal && (
         <Modal title={t.weekGrocery} onClose={() => setWeekGroceryModal(false)} wide>
-          <p className="text-xs mb-4" style={{ color: '#a07850' }}>
+          <p className="text-xs mb-4" style={{ color: 'var(--t-text-soft)' }}>
             {t.groceryTip(weekGroceryItems.length)}
           </p>
           <div className="space-y-1.5">
@@ -858,32 +1379,559 @@ export default function FoodPage() {
               return (
                 <button key={i} onClick={() => setWeekChecked(prev => { const next = new Set(prev); if (next.has(i)) next.delete(i); else next.add(i); return next })}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all"
-                  style={{ backgroundColor: checked ? '#f0e8d8' : '#f9f5ef' }}>
+                  style={{ backgroundColor: 'var(--t-item-bg)' }}>
                   <div className="w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center"
-                    style={{ backgroundColor: checked ? '#2d6a4f' : '#fff', borderColor: checked ? '#2d6a4f' : '#c4a882' }}>
+                    style={{ backgroundColor: checked ? '#2d6a4f' : 'var(--t-card-bg)', borderColor: checked ? '#2d6a4f' : 'var(--t-border-soft)' }}>
                     {checked && <span className="text-white text-xs font-bold">✓</span>}
                   </div>
-                  <span className="text-sm flex-1" style={{ color: checked ? '#a07850' : '#1a3a1a', textDecoration: checked ? 'line-through' : 'none' }}>
-                    {item}
+                  <span className="text-sm flex-1" style={{ color: checked ? 'var(--t-text-soft)' : 'var(--t-text-main)', textDecoration: checked ? 'line-through' : 'none' }}>
+                    {item.name}
                   </span>
+                  {item.count > 1 && (
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0"
+                      style={{ backgroundColor: '#2d6a4f', color: '#fff' }}>
+                      ×{item.count}
+                    </span>
+                  )}
                 </button>
               )
             })}
           </div>
-          <div className="mt-4 pt-3 border-t flex items-center justify-between" style={{ borderColor: '#e8dcc8' }}>
-            <p className="text-xs" style={{ color: '#a07850' }}>{t.itemsTicked(weekChecked.size, weekGroceryItems.length)}</p>
+          <div className="mt-4 pt-3 border-t flex items-center justify-between" style={{ borderColor: 'var(--t-border-soft)' }}>
+            <p className="text-xs" style={{ color: 'var(--t-text-soft)' }}>{t.itemsTicked(weekChecked.size, weekGroceryItems.length)}</p>
             <button
               onClick={() => {
-                const text = weekGroceryItems.map((item, i) => `${weekChecked.has(i) ? '✓' : '○'} ${item}`).join('\n')
+                const text = weekGroceryItems.map((item, i) => `${weekChecked.has(i) ? '✓' : '○'} ${item.name}${item.count > 1 ? ` ×${item.count}` : ''}`).join('\n')
                 navigator.clipboard.writeText(text).then(() => alert(t.copied))
               }}
               className="text-xs px-3 py-1.5 rounded-lg font-medium"
-              style={{ backgroundColor: '#d8f3dc', color: '#2d6a4f' }}>
+              style={{ backgroundColor: 'var(--t-primary-pale)', color: 'var(--t-primary)' }}>
               {t.copyList}
             </button>
           </div>
         </Modal>
       )}
+
+      {/* ── Week Cell Detail Modal ── */}
+      {weekCellDetail && (() => {
+        const entry = weekCellDetail
+        const hardcoded = entry.id.startsWith('m') ? MEALS.find(m => `m${m.id}` === entry.id) : null
+        const recipe    = entry.id.startsWith('r') ? recipes.find(r => `r${r.id}` === entry.id) : null
+        const meal      = hardcoded ? getMeal(hardcoded) : null
+
+        return (
+          <Modal title={entry.name} onClose={() => setWeekCellDetail(null)} wide>
+            {meal ? (
+              <div className="space-y-4">
+                {/* Stats */}
+                <div className="flex flex-wrap gap-2">
+                  {[{ icon: '💪', val: meal.protein }, { icon: '🔥', val: meal.kcal }, { icon: '⏱', val: meal.time }].map(s => (
+                    <span key={s.icon} className="text-xs px-3 py-1.5 rounded-full font-medium"
+                      style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>
+                      {s.icon} {s.val}
+                    </span>
+                  ))}
+                </div>
+                {/* Ingredients */}
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--t-text-soft)' }}>🧺 Ingrédients</p>
+                  <div className="space-y-1.5">
+                    {splitIngredients(meal.ingredients).map((ing, i) => (
+                      <div key={i} className="flex items-start gap-2 text-sm" style={{ color: 'var(--t-text-main)' }}>
+                        <span style={{ color: 'var(--t-primary)' }}>•</span> {ing}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {/* Prep */}
+                {meal.prep && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--t-text-soft)' }}>👨‍🍳 Préparation</p>
+                    <p className="text-sm leading-relaxed" style={{ color: 'var(--t-text-main)' }}>{meal.prep}</p>
+                  </div>
+                )}
+                {/* Tip */}
+                {meal.tip && (
+                  <div className="rounded-2xl px-4 py-3" style={{ backgroundColor: 'var(--t-item-bg)' }}>
+                    <p className="text-xs font-bold mb-1" style={{ color: 'var(--t-primary)' }}>💡 Tip</p>
+                    <p className="text-sm" style={{ color: 'var(--t-text-muted)' }}>{meal.tip}</p>
+                  </div>
+                )}
+              </div>
+            ) : recipe ? (
+              <div className="space-y-4">
+                {/* Stats */}
+                <div className="flex flex-wrap gap-2">
+                  <span className="text-xs px-3 py-1.5 rounded-full font-medium" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>
+                    ⏱ {recipe.prepTime + recipe.cookTime} min
+                  </span>
+                  <span className="text-xs px-3 py-1.5 rounded-full font-medium" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>
+                    👤 {recipe.servings} pers.
+                  </span>
+                </div>
+                {/* Description */}
+                {recipe.description && (
+                  <p className="text-sm leading-relaxed" style={{ color: 'var(--t-text-muted)' }}>{recipe.description}</p>
+                )}
+                {/* Ingredients */}
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--t-text-soft)' }}>🧺 Ingrédients</p>
+                  <div className="space-y-1.5">
+                    {(() => {
+                      let ings: string[] = []
+                      try { ings = JSON.parse(recipe.ingredients) } catch { ings = recipe.ingredients.split(/\n|\s\+\s/).filter(Boolean) }
+                      return ings.map((ing, i) => (
+                        <div key={i} className="flex items-start gap-2 text-sm" style={{ color: 'var(--t-text-main)' }}>
+                          <span style={{ color: 'var(--t-primary)' }}>•</span> {ing}
+                        </div>
+                      ))
+                    })()}
+                  </div>
+                </div>
+                {/* Instructions */}
+                {recipe.instructions && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--t-text-soft)' }}>👨‍🍳 Instructions</p>
+                    <p className="text-sm leading-relaxed" style={{ color: 'var(--t-text-main)' }}>{recipe.instructions}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm py-4 text-center" style={{ color: 'var(--t-text-muted)' }}>Repas personnalisé — aucun détail disponible.</p>
+            )}
+          </Modal>
+        )
+      })()}
+
+      {/* ── VIDEOS TAB ── */}
+      {tab === 'videos' && (
+        <FoodVideoTab
+          videos={foodVideos}
+          adding={addingFV}
+          form={fvForm}
+          urlStatus={fvUrlStatus}
+          typeMeta={TYPE_META}
+          onStartAdd={() => { setFvForm({ name: '', url: '', types: [] }); setFvUrlStatus('idle'); setAddingFV(true) }}
+          onCancelAdd={() => setAddingFV(false)}
+          onFormChange={f => { setFvForm(f); if (f.url !== fvForm.url) setFvUrlStatus('idle') }}
+          onCheckUrl={() => {
+            const ok = /tiktok\.com\/@[\w.]+\/video\/\d+|vm\.tiktok\.com\/[\w]+/i.test(fvForm.url)
+            setFvUrlStatus(ok ? 'ok' : 'bad')
+          }}
+          onConfirm={async () => {
+            if (!fvForm.name.trim() || fvUrlStatus !== 'ok') return
+            const res = await fetch('/api/food-videos', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: fvForm.name.trim(), url: fvForm.url.trim(), types: fvForm.types }),
+            })
+            const created = await res.json()
+            setFoodVideos(prev => [...prev, created])
+            setAddingFV(false)
+          }}
+          onDelete={async (id) => {
+            await fetch(`/api/food-videos/${id}`, { method: 'DELETE' })
+            setFoodVideos(prev => prev.filter(v => String(v.id) !== String(id)))
+          }}
+        />
+      )}
+
+      {/* ── BUY LIST TAB ── */}
+      {tab === 'list' && (
+        <div className="space-y-4">
+
+          {/* Add button / inline form */}
+          {!buyAdding ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setBuyAdding(true); setTimeout(() => buyInputRef.current?.focus(), 50) }}
+                className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold transition-all active:scale-95"
+                style={{ background: 'linear-gradient(135deg,#2d6a4f,#40916c)', color: '#fff' }}>
+                <span className="text-lg leading-none">+</span> Ajouter un article
+              </button>
+              {buyItems.length > 0 && (
+                <>
+                  <button
+                    onClick={() => {
+                      const text = '🛒 Liste de courses\n\n' + buyItems.map(i => `${i.checked ? '✓' : '○'} ${i.text}`).join('\n')
+                      navigator.clipboard.writeText(text).then(() => {
+                        setBuyCopied(true)
+                        setTimeout(() => setBuyCopied(false), 2000)
+                      })
+                    }}
+                    className="px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all active:scale-95 whitespace-nowrap"
+                    style={{ backgroundColor: buyCopied ? '#2d6a4f' : 'var(--t-item-bg)', color: buyCopied ? '#fff' : 'var(--t-text-muted)' }}>
+                    {buyCopied ? '✓ Copié !' : '📋 Copier'}
+                  </button>
+                  {buyItems.some(i => i.checked) && (
+                    <button
+                      onClick={() => saveBuy(buyItems.map(i => ({ ...i, checked: false })))}
+                      className="px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all active:scale-95 whitespace-nowrap"
+                      style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>
+                      ↺ Reset
+                    </button>
+                  )}
+                  <button
+                    onClick={forceSyncToCloud}
+                    disabled={syncingCloud}
+                    className="px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all active:scale-95 whitespace-nowrap"
+                    style={{ backgroundColor: syncDone ? '#d8f3dc' : 'var(--t-item-bg)', color: syncDone ? '#2d6a4f' : 'var(--t-text-muted)' }}>
+                    {syncingCloud ? '⏳' : syncDone ? '✓ Sync !' : '☁️ Sync'}
+                  </button>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="flex gap-2 items-center">
+              <input
+                ref={buyInputRef}
+                value={buyInput}
+                onChange={e => setBuyInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') addBuyItem(); if (e.key === 'Escape') { setBuyAdding(false); setBuyInput('') } }}
+                placeholder="Ex: Oats, tuna, eggs..."
+                className="flex-1 px-4 py-3 rounded-2xl border text-sm outline-none"
+                style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-primary)', color: 'var(--t-text-main)' }}
+              />
+              <button onClick={addBuyItem}
+                className="px-4 py-3 rounded-2xl text-sm font-bold whitespace-nowrap transition-all active:scale-95"
+                style={{ background: 'linear-gradient(135deg,#2d6a4f,#40916c)', color: '#fff' }}>
+                ✓ OK
+              </button>
+              <button onClick={() => { setBuyAdding(false); setBuyInput('') }}
+                className="w-10 h-10 rounded-2xl flex items-center justify-center text-sm font-bold transition-all active:scale-95"
+                style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>
+                ✕
+              </button>
+            </div>
+          )}
+
+          {/* List */}
+          {buyItems.length === 0 ? (
+            <div className="text-center py-16 rounded-2xl" style={{ backgroundColor: 'var(--t-item-bg)' }}>
+              <p className="text-4xl mb-3">🛒</p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--t-text-muted)' }}>Liste vide</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--t-text-soft)' }}>Clique sur + pour ajouter un article</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {buyItems.map((item, i) => (
+                <div key={i}
+                  className="rounded-2xl transition-all overflow-hidden"
+                  style={{ backgroundColor: item.checked ? 'var(--t-bg-soft)' : 'var(--t-card-bg)', border: '1px solid', borderColor: item.checked ? 'var(--t-border)' : 'var(--t-border-soft)' }}>
+
+                  {/* Main row */}
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    {/* Checkbox */}
+                    <button onClick={() => { toggleBuyItem(i); setBuyConfirmIdx(null) }}
+                      className="w-6 h-6 rounded-full border-2 shrink-0 flex items-center justify-center transition-all"
+                      style={{ borderColor: item.checked ? '#2d6a4f' : 'var(--t-border-soft)', backgroundColor: item.checked ? '#2d6a4f' : 'transparent' }}>
+                      {item.checked && <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><polyline points="2,6 5,9 10,3"/></svg>}
+                    </button>
+                    {/* Text */}
+                    <span className="flex-1 text-sm" style={{ color: item.checked ? 'var(--t-text-soft)' : 'var(--t-text-main)', textDecoration: item.checked ? 'line-through' : 'none' }}>
+                      {item.text}
+                    </span>
+                    {/* Delete trigger */}
+                    <button
+                      onClick={() => setBuyConfirmIdx(buyConfirmIdx === i ? null : i)}
+                      className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all"
+                      style={{ backgroundColor: buyConfirmIdx === i ? '#fde8ec' : 'var(--t-item-bg)', color: buyConfirmIdx === i ? '#c0303e' : 'var(--t-text-soft)', fontSize: 13 }}>
+                      🗑
+                    </button>
+                  </div>
+
+                  {/* Confirm delete row */}
+                  {buyConfirmIdx === i && (
+                    <div className="flex items-center gap-2 px-4 pb-3">
+                      <p className="flex-1 text-xs font-medium" style={{ color: '#c0303e' }}>Supprimer cet article ?</p>
+                      <button onClick={() => deleteBuyItem(i)}
+                        className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95"
+                        style={{ backgroundColor: '#c0303e', color: '#fff' }}>
+                        Oui, supprimer
+                      </button>
+                      <button onClick={() => setBuyConfirmIdx(null)}
+                        className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all active:scale-95"
+                        style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>
+                        Annuler
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {/* Clear checked */}
+              {buyItems.some(i => i.checked) && (
+                <button onClick={clearCheckedBuy}
+                  className="w-full py-3 rounded-2xl text-sm font-semibold transition-all active:scale-95 mt-2"
+                  style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>
+                  🗑 Effacer les cochés ({buyItems.filter(i => i.checked).length})
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Food video types (reuses existing food categories) ─────────────────────────
+const FOOD_VIDEO_TYPES = [
+  { key: 'breakfast', label: 'Breakfast', emoji: '☀️' },
+  { key: 'main',      label: 'Plat',      emoji: '🍽️' },
+  { key: 'snack',     label: 'Snack',     emoji: '🍎' },
+  { key: 'smoothie',  label: 'Smoothie',  emoji: '🥤' },
+]
+
+type FoodVideoEntry = { id: number | string; name: string; url: string; types: string[] }
+
+function FoodVideoTab({
+  videos, adding, form, urlStatus, typeMeta,
+  onStartAdd, onCancelAdd, onFormChange, onCheckUrl, onConfirm, onDelete,
+}: {
+  videos: FoodVideoEntry[]
+  adding: boolean
+  form: { name: string; url: string; types: string[] }
+  urlStatus: 'idle' | 'ok' | 'bad'
+  typeMeta: Record<string, { label: string; emoji: string; color: string; bg: string }>
+  onStartAdd: () => void
+  onCancelAdd: () => void
+  onFormChange: (f: { name: string; url: string; types: string[] }) => void
+  onCheckUrl: () => void
+  onConfirm: () => void
+  onDelete: (id: number | string) => void
+}) {
+  const [filter, setFilter] = useState<string | null>(null)
+  const filtered = filter ? videos.filter(v => v.types?.includes(filter)) : videos
+
+  if (videos.length === 0 && !adding) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-5">
+        <div className="w-20 h-20 rounded-full flex items-center justify-center text-4xl"
+          style={{ backgroundColor: '#d8f3dc' }}>
+          🎬
+        </div>
+        <div className="text-center">
+          <p className="font-bold text-base" style={{ color: 'var(--t-text-main)' }}>Aucune vidéo food</p>
+          <p className="text-sm mt-1" style={{ color: 'var(--t-text-soft)' }}>Ajoute ta première recette TikTok</p>
+        </div>
+        <button
+          onClick={onStartAdd}
+          className="w-14 h-14 rounded-full text-3xl font-bold flex items-center justify-center shadow-lg active:scale-95"
+          style={{ backgroundColor: '#2d6a4f', color: '#fff' }}
+        >+</button>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      {/* Filter pills */}
+      <div className="flex gap-2 overflow-x-auto pb-2 mb-4" style={{ scrollbarWidth: 'none' }}>
+        <button
+          onClick={() => setFilter(null)}
+          className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold"
+          style={{ backgroundColor: filter === null ? 'var(--t-primary)' : 'var(--t-item-bg)', color: filter === null ? '#fff' : 'var(--t-text-muted)' }}
+        >
+          Tout ({videos.length})
+        </button>
+        {FOOD_VIDEO_TYPES.map(ft => {
+          const count = videos.filter(v => v.types?.includes(ft.key)).length
+          if (count === 0) return null
+          const meta = typeMeta[ft.key]
+          return (
+            <button key={ft.key}
+              onClick={() => setFilter(filter === ft.key ? null : ft.key)}
+              className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1"
+              style={{
+                backgroundColor: filter === ft.key ? meta.color : meta.bg,
+                color: filter === ft.key ? '#fff' : meta.color,
+              }}
+            >
+              {ft.emoji} {ft.label} ({count})
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filtered.map(v => (
+          <FoodVideoCard key={v.id} video={v} typeMeta={typeMeta} onDelete={onDelete} />
+        ))}
+
+        {adding ? (
+          <div className="col-span-full sm:col-span-1">
+            <FoodAddVideoCard
+              form={form}
+              urlStatus={urlStatus}
+              onChange={onFormChange}
+              onCheck={onCheckUrl}
+              onConfirm={onConfirm}
+              onCancel={onCancelAdd}
+            />
+          </div>
+        ) : (
+          <button
+            onClick={onStartAdd}
+            className="rounded-2xl border-2 border-dashed flex items-center justify-center active:scale-95 min-h-[120px] sm:min-h-[180px]"
+            style={{ borderColor: 'var(--t-border-soft)', backgroundColor: 'var(--t-item-bg)' }}
+          >
+            <span className="text-4xl font-bold" style={{ color: '#2d6a4f' }}>+</span>
+          </button>
+        )}
+      </div>
+
+      {filtered.length === 0 && filter && (
+        <p className="text-center text-sm py-10" style={{ color: '#a07850' }}>Aucune vidéo pour ce type.</p>
+      )}
+    </div>
+  )
+}
+
+function FoodVideoCard({ video, typeMeta, onDelete }: {
+  video: FoodVideoEntry
+  typeMeta: Record<string, { label: string; emoji: string; color: string; bg: string }>
+  onDelete: (id: number | string) => void
+}) {
+  const [hover, setHover] = useState(false)
+  const firstType = video.types?.[0]
+  const meta = firstType ? typeMeta[firstType] : null
+
+  return (
+    <div
+      className="relative rounded-2xl overflow-hidden shadow-md"
+      style={{ minHeight: 180, backgroundColor: meta?.bg ?? 'var(--t-item-bg)', border: `2px solid ${meta?.color ?? '#2d6a4f'}22` }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      {/* Color top bar */}
+      <div className="h-1.5 w-full" style={{ backgroundColor: meta?.color ?? '#2d6a4f' }} />
+
+      {/* Type tags */}
+      {video.types?.length > 0 && (
+        <div className="absolute top-3 left-3 flex flex-wrap gap-1 max-w-[calc(100%-3rem)]">
+          {video.types.map(tk => {
+            const m = typeMeta[tk]
+            return m ? (
+              <span key={tk} className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                style={{ backgroundColor: m.color, color: '#fff' }}>
+                {m.emoji} {m.label}
+              </span>
+            ) : null
+          })}
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="flex flex-col items-center justify-center gap-3 p-4 pt-10 pb-4 min-h-[180px]">
+        <p className="font-bold text-sm text-center leading-tight px-2" style={{ color: 'var(--t-text-main)' }}>{video.name}</p>
+        <a
+          href={video.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-11 h-11 rounded-full flex items-center justify-center text-lg shadow-md active:scale-95"
+          style={{ backgroundColor: meta?.color ?? '#2d6a4f', color: '#fff' }}
+        >▶</a>
+      </div>
+
+      {/* Delete */}
+      <button
+        onClick={() => { if (confirm('Supprimer cette vidéo ?')) onDelete(video.id) }}
+        className="absolute top-3 right-3 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
+        style={{ backgroundColor: 'rgba(192,48,62,0.85)', color: '#fff', opacity: hover ? 1 : 0.5 }}
+      >×</button>
+    </div>
+  )
+}
+
+function FoodAddVideoCard({ form, urlStatus, onChange, onCheck, onConfirm, onCancel }: {
+  form: { name: string; url: string; types: string[] }
+  urlStatus: 'idle' | 'ok' | 'bad'
+  onChange: (f: { name: string; url: string; types: string[] }) => void
+  onCheck: () => void
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  const canConfirm = form.name.trim().length > 0 && urlStatus === 'ok'
+
+  const toggleType = (key: string) => {
+    const next = form.types.includes(key) ? form.types.filter(t => t !== key) : [...form.types, key]
+    onChange({ ...form, types: next })
+  }
+
+  return (
+    <div className="rounded-2xl border-2 shadow-lg flex flex-col overflow-hidden w-full"
+      style={{ borderColor: '#40916c', backgroundColor: 'var(--t-card-bg)' }}>
+      <div className="h-1 w-full" style={{ backgroundColor: '#2d6a4f' }} />
+
+      <div className="flex flex-col gap-3 p-4">
+        {/* Name */}
+        <div>
+          <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--t-text-muted)' }}>Nom de la recette</label>
+          <input
+            value={form.name}
+            onChange={e => onChange({ ...form, name: e.target.value })}
+            placeholder="ex. Pancakes protéinés"
+            className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-green-300"
+            style={{ borderColor: 'var(--t-border-soft)' }}
+            autoFocus
+          />
+        </div>
+
+        {/* URL */}
+        <div>
+          <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--t-text-muted)' }}>Lien TikTok</label>
+          <div className="flex gap-2">
+            <input
+              value={form.url}
+              onChange={e => onChange({ ...form, url: e.target.value })}
+              placeholder="https://tiktok.com/@user/video/…"
+              className="flex-1 min-w-0 px-3 py-2.5 rounded-xl border text-xs outline-none focus:ring-2 focus:ring-green-300"
+              style={{ borderColor: urlStatus === 'ok' ? '#40916c' : urlStatus === 'bad' ? '#c0303e' : 'var(--t-border-soft)' }}
+              onKeyDown={e => { if (e.key === 'Enter') onCheck() }}
+            />
+            <button onClick={onCheck}
+              className="px-3 py-2 rounded-xl text-xs font-bold shrink-0"
+              style={{ backgroundColor: '#1a3a1a', color: '#74c69d' }}>✓</button>
+          </div>
+          {urlStatus === 'ok' && <p className="text-xs mt-1 font-medium" style={{ color: '#2d6a4f' }}>✓ Lien valide</p>}
+          {urlStatus === 'bad' && <p className="text-xs mt-1 font-medium" style={{ color: '#c0303e' }}>✗ URL TikTok invalide</p>}
+        </div>
+
+        {/* Type multi-select */}
+        <div>
+          <label className="block text-xs font-semibold mb-2" style={{ color: 'var(--t-text-muted)' }}>Catégorie</label>
+          <div className="flex flex-wrap gap-2">
+            {FOOD_VIDEO_TYPES.map(ft => {
+              const active = form.types.includes(ft.key)
+              return (
+                <button key={ft.key} type="button" onClick={() => toggleType(ft.key)}
+                  className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+                  style={{
+                    backgroundColor: active ? '#2d6a4f' : 'var(--t-item-bg)',
+                    color: active ? '#fff' : 'var(--t-text-muted)',
+                    border: active ? '2px solid #2d6a4f' : '2px solid var(--t-border-soft)',
+                  }}>
+                  {ft.emoji} {ft.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-1">
+          <button onClick={onCancel}
+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
+            style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>Annuler</button>
+          <button onClick={onConfirm} disabled={!canConfirm}
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold disabled:opacity-40"
+            style={{ backgroundColor: canConfirm ? '#2d6a4f' : '#ccc', color: '#fff' }}>
+            Ajouter ▶
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useLang } from '@/lib/lang'
+import { useTheme } from '@/lib/theme'
 
 type FeedItem = {
   id: number
@@ -13,18 +14,66 @@ type FeedItem = {
   href: string
 }
 
-const CAT_STYLE: Record<string, { badge: string; border: string }> = {
-  food:     { badge: '#2d6a4f', border: '#b7e4c7' },
-  workout:  { badge: '#6b4226', border: '#d4c5a9' },
-  valorant: { badge: '#c0303e', border: '#fde8ec' },
-  trading:  { badge: '#b8860b', border: '#fef9e7' },
-  backtest: { badge: '#40916c', border: '#d8f3dc' },
+const QUICK_LINKS = [
+  { href: '/food',     label: 'Food',    emoji: '🥗',  bg: '#dcfce7', color: '#15803d' },
+  { href: '/workout',  label: 'Workout', emoji: '💪',  bg: '#fef3c7', color: '#92400e' },
+  { href: '/valorant', label: 'Valorant',emoji: '🎮',  bg: '#fee2e2', color: '#991b1b' },
+  { href: '/trading',  label: 'Trading', emoji: '📈',  bg: '#fef9c3', color: '#854d0e' },
+  { href: '/notes',    label: 'Spanish', emoji: '🇪🇸', bg: '#dbeafe', color: '#1e40af' },
+]
+
+const CAT_STYLE: Record<string, { bg: string; color: string; border: string; emoji: string }> = {
+  food:     { bg: '#dcfce7', color: '#15803d', border: '#bbf7d0', emoji: '🥗' },
+  workout:  { bg: '#fef3c7', color: '#92400e', border: '#fde68a', emoji: '💪' },
+  valorant: { bg: '#fee2e2', color: '#991b1b', border: '#fca5a5', emoji: '🎮' },
+  trading:  { bg: '#fef9c3', color: '#854d0e', border: '#fde047', emoji: '📈' },
+  backtest: { bg: '#d1fae5', color: '#065f46', border: '#6ee7b7', emoji: '📊' },
+  spanish:  { bg: '#dbeafe', color: '#1e40af', border: '#93c5fd', emoji: '🇪🇸' },
+  videos:   { bg: '#f3f4f6', color: '#374151', border: '#d1d5db', emoji: '🎬' },
 }
+
+const ALL_CATS = Object.keys(CAT_STYLE)
+
+function noteKey(theme: string) { return `hero-note-${theme}` }
+function dateKey(theme: string) { return `hero-date-${theme}` }
 
 export default function FeedPage() {
   const [feed, setFeed] = useState<FeedItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<string | null>(null)
   const { t } = useLang()
+  const { theme, toggle: toggleTheme, dark, toggleDark } = useTheme()
+
+  // Per-theme personal note
+  const [noteText, setNoteText] = useState('')
+  const [noteDate, setNoteDate] = useState('')
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Load note from localStorage when theme changes
+  useEffect(() => {
+    const saved = localStorage.getItem(noteKey(theme)) ?? ''
+    const savedDate = localStorage.getItem(dateKey(theme)) ?? ''
+    setNoteText(saved)
+    setNoteDate(savedDate)
+    setEditing(false)
+  }, [theme])
+
+  const startEdit = () => {
+    setDraft(noteText)
+    setEditing(true)
+    setTimeout(() => textareaRef.current?.focus(), 50)
+  }
+
+  const saveNote = () => {
+    const now = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+    localStorage.setItem(noteKey(theme), draft)
+    localStorage.setItem(dateKey(theme), now)
+    setNoteText(draft)
+    setNoteDate(now)
+    setEditing(false)
+  }
 
   useEffect(() => {
     fetch('/api/feed')
@@ -33,73 +82,180 @@ export default function FeedPage() {
       .catch(() => setLoading(false))
   }, [])
 
+  const filtered = filter ? feed.filter(i => i.category === filter) : feed
+
   return (
     <div>
-      {/* Hero */}
-      <div className="text-center py-8 sm:py-14 mb-6 sm:mb-10">
-        <div className="inline-block px-4 py-1 rounded-full text-sm font-medium mb-3"
-          style={{ backgroundColor: '#d8f3dc', color: '#2d6a4f' }}>
-          {t.tagline}
-        </div>
-        <h1 className="text-3xl sm:text-5xl font-bold mb-3" style={{ color: '#1a3a1a' }}>
-          {t.welcomeBack}
-        </h1>
-        <p className="text-base sm:text-lg" style={{ color: '#8b5e3c' }}>
-          Food &middot; Fitness &middot; Valorant &middot; Trading
-        </p>
 
-        <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-6 sm:mt-8">
-          {[
-            { href: '/food',     label: t.foodPlan, emoji: '🥗', color: '#2d6a4f' },
-            { href: '/workout',  label: t.workout,  emoji: '💪', color: '#6b4226' },
-            { href: '/valorant', label: 'Valorant',  emoji: '🎮', color: '#c0303e' },
-            { href: '/trading',  label: 'Trading',   emoji: '📈', color: '#b8860b' },
-          ].map(item => (
-            <Link key={item.href} href={item.href}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-white text-sm shadow-sm transition-transform hover:scale-105"
-              style={{ backgroundColor: item.color }}>
-              <span>{item.emoji}</span> {item.label}
-            </Link>
-          ))}
+      {/* ── Greeting ── */}
+      <div className="flex items-center justify-between mb-5 pt-1">
+        <div>
+          <p className="text-xs font-medium" style={{ color: 'var(--t-text-muted)' }}>Bienvenue 👋</p>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--t-text-main)' }}>{theme === 'sb' ? 'SB' : 'ZK'} Dashboard</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleDark}
+            className="w-10 h-10 rounded-full flex items-center justify-center text-lg transition-all active:scale-90 hover:scale-110"
+            style={{
+              background: dark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.07)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+            }}
+            title={dark ? 'Mode clair' : 'Mode sombre'}
+          >
+            {dark ? '☀️' : '🌙'}
+          </button>
+          <button
+            onClick={toggleTheme}
+            className="w-10 h-10 rounded-full flex items-center justify-center font-black text-sm tracking-widest transition-all active:scale-90 hover:scale-110"
+            style={{
+              background: 'linear-gradient(135deg,var(--t-fab-from),var(--t-fab-to))',
+              color: '#fff',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.2)',
+            }}
+            title="Switch theme"
+          >
+            {theme === 'sb' ? 'SB' : 'ZK'}
+          </button>
         </div>
       </div>
 
-      {/* Feed */}
-      <div className="flex items-center gap-3 mb-6">
-        <h2 className="text-xl font-semibold" style={{ color: '#1a3a1a' }}>{t.latestActivity}</h2>
-        <div className="flex-1 h-px" style={{ backgroundColor: '#e8dcc8' }} />
+      {/* ── Hero — personal note ── */}
+      {(
+        <div className="rounded-2xl p-5 mb-5 relative overflow-hidden"
+          style={{ background: 'linear-gradient(135deg, var(--t-hero-from) 0%, var(--t-hero-mid) 55%, var(--t-hero-to) 100%)' }}>
+          <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.07)' }} />
+          <div className="absolute right-4 -bottom-6 w-24 h-24 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }} />
+
+          {/* Pencil edit btn */}
+          {!editing && (
+            <button
+              onClick={startEdit}
+              className="absolute top-3 right-3 text-base leading-none opacity-70 hover:opacity-100 transition-opacity"
+              title="Modifier"
+            >✏️</button>
+          )}
+
+          <span className="inline-block text-xs font-bold uppercase tracking-widest px-2.5 py-1 rounded-full mb-3"
+            style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'var(--t-hero-text)' }}>
+            📌 Note personnelle
+          </span>
+
+          {editing ? (
+            <>
+              <textarea
+                ref={textareaRef}
+                value={draft}
+                onChange={e => setDraft(e.target.value)}
+                rows={3}
+                className="w-full rounded-xl px-3 py-2 text-sm resize-none outline-none mb-3"
+                style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)' }}
+                placeholder="Écris quelque chose..."
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={saveNote}
+                  className="flex-1 py-2 rounded-xl text-xs font-bold"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.25)', color: '#fff' }}
+                >✓ Sauvegarder</button>
+                <button
+                  onClick={() => setEditing(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold"
+                  style={{ backgroundColor: 'rgba(0,0,0,0.15)', color: '#fff' }}
+                >✕</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-white text-sm leading-relaxed min-h-[48px]">
+                {noteText || <span className="opacity-50 italic">Aucune note — clique sur ✏️ pour écrire</span>}
+              </p>
+              {noteDate && (
+                <p className="text-xs mt-3 font-medium" style={{ color: 'var(--t-primary-pale)' }}>{noteDate}</p>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── Quick links ── */}
+      <div className="flex gap-2.5 overflow-x-auto pb-1 mb-6" style={{ scrollbarWidth: 'none' }}>
+        {QUICK_LINKS.map(item => (
+          <Link key={item.href} href={item.href}
+            className="flex-shrink-0 flex flex-col items-center gap-1.5 px-4 py-3 rounded-2xl transition-all active:scale-95"
+            style={{ backgroundColor: dark ? 'var(--t-item-bg)' : item.bg, minWidth: 72 }}>
+            <span className="text-2xl">{item.emoji}</span>
+            <span className="text-xs font-semibold" style={{ color: dark ? 'var(--t-text-muted)' : item.color }}>{item.label}</span>
+          </Link>
+        ))}
       </div>
 
+      {/* ── Activities header ── */}
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-base font-bold" style={{ color: 'var(--t-text-main)' }}>{t.latestActivity}</h2>
+        <span className="text-xs font-semibold" style={{ color: 'var(--t-primary)' }}>{feed.length} entrées</span>
+      </div>
+
+      {/* ── Filter pills ── */}
+      <div className="flex gap-2 overflow-x-auto pb-2 mb-4" style={{ scrollbarWidth: 'none' }}>
+        <button
+          onClick={() => setFilter(null)}
+          className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+          style={{ backgroundColor: filter === null ? 'var(--t-primary)' : 'var(--t-item-bg)', color: filter === null ? '#fff' : 'var(--t-text-muted)' }}
+        >
+          Tout ({feed.length})
+        </button>
+        {ALL_CATS.map(cat => {
+          const s = CAT_STYLE[cat]
+          const count = feed.filter(i => i.category === cat).length
+          if (count === 0) return null
+          return (
+            <button key={cat}
+              onClick={() => setFilter(filter === cat ? null : cat)}
+              className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1"
+              style={{ backgroundColor: filter === cat ? s.color : 'var(--t-item-bg)', color: filter === cat ? '#fff' : 'var(--t-text-muted)' }}
+            >
+              {s.emoji} {cat} ({count})
+            </button>
+          )
+        })}
+      </div>
+
+      {/* ── Feed items ── */}
       {loading ? (
-        <div className="columns-1 sm:columns-2 lg:columns-3 gap-4">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="break-inside-avoid mb-4 rounded-2xl h-40 animate-pulse"
-              style={{ backgroundColor: '#e8dcc8' }} />
+        <div className="flex flex-col gap-3">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="rounded-2xl h-24 animate-pulse" style={{ backgroundColor: 'var(--t-border-soft)' }} />
           ))}
         </div>
-      ) : feed.length === 0 ? (
-        <div className="text-center py-24 rounded-2xl" style={{ backgroundColor: '#f9f5ef', color: '#a07850' }}>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-20 rounded-2xl" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>
           <p className="text-5xl mb-4">🌱</p>
-          <p className="text-xl font-medium mb-1">{t.nothingYet}</p>
+          <p className="text-lg font-semibold mb-1">{t.nothingYet}</p>
           <p className="text-sm">{t.nothingYetSub}</p>
         </div>
       ) : (
-        <div className="columns-1 sm:columns-2 lg:columns-3 gap-4">
-          {feed.map(item => {
+        <div className="flex flex-col gap-3">
+          {filtered.map(item => {
             const s = CAT_STYLE[item.category] || CAT_STYLE.food
             return (
               <Link key={`${item.category}-${item.id}`} href={item.href}
-                className="block break-inside-avoid mb-4 rounded-2xl p-5 border-2 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
-                style={{ backgroundColor: '#ffffff', borderColor: s.border }}>
-                <span className="inline-block text-xs font-bold px-3 py-1 rounded-full text-white uppercase tracking-wide mb-3"
-                  style={{ backgroundColor: s.badge }}>
-                  {item.category}
-                </span>
-                <h3 className="font-semibold text-lg leading-snug mb-2" style={{ color: '#1a3a1a' }}>
-                  {item.title}
-                </h3>
-                <p className="text-sm line-clamp-3" style={{ color: '#8b5e3c' }}>{item.excerpt}</p>
-                <p className="text-xs mt-3" style={{ color: '#c4a882' }}>{item.date}</p>
+                className="flex gap-4 items-start bg-white rounded-2xl p-4 shadow-sm transition-all active:scale-[0.98] hover:shadow-md"
+                style={{ borderLeft: `4px solid ${s.border}` }}>
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-lg"
+                  style={{ backgroundColor: dark ? 'var(--t-item-bg)' : s.bg }}>
+                  {s.emoji}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-xs font-bold uppercase tracking-wide" style={{ color: s.color }}>
+                      {item.category}
+                    </span>
+                    <span className="text-xs" style={{ color: 'var(--t-text-soft)' }}>{item.date}</span>
+                  </div>
+                  <p className="font-semibold text-sm leading-snug line-clamp-1" style={{ color: 'var(--t-text-main)' }}>{item.title}</p>
+                  <p className="text-xs mt-0.5 line-clamp-2" style={{ color: 'var(--t-text-muted)' }}>{item.excerpt}</p>
+                </div>
               </Link>
             )
           })}

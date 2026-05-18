@@ -90,5 +90,59 @@ model Note {
   title      String
   rules      String
   examples   String
+  quiz       String?
   createdAt  DateTime @default(now())
+}
+
+model WorkoutVideo {
+  id        Int      @id @default(autoincrement())
+  name      String
+  url       String
+  types     String   @default("[]")
+  createdAt DateTime @default(now())
+}
+
+model FoodVideo {
+  id        Int      @id @default(autoincrement())
+  name      String
+  url       String
+  types     String   @default("[]")
+  createdAt DateTime @default(now())
+}
+
+model MealOverride {
+  id          Int     @id @default(autoincrement())
+  mealId      Int     @unique
+  name        String?
+  type        String?
+  protein     String?
+  kcal        String?
+  time        String?
+  ingredients String?
+  prep        String?
+  tip         String?
+}
+
+model RajaPhoto {
+  id        Int      @id @default(autoincrement())
+  title     String
+  year      String
+  imageData String
+  mood      String?
+  createdAt DateTime @default(now())
+}
+
+model WeekScheduleData {
+  id   Int    @id @default(1)
+  data String @default("{}")
+}
+
+model BuyListData {
+  id    Int    @id @default(1)
+  items String @default("[]")
+}
+
+model AppPreference {
+  key   String @id
+  value String @default("[]")
 }

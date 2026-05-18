@@ -13,6 +13,7 @@ type ExCard = {
 }
 type LogExercise = { name: string; sets: number; reps: string; notes: string }
 type Session = { id: number; type: string; title: string; date: string; exercises: string; notes: string | null }
+type VideoEntry = { id: number | string; name: string; url: string; types: string[] }
 
 // ─── Exercise Library Data ────────────────────────────────────────────────────
 const EXERCISES: ExCard[] = [
@@ -463,32 +464,32 @@ function PhotoEditPopup({ index, current, onSave, onClose }: {
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4"
       style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden" style={{ backgroundColor: '#fff' }}>
+      <div className="w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden" style={{ backgroundColor: 'var(--t-card-bg)' }}>
         {/* header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: '#e8dcc8' }}>
-          <span className="font-semibold text-sm" style={{ color: '#1a3a1a' }}>✏️ Photo {index + 1}</span>
+        <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--t-border-soft)' }}>
+          <span className="font-semibold text-sm" style={{ color: 'var(--t-text-main)' }}>✏️ Photo {index + 1}</span>
           <button onClick={onClose} className="w-7 h-7 rounded-full flex items-center justify-center text-lg font-bold"
-            style={{ backgroundColor: '#f0e8d8', color: '#6b4226' }}>×</button>
+            style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>×</button>
         </div>
         <div className="p-4 space-y-3">
           {/* preview */}
           {url && (
-            <div className="rounded-xl overflow-hidden border" style={{ borderColor: '#e8dcc8', aspectRatio: '4/3' }}>
+            <div className="rounded-xl overflow-hidden border" style={{ borderColor: 'var(--t-border-soft)', aspectRatio: '4/3' }}>
               <img src={url} alt="preview" className="w-full h-full object-cover" />
             </div>
           )}
           {/* URL input */}
           <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: '#6b4226' }}>Image URL</label>
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>Image URL</label>
             <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..."
               className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
-              style={{ borderColor: '#d4c5a9' }} />
+              style={{ borderColor: 'var(--t-border-soft)' }} />
           </div>
           {/* File upload */}
           <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: '#6b4226' }}>Or upload a file</label>
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>Or upload a file</label>
             <label className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border-2 border-dashed cursor-pointer text-sm font-medium transition-colors"
-              style={{ borderColor: '#d4c5a9', color: '#8b5e3c' }}>
+              style={{ borderColor: 'var(--t-border-soft)', color: 'var(--t-text-muted)' }}>
               📁 Choose file
               <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
             </label>
@@ -503,7 +504,7 @@ function PhotoEditPopup({ index, current, onSave, onClose }: {
               </button>
             )}
             <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-medium"
-              style={{ backgroundColor: '#f0e8d8', color: '#6b4226' }}>Cancel</button>
+              style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>Cancel</button>
             <button onClick={() => onSave(url.trim() || null)}
               className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white"
               style={{ backgroundColor: '#2d6a4f' }}>Save</button>
@@ -606,22 +607,22 @@ function ExDetailOverlay({ ex, onClose }: { ex: ExCard; onClose: () => void }) {
       style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="w-full sm:max-w-2xl max-h-[95vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl shadow-2xl"
-        style={{ backgroundColor: '#fff' }}>
+        style={{ backgroundColor: 'var(--t-card-bg)' }}>
 
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-4 border-b"
-          style={{ backgroundColor: '#fff', borderColor: '#e8dcc8' }}>
+          style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
           <div>
             <div className="flex items-center gap-2 mb-0.5">
               <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: info.color }}>{info.emoji} {ex.type}</span>
-              <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: '#f0e8d8', color: '#8b5e3c' }}>{equipment}</span>
+              <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>{equipment}</span>
             </div>
-            <h2 className="font-bold text-lg leading-tight" style={{ color: '#1a3a1a' }}>{ex.name}</h2>
-            <p className="text-xs mt-0.5" style={{ color: '#a07850' }}>{muscle}</p>
+            <h2 className="font-bold text-lg leading-tight" style={{ color: 'var(--t-text-main)' }}>{ex.name}</h2>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-soft)' }}>{muscle}</p>
           </div>
           <button onClick={onClose}
             className="w-9 h-9 rounded-full flex items-center justify-center text-xl font-bold flex-shrink-0"
-            style={{ backgroundColor: '#f0e8d8', color: '#6b4226' }}>×</button>
+            style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>×</button>
         </div>
 
         <div className="px-5 py-4 space-y-5">
@@ -631,20 +632,20 @@ function ExDetailOverlay({ ex, onClose }: { ex: ExCard; onClose: () => void }) {
             /* Loading skeleton */
             <div className="grid grid-cols-3 gap-2">
               {[0, 1, 2].map(i => (
-                <div key={i} className="rounded-2xl animate-pulse" style={{ aspectRatio: '4/5', backgroundColor: '#f0e8d8' }} />
+                <div key={i} className="rounded-2xl animate-pulse" style={{ aspectRatio: '4/5', backgroundColor: 'var(--t-item-bg)' }} />
               ))}
             </div>
           ) : gifUrl && !customPhotos.some(p => p !== null) ? (
             /* ExerciseDB animated GIF — shows full movement */
             <div className="rounded-2xl overflow-hidden border-2" style={{ borderColor: info.color + '40' }}>
               <div className="relative">
-                <img src={gifUrl} alt={ex.name} className="w-full object-contain" style={{ maxHeight: 280, backgroundColor: '#f9f5ef' }} />
+                <img src={gifUrl} alt={ex.name} className="w-full object-contain" style={{ maxHeight: 280, backgroundColor: 'var(--t-item-bg)' }} />
                 <span className="absolute top-2 right-2 text-xs font-bold px-2 py-1 rounded-lg text-white" style={{ backgroundColor: info.color }}>
                   {lang === 'fr' ? 'Mouvement complet' : 'Full movement'}
                 </span>
                 <button onClick={() => setEditingPhoto(0)}
                   className="absolute bottom-2 right-2 w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-md"
-                  style={{ backgroundColor: '#fff', color: '#2d6a4f' }}>✏️</button>
+                  style={{ backgroundColor: 'var(--t-card-bg)', color: '#2d6a4f' }}>✏️</button>
               </div>
             </div>
           ) : imgs.length > 0 || customPhotos.some(p => p !== null) ? (
@@ -720,11 +721,11 @@ function ExDetailOverlay({ ex, onClose }: { ex: ExCard; onClose: () => void }) {
                 {t.stepLabel} {activeStep + 1}
               </span>
             </div>
-            <p className="text-sm font-medium leading-relaxed" style={{ color: '#1a3a1a' }}>{steps[activeStep]}</p>
+            <p className="text-sm font-medium leading-relaxed" style={{ color: 'var(--t-text-main)' }}>{steps[activeStep]}</p>
           </div>
 
           {/* Description */}
-          <p className="text-sm leading-relaxed" style={{ color: '#6b4226' }}>{desc}</p>
+          <p className="text-sm leading-relaxed" style={{ color: 'var(--t-text-muted)' }}>{desc}</p>
 
           {/* Level tabs */}
           <div>
@@ -732,12 +733,12 @@ function ExDetailOverlay({ ex, onClose }: { ex: ExCard; onClose: () => void }) {
               {LEVELS.map((lk, i) => (
                 <button key={lk} onClick={() => setLevel(lk)}
                   className="px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap flex-shrink-0 transition-all"
-                  style={{ backgroundColor: level === lk ? info.color : '#f0e8d8', color: level === lk ? '#fff' : '#6b4226' }}>
+                  style={{ backgroundColor: level === lk ? info.color : 'var(--t-item-bg)', color: level === lk ? '#fff' : 'var(--t-text-muted)' }}>
                   {levelLabels[i]}
                 </button>
               ))}
             </div>
-            <div className="rounded-2xl p-3" style={{ backgroundColor: '#f0faf2' }}>
+            <div className="rounded-2xl p-3" style={{ backgroundColor: 'var(--t-item-bg)' }}>
               <p className="text-sm font-medium" style={{ color: '#2d6a4f' }}>{levelText(level)}</p>
             </div>
           </div>
@@ -769,31 +770,31 @@ function ExCard({
 
   return (
     <div className="rounded-2xl border-2 flex flex-col overflow-hidden shadow-sm"
-      style={{ backgroundColor: '#fff', borderColor: '#e8dcc8' }}>
+      style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
       {/* Header */}
       <div className="px-4 pt-4 pb-2 flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0 cursor-pointer" onClick={onView}>
           <div className="flex items-center gap-1.5 mb-1">
             <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: info.color }}>{info.emoji} {ex.type}</span>
-            <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: '#f0e8d8', color: '#8b5e3c' }}>{equipment}</span>
+            <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>{equipment}</span>
           </div>
-          <h3 className="font-bold text-sm leading-tight" style={{ color: '#1a3a1a' }}>{ex.name}</h3>
-          <p className="text-xs mt-0.5" style={{ color: '#a07850' }}>{muscle}</p>
+          <h3 className="font-bold text-sm leading-tight" style={{ color: 'var(--t-text-main)' }}>{ex.name}</h3>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-soft)' }}>{muscle}</p>
         </div>
         <div className="flex gap-1 shrink-0">
           <button onClick={onView} className="w-7 h-7 rounded-full flex items-center justify-center transition-all text-xs"
             style={{ backgroundColor: info.color, color: '#fff' }}>📸</button>
           <button onClick={onEdit} className="w-7 h-7 rounded-full flex items-center justify-center transition-all"
-            style={{ backgroundColor: '#f0e8d8', color: '#8b5e3c' }}>✏️</button>
+            style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>✏️</button>
           <button onClick={onFav} className="w-7 h-7 rounded-full flex items-center justify-center transition-all"
-            style={{ backgroundColor: isFav ? '#fde8ec' : '#f0e8d8' }}>
+            style={{ backgroundColor: isFav ? '#fde8ec' : 'var(--t-item-bg)' }}>
             <span style={{ fontSize: 14 }}>{isFav ? '❤️' : '🤍'}</span>
           </button>
         </div>
       </div>
 
       {/* Step Carousel */}
-      <div className="mx-4 mb-2 rounded-xl p-3 relative" style={{ backgroundColor: '#f9f5ef', minHeight: 88 }}>
+      <div className="mx-4 mb-2 rounded-xl p-3 relative" style={{ backgroundColor: 'var(--t-item-bg)', minHeight: 88 }}>
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-xs font-semibold" style={{ color: '#2d6a4f' }}>{t.stepLabel} {step + 1}/{steps.length}</span>
           <div className="flex gap-1">
@@ -805,7 +806,7 @@ function ExCard({
               style={{ backgroundColor: '#d8f3dc', color: '#2d6a4f' }}>›</button>
           </div>
         </div>
-        <p className="text-xs leading-relaxed" style={{ color: '#6b4226' }}>{steps[step]}</p>
+        <p className="text-xs leading-relaxed" style={{ color: 'var(--t-text-muted)' }}>{steps[step]}</p>
         {/* Dots */}
         <div className="flex gap-1 mt-2">
           {steps.map((_, i) => (
@@ -822,12 +823,12 @@ function ExCard({
           {levelKeys.map((lk, i) => (
             <button key={lk} onClick={() => setLevel(lk)}
               className="px-2 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-all shrink-0"
-              style={{ backgroundColor: level === lk ? info.color : '#f0e8d8', color: level === lk ? '#fff' : '#6b4226' }}>
+              style={{ backgroundColor: level === lk ? info.color : 'var(--t-item-bg)', color: level === lk ? '#fff' : 'var(--t-text-muted)' }}>
               {levelLabels[i].split(' ')[0]}
             </button>
           ))}
         </div>
-        <p className="text-xs leading-relaxed rounded-xl p-2.5" style={{ backgroundColor: '#f0faf2', color: '#2d6a4f' }}>
+        <p className="text-xs leading-relaxed rounded-xl p-2.5" style={{ backgroundColor: 'var(--t-item-bg)', color: '#2d6a4f' }}>
           {levelLabels[levelKeys.indexOf(level)]} — {levelText(level)}
         </p>
       </div>
@@ -847,7 +848,13 @@ export default function WorkoutPage() {
   }
 
   // ── Main tab ────────────────────────────────────────────────────────────────
-  const [mainTab, setMainTab] = useState<'library' | 'log' | 'week'>('library')
+  const [mainTab, setMainTab] = useState<'library' | 'log' | 'week' | 'videos'>('library')
+
+  // ── Videos state ────────────────────────────────────────────────────────────
+  const [igVideos, setIgVideos] = useState<VideoEntry[]>([])
+  const [addingVideo, setAddingVideo] = useState(false)
+  const [vForm, setVForm] = useState({ name: '', url: '', types: [] as string[] })
+  const [vUrlStatus, setVUrlStatus] = useState<'idle' | 'ok' | 'bad'>('idle')
 
   // ── Library state ──────────────────────────────────────────────────────────
   const [libCat, setLibCat] = useState('PULL')
@@ -883,6 +890,7 @@ export default function WorkoutPage() {
       setWeekPlan(JSON.parse(localStorage.getItem('weekWorkout') || '{}'))
       setDoneSets(new Set(JSON.parse(localStorage.getItem('exDone') || '[]')))
     } catch {}
+    fetch('/api/videos').then(r => r.json()).then(setIgVideos).catch(() => {})
   }, [])
 
   const loadSessions = (type?: string) =>
@@ -969,11 +977,25 @@ export default function WorkoutPage() {
 
   return (
     <div>
+      {/* ── Hero last session ── */}
+      {sessions.length > 0 && (
+        <div className="rounded-2xl p-5 mb-5 relative overflow-hidden"
+          style={{ background: 'linear-gradient(135deg, var(--t-hero-from) 0%, var(--t-hero-mid) 55%, var(--t-hero-to) 100%)' }}>
+          <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.07)' }} />
+          <span className="inline-block text-xs font-bold uppercase tracking-widest px-2.5 py-1 rounded-full mb-3"
+            style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'var(--t-hero-text)' }}>
+            💪 Dernière séance
+          </span>
+          <p className="text-white font-bold text-lg leading-snug mb-1">{sessions[0].title}</p>
+          <p className="text-sm" style={{ color: 'var(--t-hero-text)' }}>{sessions[0].type} · {sessions[0].date}</p>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="flex items-center justify-between gap-3 mb-5">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: '#1a3a1a' }}>💪 Workout</h1>
-          <p className="text-xs sm:text-sm mt-0.5" style={{ color: '#8b5e3c' }}>{t.workoutSubtitle}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: 'var(--t-text-main)' }}>💪 Workout</h1>
+          <p className="text-xs sm:text-sm mt-0.5" style={{ color: 'var(--t-text-muted)' }}>{t.workoutSubtitle}</p>
         </div>
         {mainTab === 'log' && (
           <button onClick={openLogAdd} className="btn-glass btn-glass-green px-4 py-2.5 rounded-xl text-sm font-medium">{t.logBtn}</button>
@@ -985,10 +1007,10 @@ export default function WorkoutPage() {
 
       {/* Main Tabs */}
       <div className="flex gap-2 mb-5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-        {([['library', t.libraryTab], ['log', t.workoutLogTab], ['week', t.workoutWeekTab]] as const).map(([key, label]) => (
+        {([['library', t.libraryTab], ['log', t.workoutLogTab], ['week', t.workoutWeekTab], ['videos', '🎬 Videos']] as const).map(([key, label]) => (
           <button key={key} onClick={() => setMainTab(key)}
             className="px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all"
-            style={{ backgroundColor: mainTab === key ? '#2d6a4f' : '#f0e8d8', color: mainTab === key ? '#fff' : '#6b4226' }}>
+            style={{ backgroundColor: mainTab === key ? '#2d6a4f' : 'var(--t-item-bg)', color: mainTab === key ? '#fff' : 'var(--t-text-muted)' }}>
             {label}
           </button>
         ))}
@@ -1004,7 +1026,7 @@ export default function WorkoutPage() {
               return (
                 <button key={tp} onClick={() => setLibCat(tp)}
                   className="px-3 py-1.5 rounded-xl text-sm font-medium whitespace-nowrap flex items-center gap-1 transition-all"
-                  style={{ backgroundColor: libCat === tp ? info.color : '#f0e8d8', color: libCat === tp ? '#fff' : '#6b4226' }}>
+                  style={{ backgroundColor: libCat === tp ? info.color : 'var(--t-item-bg)', color: libCat === tp ? '#fff' : 'var(--t-text-muted)' }}>
                   {info.emoji} {info.label}
                 </button>
               )
@@ -1020,11 +1042,11 @@ export default function WorkoutPage() {
                 {f === 'all' ? t.allExercises : '❤️ Favs'}
               </button>
             ))}
-            <span className="text-xs ml-auto self-center" style={{ color: '#a07850' }}>{filteredLib.length} exercises</span>
+            <span className="text-xs ml-auto self-center" style={{ color: 'var(--t-text-soft)' }}>{filteredLib.length} exercises</span>
           </div>
 
           {filteredLib.length === 0 ? (
-            <div className="text-center py-16 rounded-2xl" style={{ backgroundColor: '#f9f5ef', color: '#a07850' }}>
+            <div className="text-center py-16 rounded-2xl" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-soft)' }}>
               <p className="text-4xl mb-2">❤️</p>
               <p className="font-medium text-sm">{t.noFavExercises}</p>
             </div>
@@ -1041,8 +1063,8 @@ export default function WorkoutPage() {
           {libFilter === 'all' && favExercises.size > 0 && (
             <div className="mt-8">
               <div className="flex items-center gap-3 mb-4">
-                <h2 className="text-base font-semibold" style={{ color: '#1a3a1a' }}>❤️ Favorites — {TYPE_INFO[libCat]?.label}</h2>
-                <div className="flex-1 h-px" style={{ backgroundColor: '#e8dcc8' }} />
+                <h2 className="text-base font-semibold" style={{ color: 'var(--t-text-main)' }}>❤️ Favorites — {TYPE_INFO[libCat]?.label}</h2>
+                <div className="flex-1 h-px" style={{ backgroundColor: 'var(--t-border-soft)' }} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {EXERCISES.filter(e => e.type === libCat && favExercises.has(e.id)).map(ex => (
@@ -1064,14 +1086,14 @@ export default function WorkoutPage() {
               return (
                 <button key={tp} onClick={() => setLogCat(tp)}
                   className="px-3 sm:px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap flex items-center gap-1.5 transition-all"
-                  style={{ backgroundColor: logCat === tp ? info.color : '#f0e8d8', color: logCat === tp ? '#fff' : '#6b4226' }}>
+                  style={{ backgroundColor: logCat === tp ? info.color : 'var(--t-item-bg)', color: logCat === tp ? '#fff' : 'var(--t-text-muted)' }}>
                   {info.emoji} {info.label}
                 </button>
               )
             })}
           </div>
           {sessions.length === 0 ? (
-            <div className="text-center py-16 rounded-2xl" style={{ backgroundColor: '#f9f5ef', color: '#a07850' }}>
+            <div className="text-center py-16 rounded-2xl" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-soft)' }}>
               <p className="text-4xl mb-2">{TYPE_INFO[logCat]?.emoji}</p>
               <p className="font-medium text-sm">{t.noSessions(TYPE_INFO[logCat]?.label ?? '')}</p>
             </div>
@@ -1081,27 +1103,27 @@ export default function WorkoutPage() {
                 const exs = JSON.parse(s.exercises) as { name: string; sets: number; reps: string; notes: string }[]
                 const info = TYPE_INFO[s.type]
                 return (
-                  <div key={s.id} className="rounded-2xl border-2 p-4 shadow-sm" style={{ backgroundColor: '#fff', borderColor: '#e8dcc8' }}>
+                  <div key={s.id} className="rounded-2xl border-2 p-4 shadow-sm" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <span className="text-xs font-bold px-2.5 py-1 rounded-full text-white" style={{ backgroundColor: info?.color }}>{info?.emoji} {info?.label}</span>
-                        <h3 className="font-semibold text-base mt-1.5" style={{ color: '#1a3a1a' }}>{s.title}</h3>
-                        <p className="text-xs mt-0.5" style={{ color: '#a07850' }}>{s.date}</p>
+                        <h3 className="font-semibold text-base mt-1.5" style={{ color: 'var(--t-text-main)' }}>{s.title}</h3>
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-soft)' }}>{s.date}</p>
                       </div>
                       <div className="flex gap-1 shrink-0">
-                        <button onClick={() => openLogEdit(s)} className="text-xs px-2 py-1 rounded-lg" style={{ color: '#8b5e3c', backgroundColor: '#f0e8d8' }}>{t.edit}</button>
+                        <button onClick={() => openLogEdit(s)} className="text-xs px-2 py-1 rounded-lg" style={{ color: 'var(--t-text-muted)', backgroundColor: 'var(--t-item-bg)' }}>{t.edit}</button>
                         <button onClick={() => delLog(s.id)} className="text-xs px-2 py-1 rounded-lg" style={{ color: '#c0303e', backgroundColor: '#fde8ec' }}>{t.del}</button>
                       </div>
                     </div>
                     <div className="space-y-1.5">
                       {exs.map((ex, i) => (
-                        <div key={i} className="flex items-center gap-2 py-1.5 px-3 rounded-xl" style={{ backgroundColor: '#f9f5ef' }}>
-                          <span className="font-medium text-sm flex-1 truncate" style={{ color: '#1a3a1a' }}>{ex.name}</span>
+                        <div key={i} className="flex items-center gap-2 py-1.5 px-3 rounded-xl" style={{ backgroundColor: 'var(--t-item-bg)' }}>
+                          <span className="font-medium text-sm flex-1 truncate" style={{ color: 'var(--t-text-main)' }}>{ex.name}</span>
                           <span className="text-xs px-2 py-0.5 rounded-full shrink-0" style={{ backgroundColor: '#d8f3dc', color: '#2d6a4f' }}>{ex.sets}×{ex.reps}</span>
                         </div>
                       ))}
                     </div>
-                    {s.notes && <p className="text-xs mt-2 italic" style={{ color: '#a07850' }}>{s.notes}</p>}
+                    {s.notes && <p className="text-xs mt-2 italic" style={{ color: 'var(--t-text-soft)' }}>{s.notes}</p>}
                   </div>
                 )
               })}
@@ -1120,7 +1142,7 @@ export default function WorkoutPage() {
               return (
                 <button key={day} onClick={() => setWeekDay(i)}
                   className="flex-1 min-w-[42px] flex flex-col items-center py-2.5 px-1 rounded-xl text-xs font-medium transition-all relative"
-                  style={{ backgroundColor: weekDay === i ? '#2d6a4f' : '#f0e8d8', color: weekDay === i ? '#fff' : '#6b4226' }}>
+                  style={{ backgroundColor: weekDay === i ? '#2d6a4f' : 'var(--t-item-bg)', color: weekDay === i ? '#fff' : 'var(--t-text-muted)' }}>
                   {day}
                   {planned > 0 && (
                     <span className="mt-0.5 w-4 h-4 rounded-full flex items-center justify-center text-white font-bold"
@@ -1133,7 +1155,7 @@ export default function WorkoutPage() {
 
           {/* Day exercises */}
           {dayExercises.length === 0 ? (
-            <div className="text-center py-16 rounded-2xl" style={{ backgroundColor: '#f9f5ef', color: '#a07850' }}>
+            <div className="text-center py-16 rounded-2xl" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-soft)' }}>
               <p className="text-4xl mb-2">📅</p>
               <p className="font-medium text-sm px-4">{t.workoutWeekEmpty}</p>
             </div>
@@ -1149,13 +1171,13 @@ export default function WorkoutPage() {
                   const info = TYPE_INFO_STATIC[ex.type]
                   return (
                     <div key={ex.id} className="rounded-2xl border-2 p-4 flex items-center gap-3 transition-all"
-                      style={{ backgroundColor: isDone ? '#f0faf2' : '#fff', borderColor: isDone ? '#2d6a4f' : '#e8dcc8' }}>
+                      style={{ backgroundColor: isDone ? '#f0faf2' : 'var(--t-card-bg)', borderColor: isDone ? '#2d6a4f' : 'var(--t-border-soft)' }}>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 mb-0.5">
                           <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: info.color }}>{info.emoji}</span>
-                          <span className="font-semibold text-sm truncate" style={{ color: isDone ? '#52b788' : '#1a3a1a', textDecoration: isDone ? 'line-through' : 'none' }}>{ex.name}</span>
+                          <span className="font-semibold text-sm truncate" style={{ color: isDone ? '#52b788' : 'var(--t-text-main)', textDecoration: isDone ? 'line-through' : 'none' }}>{ex.name}</span>
                         </div>
-                        <p className="text-xs" style={{ color: '#a07850' }}>{ex.muscle} · {ex.equipment}</p>
+                        <p className="text-xs" style={{ color: 'var(--t-text-soft)' }}>{ex.muscle} · {ex.equipment}</p>
                       </div>
                       <div className="flex gap-1.5 shrink-0">
                         <button onClick={() => toggleDone(ex.id)}
@@ -1180,16 +1202,16 @@ export default function WorkoutPage() {
       {editEx && (
         <Modal title={t.editExercise} onClose={() => setEditEx(null)}>
           <div className="mb-2">
-            <p className="font-semibold text-sm mb-1" style={{ color: '#1a3a1a' }}>{editEx.name}</p>
-            <p className="text-xs mb-4" style={{ color: '#a07850' }}>{editEx.muscle} · {editEx.equipment}</p>
-            <label className="block text-xs font-medium mb-1" style={{ color: '#6b4226' }}>{t.personalNotes}</label>
+            <p className="font-semibold text-sm mb-1" style={{ color: 'var(--t-text-main)' }}>{editEx.name}</p>
+            <p className="text-xs mb-4" style={{ color: 'var(--t-text-soft)' }}>{editEx.muscle} · {editEx.equipment}</p>
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.personalNotes}</label>
             <textarea value={noteInput} onChange={e => setNoteInput(e.target.value)} rows={4}
               className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none"
-              style={{ borderColor: '#d4c5a9' }}
+              style={{ borderColor: 'var(--t-border-soft)' }}
               placeholder="Your custom notes, cues, weight used..." />
           </div>
           {customNotes[editEx.id] && (
-            <p className="text-xs italic mb-3 px-2 py-1.5 rounded-lg" style={{ backgroundColor: '#f9f5ef', color: '#a07850' }}>
+            <p className="text-xs italic mb-3 px-2 py-1.5 rounded-lg" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-soft)' }}>
               Previously saved: {customNotes[editEx.id]}
             </p>
           )}
@@ -1209,7 +1231,7 @@ export default function WorkoutPage() {
               return (
                 <button key={tp} onClick={() => setPickCat(tp)}
                   className="px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap flex items-center gap-1 transition-all"
-                  style={{ backgroundColor: pickCat === tp ? info.color : '#f0e8d8', color: pickCat === tp ? '#fff' : '#6b4226' }}>
+                  style={{ backgroundColor: pickCat === tp ? info.color : 'var(--t-item-bg)', color: pickCat === tp ? '#fff' : 'var(--t-text-muted)' }}>
                   {info.emoji} {info.label}
                 </button>
               )
@@ -1220,10 +1242,10 @@ export default function WorkoutPage() {
               const already = (weekPlan[dayKey] || []).includes(ex.id)
               return (
                 <div key={ex.id} className="flex items-center gap-3 p-3 rounded-xl border"
-                  style={{ backgroundColor: already ? '#f0faf2' : '#f9f5ef', borderColor: already ? '#2d6a4f' : '#e8dcc8' }}>
+                  style={{ backgroundColor: 'var(--t-item-bg)', borderColor: already ? '#2d6a4f' : 'var(--t-border-soft)' }}>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm" style={{ color: '#1a3a1a' }}>{ex.name}</p>
-                    <p className="text-xs" style={{ color: '#a07850' }}>{ex.muscle} · {ex.equipment}</p>
+                    <p className="font-medium text-sm" style={{ color: 'var(--t-text-main)' }}>{ex.name}</p>
+                    <p className="text-xs" style={{ color: 'var(--t-text-soft)' }}>{ex.muscle} · {ex.equipment}</p>
                   </div>
                   <button
                     onClick={() => { addToDay(ex.id); }}
@@ -1245,48 +1267,48 @@ export default function WorkoutPage() {
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: '#6b4226' }}>{t.type}</label>
-                <select value={logForm.type} onChange={e => setLogForm(f => ({ ...f, type: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: '#d4c5a9' }}>
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.type}</label>
+                <select value={logForm.type} onChange={e => setLogForm(f => ({ ...f, type: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }}>
                   {TYPES.map(tp => <option key={tp} value={tp}>{TYPE_INFO[tp].label}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: '#6b4226' }}>{t.date}</label>
-                <input type="date" value={logForm.date} onChange={e => setLogForm(f => ({ ...f, date: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: '#d4c5a9' }} />
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.date}</label>
+                <input type="date" value={logForm.date} onChange={e => setLogForm(f => ({ ...f, date: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }} />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: '#6b4226' }}>{t.sessionTitle}</label>
-              <input value={logForm.title} onChange={e => setLogForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Heavy Push Day" className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: '#d4c5a9' }} />
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.sessionTitle}</label>
+              <input value={logForm.title} onChange={e => setLogForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Heavy Push Day" className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }} />
             </div>
-            <button onClick={generateAI} disabled={aiLoading} className="w-full py-2.5 rounded-xl text-sm font-medium disabled:opacity-60" style={{ backgroundColor: '#f0e8d8', color: '#6b4226' }}>
+            <button onClick={generateAI} disabled={aiLoading} className="w-full py-2.5 rounded-xl text-sm font-medium disabled:opacity-60" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>
               {aiLoading ? t.aiGenerating : t.aiSuggest}
             </button>
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-medium" style={{ color: '#6b4226' }}>{t.exercises}</label>
+                <label className="text-xs font-medium" style={{ color: 'var(--t-text-muted)' }}>{t.exercises}</label>
                 <button onClick={addLogEx} className="text-xs px-2 py-1 rounded-lg" style={{ backgroundColor: '#d8f3dc', color: '#2d6a4f' }}>+ Add</button>
               </div>
               <div className="space-y-2">
                 {logExercises.map((ex, i) => (
-                  <div key={i} className="rounded-xl p-2 space-y-2" style={{ backgroundColor: '#f9f5ef' }}>
+                  <div key={i} className="rounded-xl p-2 space-y-2" style={{ backgroundColor: 'var(--t-item-bg)' }}>
                     <div className="flex gap-2">
                       <input value={ex.name} onChange={e => updateLogEx(i, 'name', e.target.value)} placeholder={t.exerciseName}
-                        className="flex-1 px-2.5 py-2 rounded-lg border text-sm outline-none" style={{ borderColor: '#d4c5a9', backgroundColor: '#fff' }} />
+                        className="flex-1 px-2.5 py-2 rounded-lg border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)', backgroundColor: 'var(--t-card-bg)' }} />
                       <button onClick={() => removeLogEx(i)} className="px-2 py-1 rounded-lg text-xs" style={{ color: '#c0303e', backgroundColor: '#fde8ec' }}>×</button>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
-                      <input type="number" value={ex.sets} onChange={e => updateLogEx(i, 'sets', Number(e.target.value))} placeholder={t.sets} className="px-2.5 py-2 rounded-lg border text-sm outline-none text-center" style={{ borderColor: '#d4c5a9', backgroundColor: '#fff' }} />
-                      <input value={ex.reps} onChange={e => updateLogEx(i, 'reps', e.target.value)} placeholder={t.reps} className="px-2.5 py-2 rounded-lg border text-sm outline-none text-center" style={{ borderColor: '#d4c5a9', backgroundColor: '#fff' }} />
-                      <input value={ex.notes} onChange={e => updateLogEx(i, 'notes', e.target.value)} placeholder={t.notes} className="px-2.5 py-2 rounded-lg border text-sm outline-none" style={{ borderColor: '#d4c5a9', backgroundColor: '#fff' }} />
+                      <input type="number" value={ex.sets} onChange={e => updateLogEx(i, 'sets', Number(e.target.value))} placeholder={t.sets} className="px-2.5 py-2 rounded-lg border text-sm outline-none text-center" style={{ borderColor: 'var(--t-border-soft)', backgroundColor: 'var(--t-card-bg)' }} />
+                      <input value={ex.reps} onChange={e => updateLogEx(i, 'reps', e.target.value)} placeholder={t.reps} className="px-2.5 py-2 rounded-lg border text-sm outline-none text-center" style={{ borderColor: 'var(--t-border-soft)', backgroundColor: 'var(--t-card-bg)' }} />
+                      <input value={ex.notes} onChange={e => updateLogEx(i, 'notes', e.target.value)} placeholder={t.notes} className="px-2.5 py-2 rounded-lg border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)', backgroundColor: 'var(--t-card-bg)' }} />
                     </div>
                   </div>
                 ))}
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: '#6b4226' }}>{t.sessionNotes}</label>
-              <textarea value={logForm.notes} onChange={e => setLogForm(f => ({ ...f, notes: e.target.value }))} rows={2} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none" style={{ borderColor: '#d4c5a9' }} />
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.sessionNotes}</label>
+              <textarea value={logForm.notes} onChange={e => setLogForm(f => ({ ...f, notes: e.target.value }))} rows={2} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none" style={{ borderColor: 'var(--t-border-soft)' }} />
             </div>
           </div>
           <div className="flex gap-2 mt-5">
@@ -1298,8 +1320,342 @@ export default function WorkoutPage() {
         </Modal>
       )}
 
+      {/* ── VIDEOS TAB ──────────────────────────────────────────────────────── */}
+      {mainTab === 'videos' && (
+        <VideoTab
+          videos={igVideos}
+          adding={addingVideo}
+          form={vForm}
+          urlStatus={vUrlStatus}
+          onStartAdd={() => { setVForm({ name: '', url: '', types: [] }); setVUrlStatus('idle'); setAddingVideo(true) }}
+          onCancelAdd={() => setAddingVideo(false)}
+          onFormChange={f => { setVForm(f); if (f.url !== vForm.url) setVUrlStatus('idle') }}
+          onCheckUrl={() => {
+            const ok = /tiktok\.com\/@[\w.]+\/video\/\d+|vm\.tiktok\.com\/[\w]+/i.test(vForm.url)
+            setVUrlStatus(ok ? 'ok' : 'bad')
+          }}
+          onConfirm={async () => {
+            if (!vForm.name.trim() || vUrlStatus !== 'ok') return
+            const res = await fetch('/api/videos', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: vForm.name.trim(), url: vForm.url.trim(), types: vForm.types }),
+            })
+            const created = await res.json()
+            setIgVideos(prev => [...prev, created])
+            setAddingVideo(false)
+          }}
+          onDelete={async (id) => {
+            await fetch(`/api/videos/${id}`, { method: 'DELETE' })
+            setIgVideos(prev => prev.filter(v => String(v.id) !== String(id)))
+          }}
+        />
+      )}
+
       {/* ── Exercise Detail Overlay ─────────────────────────────────────────── */}
       {detailEx && <ExDetailOverlay ex={detailEx} onClose={() => setDetailEx(null)} />}
+    </div>
+  )
+}
+
+// ── Video types ───────────────────────────────────────────────────────────────
+const VIDEO_TYPES = [
+  { key: 'arms',  label: 'Bras',   emoji: '💪' },
+  { key: 'abs',   label: 'Abdo',   emoji: '🔥' },
+  { key: 'back',  label: 'Dos',    emoji: '🏋️' },
+  { key: 'legs',  label: 'Jambes', emoji: '🦵' },
+  { key: 'chest', label: 'Pecto',  emoji: '🫁' },
+  { key: 'glutes',label: 'Fesse',  emoji: '🍑' },
+  { key: 'cardio',label: 'Cardio', emoji: '🏃' },
+] as const
+type VType = typeof VIDEO_TYPES[number]['key']
+
+// ── VideoTab component ────────────────────────────────────────────────────────
+function VideoTab({
+  videos, adding, form, urlStatus,
+  onStartAdd, onCancelAdd, onFormChange, onCheckUrl, onConfirm, onDelete,
+}: {
+  videos: VideoEntry[]
+  adding: boolean
+  form: { name: string; url: string; types: string[] }
+  urlStatus: 'idle' | 'ok' | 'bad'
+  onStartAdd: () => void
+  onCancelAdd: () => void
+  onFormChange: (f: { name: string; url: string; types: string[] }) => void
+  onCheckUrl: () => void
+  onConfirm: () => void
+  onDelete: (id: number | string) => void
+}) {
+  const [filter, setFilter] = useState<string | null>(null)
+
+  const filtered = filter ? videos.filter(v => v.types?.includes(filter)) : videos
+
+  // Empty state
+  if (videos.length === 0 && !adding) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-5">
+        <div className="w-20 h-20 rounded-full flex items-center justify-center text-4xl font-black"
+          style={{ background: 'linear-gradient(135deg,#69C9D0,#EE1D52)', color: '#fff' }}>
+          ♪
+        </div>
+        <div className="text-center">
+          <p className="font-bold text-base" style={{ color: 'var(--t-text-main)' }}>Aucune vidéo pour l'instant</p>
+          <p className="text-sm mt-1" style={{ color: 'var(--t-text-soft)' }}>Ajoute ta première vidéo TikTok</p>
+        </div>
+        <button
+          onClick={onStartAdd}
+          className="w-14 h-14 rounded-full text-3xl font-bold flex items-center justify-center shadow-lg active:scale-95"
+          style={{ background: 'linear-gradient(135deg,#69C9D0,#EE1D52)', color: '#fff' }}
+        >
+          +
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      {/* ── Filter pills ── */}
+      <div className="flex gap-2 overflow-x-auto pb-2 mb-4" style={{ scrollbarWidth: 'none' }}>
+        <button
+          onClick={() => setFilter(null)}
+          className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+          style={{
+            backgroundColor: filter === null ? 'var(--t-primary)' : 'var(--t-item-bg)',
+            color: filter === null ? '#fff' : 'var(--t-text-muted)',
+          }}
+        >
+          Tous ({videos.length})
+        </button>
+        {VIDEO_TYPES.map(vt => {
+          const count = videos.filter(v => v.types?.includes(vt.key)).length
+          if (count === 0) return null
+          return (
+            <button
+              key={vt.key}
+              onClick={() => setFilter(filter === vt.key ? null : vt.key)}
+              className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1"
+              style={{
+                backgroundColor: filter === vt.key ? '#2d6a4f' : 'var(--t-item-bg)',
+                color: filter === vt.key ? '#fff' : 'var(--t-text-muted)',
+              }}
+            >
+              {vt.emoji} {vt.label} ({count})
+            </button>
+          )
+        })}
+      </div>
+
+      {/* ── Grid ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filtered.map(v => (
+          <VideoCard key={v.id} video={v} onDelete={onDelete} />
+        ))}
+
+        {/* Add form — full width on mobile, 1 col on sm+ */}
+        {adding ? (
+          <div className="sm:col-span-1 col-span-full">
+            <AddVideoCard
+              form={form}
+              urlStatus={urlStatus}
+              onChange={onFormChange}
+              onCheck={onCheckUrl}
+              onConfirm={onConfirm}
+              onCancel={onCancelAdd}
+            />
+          </div>
+        ) : (
+          <button
+            onClick={onStartAdd}
+            className="rounded-2xl border-2 border-dashed flex items-center justify-center transition-all active:scale-95 min-h-[120px] sm:min-h-[200px]"
+            style={{ borderColor: '#a0c4a9', backgroundColor: 'var(--t-item-bg)' }}
+          >
+            <span className="text-4xl font-bold" style={{ color: '#2d6a4f' }}>+</span>
+          </button>
+        )}
+      </div>
+
+      {/* Empty filter result */}
+      {filtered.length === 0 && filter && (
+        <p className="text-center text-sm py-10" style={{ color: 'var(--t-text-soft)' }}>
+          Aucune vidéo pour ce type.
+        </p>
+      )}
+    </div>
+  )
+}
+
+function VideoCard({ video, onDelete }: { video: VideoEntry; onDelete: (id: number | string) => void }) {
+  const [hover, setHover] = useState(false)
+
+  return (
+    <div
+      className="relative rounded-2xl overflow-hidden shadow-md"
+      style={{ minHeight: 180, background: 'linear-gradient(160deg,#010101 0%,#1a1a1a 60%,#2a2a2a 100%)' }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      {/* TikTok gradient bar */}
+      <div className="absolute top-0 left-0 right-0 h-1"
+        style={{ background: 'linear-gradient(90deg,#69C9D0,#EE1D52,#010101)' }} />
+
+      {/* Type tags — top left */}
+      {video.types && video.types.length > 0 && (
+        <div className="absolute top-3 left-3 flex flex-wrap gap-1 max-w-[calc(100%-3rem)]">
+          {video.types.map(tk => {
+            const vt = VIDEO_TYPES.find(v => v.key === tk)
+            return vt ? (
+              <span key={tk} className="text-xs px-1.5 py-0.5 rounded-full font-semibold"
+                style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: '#fff', backdropFilter: 'blur(4px)' }}>
+                {vt.emoji} {vt.label}
+              </span>
+            ) : null
+          })}
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="flex flex-col items-center justify-center gap-3 p-4 pt-10 pb-4 h-full min-h-[180px]">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl font-black"
+          style={{ background: 'linear-gradient(135deg,#69C9D0,#EE1D52)', color: '#fff' }}>
+          ♪
+        </div>
+        <p className="text-white font-bold text-sm text-center leading-tight px-2">{video.name}</p>
+        <a
+          href={video.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-11 h-11 rounded-full flex items-center justify-center text-lg shadow-lg active:scale-95"
+          style={{ background: 'linear-gradient(135deg,#69C9D0,#EE1D52)', color: '#fff' }}
+        >
+          ▶
+        </a>
+      </div>
+
+      {/* Delete — always visible on mobile, hover on desktop */}
+      <button
+        onClick={e => { e.stopPropagation(); if (confirm('Supprimer cette vidéo ?')) onDelete(video.id) }}
+        className="absolute top-3 right-3 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
+        style={{
+          backgroundColor: 'rgba(192,48,62,0.85)', color: '#fff',
+          opacity: hover ? 1 : 0.6,
+        }}
+      >
+        ×
+      </button>
+    </div>
+  )
+}
+
+function AddVideoCard({
+  form, urlStatus, onChange, onCheck, onConfirm, onCancel,
+}: {
+  form: { name: string; url: string; types: string[] }
+  urlStatus: 'idle' | 'ok' | 'bad'
+  onChange: (f: { name: string; url: string; types: string[] }) => void
+  onCheck: () => void
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  const canConfirm = form.name.trim().length > 0 && urlStatus === 'ok'
+
+  const toggleType = (key: string) => {
+    const next = form.types.includes(key)
+      ? form.types.filter(t => t !== key)
+      : [...form.types, key]
+    onChange({ ...form, types: next })
+  }
+
+  return (
+    <div
+      className="rounded-2xl border-2 shadow-lg flex flex-col overflow-hidden w-full"
+      style={{ borderColor: '#40916c', backgroundColor: 'var(--t-card-bg)' }}
+    >
+      <div className="h-1 w-full"
+        style={{ background: 'linear-gradient(90deg,#69C9D0,#EE1D52,#010101)' }} />
+
+      <div className="flex flex-col gap-3 p-4">
+        {/* Name */}
+        <div>
+          <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--t-text-muted)' }}>Nom de l'exercice</label>
+          <input
+            value={form.name}
+            onChange={e => onChange({ ...form, name: e.target.value })}
+            placeholder="ex. Squat Jump"
+            className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-green-300"
+            style={{ borderColor: 'var(--t-border-soft)' }}
+            autoFocus
+          />
+        </div>
+
+        {/* URL */}
+        <div>
+          <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--t-text-muted)' }}>Lien TikTok</label>
+          <div className="flex gap-2">
+            <input
+              value={form.url}
+              onChange={e => onChange({ ...form, url: e.target.value })}
+              placeholder="https://tiktok.com/@user/video/…"
+              className="flex-1 min-w-0 px-3 py-2.5 rounded-xl border text-xs outline-none focus:ring-2 focus:ring-green-300"
+              style={{ borderColor: urlStatus === 'ok' ? '#40916c' : urlStatus === 'bad' ? '#c0303e' : 'var(--t-border-soft)' }}
+              onKeyDown={e => { if (e.key === 'Enter') onCheck() }}
+            />
+            <button
+              onClick={onCheck}
+              className="px-3 py-2 rounded-xl text-xs font-bold shrink-0"
+              style={{ backgroundColor: '#1a3a1a', color: '#74c69d' }}
+            >
+              ✓
+            </button>
+          </div>
+          {urlStatus === 'ok' && <p className="text-xs mt-1 font-medium" style={{ color: '#2d6a4f' }}>✓ Lien valide</p>}
+          {urlStatus === 'bad' && <p className="text-xs mt-1 font-medium" style={{ color: '#c0303e' }}>✗ URL TikTok invalide</p>}
+        </div>
+
+        {/* Type multi-select */}
+        <div>
+          <label className="block text-xs font-semibold mb-2" style={{ color: 'var(--t-text-muted)' }}>Type d'exercice</label>
+          <div className="flex flex-wrap gap-2">
+            {VIDEO_TYPES.map(vt => {
+              const active = form.types.includes(vt.key)
+              return (
+                <button
+                  key={vt.key}
+                  type="button"
+                  onClick={() => toggleType(vt.key)}
+                  className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+                  style={{
+                    backgroundColor: active ? '#2d6a4f' : 'var(--t-item-bg)',
+                    color: active ? '#fff' : 'var(--t-text-muted)',
+                    border: active ? '2px solid #2d6a4f' : '2px solid var(--t-border-soft)',
+                  }}
+                >
+                  {vt.emoji} {vt.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={onCancel}
+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
+            style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}
+          >
+            Annuler
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={!canConfirm}
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold disabled:opacity-40"
+            style={{ background: canConfirm ? 'linear-gradient(135deg,#69C9D0,#EE1D52)' : '#ccc', color: '#fff' }}
+          >
+            Ajouter ▶
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

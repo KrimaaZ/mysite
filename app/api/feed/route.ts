@@ -3,12 +3,14 @@ import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    const [recipes, sessions, tips, trades, strategies] = await Promise.all([
+    const [recipes, sessions, tips, trades, strategies, notes, videos] = await Promise.all([
       prisma.recipe.findMany({ orderBy: { createdAt: 'desc' }, take: 10 }),
       prisma.workoutSession.findMany({ orderBy: { createdAt: 'desc' }, take: 10 }),
       prisma.valorantTip.findMany({ orderBy: { createdAt: 'desc' }, take: 10 }),
       prisma.trade.findMany({ orderBy: { createdAt: 'desc' }, take: 10 }),
       prisma.backtestStrategy.findMany({ orderBy: { createdAt: 'desc' }, take: 5 }),
+      prisma.note.findMany({ orderBy: { createdAt: 'desc' }, take: 10 }),
+      prisma.workoutVideo.findMany({ orderBy: { createdAt: 'desc' }, take: 10 }),
     ])
 
     const feed = [
@@ -21,7 +23,7 @@ export async function GET() {
       ...sessions.map(s => ({
         id: s.id, category: 'workout',
         title: `${s.type} — ${s.title}`,
-        excerpt: s.notes || `Workout session logged`,
+        excerpt: s.notes || 'Workout session logged',
         date: s.date, href: '/workout', sortDate: new Date(s.createdAt).getTime(),
       })),
       ...tips.map(t => ({
@@ -41,6 +43,20 @@ export async function GET() {
         title: s.name, excerpt: s.description,
         date: new Date(s.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         href: '/trading', sortDate: new Date(s.createdAt).getTime(),
+      })),
+      ...notes.map(n => ({
+        id: n.id, category: 'spanish',
+        title: n.title,
+        excerpt: n.rules.split('\n').slice(0, 2).join(' · ').slice(0, 150),
+        date: new Date(n.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        href: '/notes', sortDate: new Date(n.createdAt).getTime(),
+      })),
+      ...videos.map(v => ({
+        id: v.id, category: 'videos',
+        title: v.name,
+        excerpt: (() => { try { const t = JSON.parse(v.types); return t.length ? t.join(', ') : 'TikTok workout video' } catch { return 'TikTok workout video' } })(),
+        date: new Date(v.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        href: '/workout', sortDate: new Date(v.createdAt).getTime(),
       })),
     ].sort((a, b) => b.sortDate - a.sortDate)
 

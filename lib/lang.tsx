@@ -35,7 +35,7 @@ type T = {
   aiGenerator: string; aiPlaceholder: string; generate: string; generating: string
   editRecipe: string; newRecipe: string; ingredientsLine: string; instructions: string
   prepMin: string; cookMin: string; servings: string; saveRecipe: string; deleteRecipe: string
-  typeBreakfast: string; typeMain: string; typeSnack: string; typeSmoothie: string; typeNight: string
+  typeBreakfast: string; typeMain: string; typeSnack: string; typeSmoothie: string
   // Workout
   workoutSubtitle: string; logBtn: string
   noSessions: (label: string) => string
@@ -107,8 +107,7 @@ const en: T = {
   prepMin: 'Prep (min)', cookMin: 'Cook (min)', servings: 'Servings',
   saveRecipe: 'Save Recipe', deleteRecipe: 'Delete this recipe?',
   typeBreakfast: 'Breakfast', typeMain: 'Main meal', typeSnack: 'Snack',
-  typeSmoothie: 'Smoothie', typeNight: 'Night',
-  workoutSubtitle: '4 training types', logBtn: '+ Log',
+  typeSmoothie: 'Smoothie',  workoutSubtitle: '4 training types', logBtn: '+ Log',
   noSessions: label => `No ${label} sessions yet.`,
   deleteSession: 'Delete session?', editSession: 'Edit Session', logSession: 'Log Session',
   saveSession: 'Save Session', sessionTitle: 'Session Title', sessionNotes: 'Session Notes',
@@ -181,8 +180,7 @@ const fr: T = {
   prepMin: 'Prép. (min)', cookMin: 'Cuisson (min)', servings: 'Portions',
   saveRecipe: 'Enregistrer', deleteRecipe: 'Supprimer cette recette ?',
   typeBreakfast: 'Petit-déjeuner', typeMain: 'Plat principal', typeSnack: 'Encas',
-  typeSmoothie: 'Smoothie', typeNight: 'Soirée',
-  workoutSubtitle: "4 types d'entraînement", logBtn: '+ Ajouter',
+  typeSmoothie: 'Smoothie',  workoutSubtitle: "4 types d'entraînement", logBtn: '+ Ajouter',
   noSessions: label => `Aucune séance ${label} pour l'instant.`,
   deleteSession: 'Supprimer la séance ?', editSession: 'Modifier la séance', logSession: 'Enregistrer la séance',
   saveSession: 'Enregistrer', sessionTitle: 'Titre de la séance', sessionNotes: 'Notes de séance',
