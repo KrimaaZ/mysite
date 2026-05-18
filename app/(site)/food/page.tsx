@@ -303,6 +303,9 @@ export default function FoodPage() {
   const [fvUrlStatus, setFvUrlStatus] = useState<'idle' | 'ok' | 'bad'>('idle')
 
   const [mealFilter, setMealFilter] = useState('ALL')
+  const [mealSearch, setMealSearch] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const [mealDetail, setMealDetail] = useState<Meal | null>(null)
   const [mealEditForm, setMealEditForm] = useState<Meal | null>(null)
   const [mealOverrides, setMealOverrides] = useState<Record<number, Partial<Meal>>>({})
@@ -437,10 +440,15 @@ export default function FoodPage() {
   const visibleMeals = useMemo(() => MEALS.filter(m => !hiddenMeals.has(m.id)).map(getMeal), [hiddenMeals, mealOverrides])
 
   const filteredMeals = useMemo(() => {
-    if (mealFilter === 'favs') return visibleMeals.filter(m => favoriteMeals.has(m.id))
-    if (mealFilter === 'ALL') return visibleMeals
-    return visibleMeals.filter(m => m.type === mealFilter)
-  }, [mealFilter, visibleMeals, favoriteMeals])
+    let base = mealFilter === 'favs' ? visibleMeals.filter(m => favoriteMeals.has(m.id))
+      : mealFilter === 'ALL' ? visibleMeals
+      : visibleMeals.filter(m => m.type === mealFilter)
+    if (mealSearch.trim()) {
+      const q = mealSearch.toLowerCase()
+      base = base.filter(m => m.name.toLowerCase().includes(q) || m.ingredients.toLowerCase().includes(q))
+    }
+    return base
+  }, [mealFilter, visibleMeals, favoriteMeals, mealSearch])
   const filteredRecipes = recipeFilter === 'ALL' ? recipes : recipes.filter(r => r.category === recipeFilter)
 
   const openAdd = () => { setForm(empty); setEditing(null); setModal(true) }
@@ -627,23 +635,61 @@ export default function FoodPage() {
         </div>
       </div>
 
-      {/* Main tabs */}
-      <div className="flex gap-2 mb-5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-        {[{ key: 'rotation', label: t.mealRotation }, { key: 'week', label: t.weekTab }, { key: 'recipes', label: t.myRecipes }, { key: 'videos', label: '🎬 Vidéos' }, { key: 'list', label: '🛒 Liste' }].map(tb => (
-          <button key={tb.key} onClick={() => setTab(tb.key as 'rotation' | 'recipes' | 'week' | 'videos' | 'list')}
-            className="px-4 py-2 rounded-xl text-sm font-medium transition-all relative whitespace-nowrap"
-            style={{ backgroundColor: tab === tb.key ? '#2d6a4f' : 'var(--t-item-bg)', color: tab === tb.key ? '#fff' : 'var(--t-text-muted)' }}>
-            {tb.label}
-            {tb.key === 'week' && weekPlan.size > 0 && (
-              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full font-bold ml-1 align-middle"
-                style={{ backgroundColor: '#c0303e', color: '#fff', fontSize: '9px' }}>{weekPlan.size}</span>
-            )}
-            {tb.key === 'list' && buyItems.filter(i => !i.checked).length > 0 && (
-              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full font-bold ml-1 align-middle"
-                style={{ backgroundColor: '#c0303e', color: '#fff', fontSize: '9px' }}>{buyItems.filter(i => !i.checked).length}</span>
-            )}
-          </button>
-        ))}
+      {/* Main tabs + search */}
+      <div className="flex items-center gap-2 mb-5">
+        {/* Scrollable tabs */}
+        <div className="flex gap-2 overflow-x-auto pb-1 flex-1" style={{ scrollbarWidth: 'none' }}>
+          {[{ key: 'rotation', label: t.mealRotation }, { key: 'week', label: t.weekTab }, { key: 'recipes', label: t.myRecipes }, { key: 'videos', label: '🎬 Vidéos' }, { key: 'list', label: '🛒 Liste' }].map(tb => (
+            <button key={tb.key} onClick={() => setTab(tb.key as 'rotation' | 'recipes' | 'week' | 'videos' | 'list')}
+              className="px-4 py-2 rounded-xl text-sm font-medium transition-all relative whitespace-nowrap"
+              style={{ backgroundColor: tab === tb.key ? '#2d6a4f' : 'var(--t-item-bg)', color: tab === tb.key ? '#fff' : 'var(--t-text-muted)' }}>
+              {tb.label}
+              {tb.key === 'week' && weekPlan.size > 0 && (
+                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full font-bold ml-1 align-middle"
+                  style={{ backgroundColor: '#c0303e', color: '#fff', fontSize: '9px' }}>{weekPlan.size}</span>
+              )}
+              {tb.key === 'list' && buyItems.filter(i => !i.checked).length > 0 && (
+                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full font-bold ml-1 align-middle"
+                  style={{ backgroundColor: '#c0303e', color: '#fff', fontSize: '9px' }}>{buyItems.filter(i => !i.checked).length}</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Search bar — expands on click, only filters rotation */}
+        <div className="shrink-0 flex items-center transition-all duration-200"
+          style={{ width: searchOpen ? 160 : 36 }}>
+          {searchOpen ? (
+            <div className="flex items-center gap-1 rounded-xl px-2.5 py-1.5 w-full"
+              style={{ backgroundColor: 'var(--t-item-bg)', border: '1.5px solid var(--t-border-soft)' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--t-text-muted)" strokeWidth="2.5" strokeLinecap="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <input
+                ref={searchInputRef}
+                value={mealSearch}
+                onChange={e => setMealSearch(e.target.value)}
+                placeholder="Rechercher…"
+                className="flex-1 bg-transparent text-xs outline-none min-w-0"
+                style={{ color: 'var(--t-text-main)' }}
+                onBlur={() => { if (!mealSearch) { setSearchOpen(false) } }}
+              />
+              {mealSearch && (
+                <button onClick={() => { setMealSearch(''); searchInputRef.current?.focus() }}
+                  className="text-xs leading-none" style={{ color: 'var(--t-text-muted)' }}>✕</button>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => { setSearchOpen(true); setTimeout(() => searchInputRef.current?.focus(), 50) }}
+              className="w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-95"
+              style={{ backgroundColor: 'var(--t-item-bg)' }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--t-text-muted)" strokeWidth="2.5" strokeLinecap="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ── MEAL ROTATION ── */}
