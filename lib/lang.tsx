@@ -16,7 +16,7 @@ type T = {
   foodPlan: string; workout: string
   // Food
   mealRotation: string; myRecipes: string; weekTab: string
-  mealsSubtitle: (n: number) => string
+  mealsSubtitle: (n: number, b: number, m: number, s: number, sm: number) => string
   recipesSubtitle: (n: number) => string
   weekSubtitle: (n: number) => string
   favs: string; selectCancel: string; selectLabel: string
@@ -83,7 +83,7 @@ const en: T = {
   nothingYet: 'Nothing here yet', nothingYetSub: 'Start adding content in any section above.',
   foodPlan: 'Food Plan', workout: 'Workout',
   mealRotation: '🔄 Meal Rotation', myRecipes: '📖 My Recipes', weekTab: '📅 Week',
-  mealsSubtitle: n => `${n} meals · 30 per category`,
+  mealsSubtitle: (n, b, m, s, sm) => `${n} meals · ☀️${b} 🍽️${m} 🍎${s} 🥤${sm}`,
   recipesSubtitle: n => `${n} saved recipes`,
   weekSubtitle: n => `${n} meal${n !== 1 ? 's' : ''} planned this week`,
   favs: '❤️ Favs', selectCancel: 'Cancel', selectLabel: 'Select',
@@ -156,7 +156,7 @@ const fr: T = {
   nothingYet: 'Rien ici pour l\'instant', nothingYetSub: 'Ajoutez du contenu dans une section ci-dessus.',
   foodPlan: 'Plan alimentaire', workout: 'Entraînement',
   mealRotation: '🔄 Repas', myRecipes: '📖 Mes Recettes', weekTab: '📅 Semaine',
-  mealsSubtitle: n => `${n} repas · 30 par catégorie`,
+  mealsSubtitle: (n, b, m, s, sm) => `${n} repas · ☀️${b} 🍽️${m} 🍎${s} 🥤${sm}`,
   recipesSubtitle: n => `${n} recettes enregistrées`,
   weekSubtitle: n => `${n} repas planifié${n !== 1 ? 's' : ''} cette semaine`,
   favs: '❤️ Favoris', selectCancel: 'Annuler', selectLabel: 'Sélectionner',

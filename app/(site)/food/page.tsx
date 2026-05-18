@@ -630,7 +630,20 @@ export default function FoodPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: 'var(--t-text-main)' }}>🥗 {t.foodPlan}</h1>
           <p className="text-xs sm:text-sm mt-0.5" style={{ color: 'var(--t-text-muted)' }}>
-            {tab === 'rotation' ? t.mealsSubtitle(MEALS.length + recipes.length) : tab === 'week' ? t.weekSubtitle(weekPlan.size) : tab === 'recipes' ? 'Ajouter une recette à la rotation' : tab === 'list' ? `${buyItems.length} articles · ${buyItems.filter(i => i.checked).length} cochés` : t.recipesSubtitle(recipes.length)}
+            {tab === 'rotation'
+              ? mealSearch.trim()
+                ? `${filteredMeals.length} résultat${filteredMeals.length !== 1 ? 's' : ''} pour "${mealSearch}"`
+                : t.mealsSubtitle(
+                    visibleMeals.length,
+                    visibleMeals.filter(m => m.type === 'breakfast').length,
+                    visibleMeals.filter(m => m.type === 'main').length,
+                    visibleMeals.filter(m => m.type === 'snack').length,
+                    visibleMeals.filter(m => m.type === 'smoothie').length,
+                  )
+              : tab === 'week' ? t.weekSubtitle(weekPlan.size)
+              : tab === 'recipes' ? 'Ajouter une recette à la rotation'
+              : tab === 'list' ? `${buyItems.length} articles · ${buyItems.filter(i => i.checked).length} cochés`
+              : t.recipesSubtitle(recipes.length)}
           </p>
         </div>
       </div>
