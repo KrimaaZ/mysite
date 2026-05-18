@@ -658,7 +658,7 @@ export default function FoodPage() {
 
         {/* Search bar — expands on click, only filters rotation */}
         <div className="shrink-0 flex items-center transition-all duration-200"
-          style={{ width: searchOpen ? 160 : 36 }}>
+          style={{ width: searchOpen ? 160 : 'auto' }}>
           {searchOpen ? (
             <div className="flex items-center gap-1 rounded-xl px-2.5 py-1.5 w-full"
               style={{ backgroundColor: 'var(--t-item-bg)', border: '1.5px solid var(--t-border-soft)' }}>
@@ -682,11 +682,12 @@ export default function FoodPage() {
           ) : (
             <button
               onClick={() => { setSearchOpen(true); setTimeout(() => searchInputRef.current?.focus(), 50) }}
-              className="w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-95"
-              style={{ backgroundColor: 'var(--t-item-bg)' }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--t-text-muted)" strokeWidth="2.5" strokeLinecap="round">
+              className="h-9 px-3 rounded-xl flex items-center gap-1.5 transition-all active:scale-95 whitespace-nowrap text-sm font-medium"
+              style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)', border: '1px solid var(--t-border-soft)' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
               </svg>
+              <span>Chercher</span>
             </button>
           )}
         </div>
