@@ -717,11 +717,11 @@ export default function FoodPage() {
                   <select
                     value={mealFilter}
                     onChange={e => setMealFilter(e.target.value)}
-                    className="w-full appearance-none rounded-xl px-4 py-2.5 text-sm font-semibold cursor-pointer outline-none transition-all"
+                    className="w-full appearance-none rounded-xl px-4 py-2.5 text-sm font-semibold cursor-pointer outline-none transition-all filter-dropdown"
                     style={{
-                      backgroundColor: 'var(--t-item-bg)',
-                      color: 'var(--t-text-main)',
-                      border: '1.5px solid var(--t-border-soft)',
+                      background: 'linear-gradient(135deg, var(--t-hero-from) 0%, var(--t-hero-mid) 55%, var(--t-hero-to) 100%)',
+                      color: '#fff',
+                      border: 'none',
                     }}>
                     <option value="ALL">Tous les repas ({visibleMeals.length})</option>
                     {MEAL_FILTERS.filter(f => f !== 'ALL').map(f => {
@@ -733,7 +733,7 @@ export default function FoodPage() {
               ))()}
               {/* chevron icon */}
               <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t-text-muted)" strokeWidth="2.5" strokeLinecap="round"><path d="m6 9 6 6 6-6"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2.5" strokeLinecap="round" className="filter-chevron"><path d="m6 9 6 6 6-6"/></svg>
               </div>
             </div>
             {Object.keys(mealOverrides).some(id => !hiddenEditBadges.has(Number(id))) && (

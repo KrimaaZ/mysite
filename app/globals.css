@@ -207,6 +207,14 @@ body {
 [data-dark="true"] .text-gray-500 { color: var(--t-text-muted) !important; }
 [data-dark="true"] .text-gray-400 { color: var(--t-text-soft) !important; }
 
+/* Meal filter dropdown — dark mode override */
+[data-dark="true"] select.filter-dropdown {
+  background: var(--t-item-bg) !important;
+  color: var(--t-text-main) !important;
+  border: 1.5px solid var(--t-border-soft) !important;
+}
+[data-dark="true"] .filter-chevron { stroke: var(--t-text-muted) !important; }
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--t-bg-soft); }
