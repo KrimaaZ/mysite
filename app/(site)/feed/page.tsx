@@ -190,7 +190,7 @@ export default function FeedPage() {
       >
         {QUICK_LINKS.map(item => (
           <Link key={item.href} href={item.href}
-            className="flex-shrink-0 flex flex-col items-center gap-2 transition-all active:scale-90"
+            className="flex-shrink-0 flex flex-col items-center transition-all active:scale-90"
             style={{ minWidth: 68 }}>
             {/* Bulle organique blanche */}
             <div
@@ -203,19 +203,21 @@ export default function FeedPage() {
                 boxShadow: '0 6px 20px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.1)',
                 border: '2.5px solid rgba(255,255,255,0.9)',
                 flexShrink: 0,
+                zIndex: 1,
               }}
             >
               {item.emoji}
             </div>
-            {/* Label — capsule blanche */}
+            {/* Label — capsule blanche collée */}
             <span
               className="text-xs font-bold text-center leading-tight px-2 py-0.5 rounded-full"
               style={{
                 background: '#fff',
-                color: '#92400e',
+                color: '#000',
                 boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-                maxWidth: 72,
+                maxWidth: 76,
                 display: 'block',
+                marginTop: -8,
               }}
             >
               {item.label}
