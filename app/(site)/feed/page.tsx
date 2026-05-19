@@ -207,10 +207,16 @@ export default function FeedPage() {
             >
               {item.emoji}
             </div>
-            {/* Label */}
+            {/* Label — capsule blanche */}
             <span
-              className="text-xs font-bold text-center leading-tight"
-              style={{ color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.3)', maxWidth: 68 }}
+              className="text-xs font-bold text-center leading-tight px-2 py-0.5 rounded-full"
+              style={{
+                background: '#fff',
+                color: '#92400e',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                maxWidth: 72,
+                display: 'block',
+              }}
             >
               {item.label}
             </span>
