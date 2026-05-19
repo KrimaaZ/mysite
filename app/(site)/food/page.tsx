@@ -711,27 +711,30 @@ export default function FoodPage() {
         <>
           {/* Category filter + select button */}
           <div className="flex items-center gap-2 mb-5">
-            <div className="flex gap-2 overflow-x-auto pb-1 flex-1" style={{ scrollbarWidth: 'none' }}>
-              {MEAL_FILTERS.map(f => {
-                const meta = TYPE_META[f]
-                const active = mealFilter === f
-                const count = f === 'ALL' ? visibleMeals.length : mealCountByType(f)
-                return (
-                  <button key={f} onClick={() => setMealFilter(f)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all"
-                    style={{ backgroundColor: active ? (meta?.color ?? '#1a3a1a') : 'var(--t-item-bg)', color: active ? '#fff' : 'var(--t-text-muted)' }}>
-                    {meta ? `${meta.emoji} ${meta.label}` : 'ALL'}
-                    <span className="text-xs opacity-75">({count})</span>
-                  </button>
-                )
-              })}
-              {/* Favorites filter */}
-              <button onClick={() => setMealFilter(mealFilter === 'favs' ? 'ALL' : 'favs')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all"
-                style={{ backgroundColor: mealFilter === 'favs' ? '#c0303e' : '#fde8ec', color: mealFilter === 'favs' ? '#fff' : '#c0303e' }}>
-                ❤️ Favs
-                <span className="text-xs opacity-75">({favoriteMeals.size})</span>
-              </button>
+            {/* Dropdown filter */}
+            <div className="relative flex-1">
+              {(() => (
+                  <select
+                    value={mealFilter}
+                    onChange={e => setMealFilter(e.target.value)}
+                    className="w-full appearance-none rounded-xl px-4 py-2.5 text-sm font-semibold cursor-pointer outline-none transition-all"
+                    style={{
+                      backgroundColor: 'var(--t-item-bg)',
+                      color: 'var(--t-text-main)',
+                      border: '1.5px solid var(--t-border-soft)',
+                    }}>
+                    <option value="ALL">Tous les repas ({visibleMeals.length})</option>
+                    {MEAL_FILTERS.filter(f => f !== 'ALL').map(f => {
+                      const meta = TYPE_META[f]
+                      return <option key={f} value={f}>{meta.emoji} {meta.label} ({mealCountByType(f)})</option>
+                    })}
+                    <option value="favs">❤️ Favoris ({favoriteMeals.size})</option>
+                  </select>
+              ))()}
+              {/* chevron icon */}
+              <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t-text-muted)" strokeWidth="2.5" strokeLinecap="round"><path d="m6 9 6 6 6-6"/></svg>
+              </div>
             </div>
             {Object.keys(mealOverrides).some(id => !hiddenEditBadges.has(Number(id))) && (
               <button
