@@ -1,91 +1,138 @@
 @import "tailwindcss";
 
-/* ── Base vars (light mode) ── */
+/* ─────────────────────────────────────────────────────────────
+   ZK theme — LIGHT MODE  (default: data-theme="zk", data-dark="false")
+───────────────────────────────────────────────────────────── */
 :root {
-  --t-card-bg:      #ffffff;
-  --t-text-main:    #111827;
-  --t-text-muted:   #6b7280;
-  --t-text-soft:    #9ca3af;
-  --t-item-bg:      #f9fafb;
-  --t-item-bg2:     #f3f4f6;
-  --t-border-soft:  #e5e7eb;
-  --t-input-bg:     #ffffff;
-  --t-shadow:       rgba(0,0,0,0.06);
-}
+  /* backgrounds */
+  --t-bg:            #f4f9f5;
+  --t-bg-soft:       #e8f4ea;
+  --t-card-bg:       #ffffff;
+  --t-item-bg:       #f1f8f3;
+  --t-item-bg2:      #e8f4ea;
+  --t-input-bg:      #ffffff;
 
-/* ── Dark mode ── */
-[data-dark="true"] {
-  --t-bg:           #0f172a;
-  --t-bg-soft:      #1e293b;
-  --t-card-bg:      #1e293b;
-  --t-text-main:    #f1f5f9;
-  --t-text-muted:   #94a3b8;
-  --t-text-soft:    #64748b;
-  --t-item-bg:      #263344;
-  --t-item-bg2:     #1e293b;
-  --t-border-soft:  #334155;
-  --t-border:       rgba(148,163,184,0.15);
-  --t-input-bg:     #1e293b;
-  --t-shadow:       rgba(0,0,0,0.35);
-  --t-primary-pale: rgba(22,163,74,0.15);
-  --t-hero-from:    #0d2137;
-  --t-hero-mid:     #1e3a5f;
-  --t-hero-to:      #2563eb;
-  --t-hero-text:    #bfdbfe;
-}
+  /* text */
+  --t-text-main:     #111827;
+  --t-text-muted:    #4b5563;
+  --t-text-soft:     #9ca3af;
+  --t-text-accent:   #15803d;
 
-[data-dark="true"][data-theme="sb"] {
-  --t-bg:           #16091d;
-  --t-bg-soft:      #2a1133;
-  --t-card-bg:      #2a1133;
-  --t-item-bg:      #3a1a47;
-  --t-item-bg2:     #2a1133;
-  --t-border:       rgba(236,72,153,0.15);
-  --t-primary-pale: rgba(236,72,153,0.15);
-  --t-hero-from:    #2d0a3f;
-  --t-hero-mid:     #7e22ce;
-  --t-hero-to:      #ec4899;
-  --t-hero-text:    #fbcfe8;
-}
+  /* borders & shadow */
+  --t-border-soft:   #d1fae5;
+  --t-border:        #d1fae5;
+  --t-shadow:        rgba(0,0,0,0.06);
 
-/* ── ZK theme (default green) ── */
-:root {
+  /* primary green */
   --t-primary:       #16a34a;
   --t-primary-dark:  #14532d;
   --t-primary-mid:   #16a34a;
   --t-primary-light: #22c55e;
   --t-primary-pale:  #bbf7d0;
-  --t-bg:            #0e131b;
-  --t-bg-soft:       #141d2b;
-  --t-text-accent:   #15803d;
-  --t-border:        #1e293b;
+
+  /* hero gradient */
   --t-hero-from:     #14532d;
   --t-hero-mid:      #16a34a;
   --t-hero-to:       #4ade80;
   --t-hero-text:     #bbf7d0;
+
+  /* FAB */
   --t-fab-from:      #22c55e;
   --t-fab-to:        #15803d;
+
   --t-name:          "ZK";
 }
 
-/* ── SB theme (pink) ── */
+/* ─────────────────────────────────────────────────────────────
+   ZK theme — DARK MODE
+───────────────────────────────────────────────────────────── */
+[data-dark="true"] {
+  --t-bg:            #0f172a;
+  --t-bg-soft:       #1e293b;
+  --t-card-bg:       #1e293b;
+  --t-item-bg:       #263344;
+  --t-item-bg2:      #1e293b;
+  --t-input-bg:      #1e293b;
+
+  --t-text-main:     #f1f5f9;
+  --t-text-muted:    #94a3b8;
+  --t-text-soft:     #64748b;
+  --t-text-accent:   #4ade80;
+
+  --t-border-soft:   #334155;
+  --t-border:        rgba(148,163,184,0.15);
+  --t-shadow:        rgba(0,0,0,0.35);
+
+  --t-primary-pale:  rgba(22,163,74,0.15);
+
+  --t-hero-from:     #0d2137;
+  --t-hero-mid:      #1e3a5f;
+  --t-hero-to:       #2563eb;
+  --t-hero-text:     #bfdbfe;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   SB theme — LIGHT MODE
+───────────────────────────────────────────────────────────── */
 [data-theme="sb"] {
+  --t-bg:            #fdf2f8;
+  --t-bg-soft:       #fce7f3;
+  --t-card-bg:       #ffffff;
+  --t-item-bg:       #fdf2f8;
+  --t-item-bg2:      #fce7f3;
+  --t-input-bg:      #ffffff;
+
+  --t-text-main:     #1f1235;
+  --t-text-muted:    #6b4a7e;
+  --t-text-soft:     #9ca3af;
+  --t-text-accent:   #be185d;
+
+  --t-border-soft:   #fbcfe8;
+  --t-border:        #fbcfe8;
+  --t-shadow:        rgba(236,72,153,0.08);
+
   --t-primary:       #ec4899;
   --t-primary-dark:  #831843;
   --t-primary-mid:   #ec4899;
   --t-primary-light: #f472b6;
   --t-primary-pale:  #fbcfe8;
-  --t-bg:            #fdf2f8;
-  --t-bg-soft:       #fce7f3;
-  --t-text-accent:   #be185d;
-  --t-border:        #fbcfe8;
+
   --t-hero-from:     #831843;
   --t-hero-mid:      #ec4899;
   --t-hero-to:       #f9a8d4;
   --t-hero-text:     #fbcfe8;
+
   --t-fab-from:      #f472b6;
   --t-fab-to:        #be185d;
+
   --t-name:          "SB";
+}
+
+/* ─────────────────────────────────────────────────────────────
+   SB theme — DARK MODE
+───────────────────────────────────────────────────────────── */
+[data-dark="true"][data-theme="sb"] {
+  --t-bg:            #16091d;
+  --t-bg-soft:       #2a1133;
+  --t-card-bg:       #2a1133;
+  --t-item-bg:       #3a1a47;
+  --t-item-bg2:      #2a1133;
+  --t-input-bg:      #2a1133;
+
+  --t-text-main:     #fdf4ff;
+  --t-text-muted:    #d8b4fe;
+  --t-text-soft:     #a78bfa;
+
+  --t-border-soft:   #4a1a5e;
+  --t-border:        rgba(236,72,153,0.15);
+  --t-shadow:        rgba(0,0,0,0.4);
+
+  --t-primary-pale:  rgba(236,72,153,0.15);
+
+  --t-hero-from:     #2d0a3f;
+  --t-hero-mid:      #7e22ce;
+  --t-hero-to:       #ec4899;
+  --t-hero-text:     #fbcfe8;
 }
 
 @theme {
@@ -154,14 +201,13 @@ body {
 [data-dark="true"] .border-t { border-color: var(--t-border-soft) !important; }
 [data-dark="true"] .border-b { border-color: var(--t-border-soft) !important; }
 [data-dark="true"] .divide-gray-100 > * + * { border-color: var(--t-border-soft) !important; }
-/* Text overrides for common Tailwind text color classes */
 [data-dark="true"] .text-gray-900,
 [data-dark="true"] .text-gray-800 { color: var(--t-text-main) !important; }
 [data-dark="true"] .text-gray-600,
 [data-dark="true"] .text-gray-500 { color: var(--t-text-muted) !important; }
 [data-dark="true"] .text-gray-400 { color: var(--t-text-soft) !important; }
 
-/* Scrollbar dark mode */
+/* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--t-bg-soft); }
 ::-webkit-scrollbar-thumb { background: var(--t-primary-mid); border-radius: 3px; }
