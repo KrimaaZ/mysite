@@ -180,26 +180,29 @@ export default function FeedPage() {
 
       {/* ── Quick links ── */}
       <div
-        className="flex gap-4 overflow-x-auto px-4 py-5 mb-6 rounded-2xl"
+        className="flex gap-5 overflow-x-auto px-4 py-5 mb-6 rounded-2xl"
         style={{
           scrollbarWidth: 'none',
-          background: 'linear-gradient(135deg, var(--t-fab-from), var(--t-fab-to))',
+          background: theme === 'sb'
+            ? 'linear-gradient(135deg,#f472b6,#be185d)'
+            : 'linear-gradient(135deg,#f59e0b,#d97706)',
         }}
       >
         {QUICK_LINKS.map(item => (
           <Link key={item.href} href={item.href}
             className="flex-shrink-0 flex flex-col items-center gap-2 transition-all active:scale-90"
-            style={{ minWidth: 72 }}>
-            {/* Bulle organique */}
+            style={{ minWidth: 68 }}>
+            {/* Bulle organique blanche */}
             <div
-              className="flex items-center justify-center text-4xl"
+              className="flex items-center justify-center text-3xl"
               style={{
-                width: 72,
-                height: 72,
-                background: dark ? 'rgba(255,255,255,0.13)' : '#fff',
-                borderRadius: '46% 54% 58% 42% / 52% 44% 56% 48%',
-                boxShadow: '0 6px 18px rgba(0,0,0,0.18)',
-                border: '2px solid rgba(255,255,255,0.55)',
+                width: 68,
+                height: 68,
+                background: '#fff',
+                borderRadius: '60% 40% 55% 45% / 45% 55% 45% 55%',
+                boxShadow: '0 6px 20px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.1)',
+                border: '2.5px solid rgba(255,255,255,0.9)',
+                flexShrink: 0,
               }}
             >
               {item.emoji}
@@ -207,7 +210,7 @@ export default function FeedPage() {
             {/* Label */}
             <span
               className="text-xs font-bold text-center leading-tight"
-              style={{ color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.25)', maxWidth: 72 }}
+              style={{ color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.3)', maxWidth: 68 }}
             >
               {item.label}
             </span>
