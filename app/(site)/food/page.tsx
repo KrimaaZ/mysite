@@ -655,7 +655,9 @@ export default function FoodPage() {
           {[{ key: 'rotation', label: t.mealRotation }, { key: 'week', label: t.weekTab }, { key: 'recipes', label: t.myRecipes }, { key: 'videos', label: '🎬 Vidéos' }, { key: 'list', label: '🛒 Liste' }].map(tb => (
             <button key={tb.key} onClick={() => setTab(tb.key as 'rotation' | 'recipes' | 'week' | 'videos' | 'list')}
               className="px-4 py-2 rounded-xl text-sm font-medium transition-all relative whitespace-nowrap"
-              style={{ backgroundColor: tab === tb.key ? '#2d6a4f' : 'var(--t-item-bg)', color: tab === tb.key ? '#fff' : 'var(--t-text-muted)' }}>
+              style={tab === tb.key
+                ? { backgroundColor: '#2d6a4f', color: '#fff', border: '2px solid #2d6a4f' }
+                : { backgroundColor: 'transparent', color: 'var(--t-text-muted)', border: '2px solid var(--t-border-soft)' }}>
               {tb.label}
               {tb.key === 'week' && weekPlan.size > 0 && (
                 <span className="inline-flex items-center justify-center w-4 h-4 rounded-full font-bold ml-1 align-middle"
