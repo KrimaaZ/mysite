@@ -8,11 +8,12 @@ import { useTheme } from '@/lib/theme'
 
 // ── Navigation links ───────────────────────────────────────────────────────
 const menuLinks = [
-  { href: '/food',     label: 'Food',    emoji: '🥗' },
-  { href: '/workout',  label: 'Workout', emoji: '💪' },
-  { href: '/valorant', label: 'Valorant',emoji: '🎮' },
-  { href: '/trading',  label: 'Trading', emoji: '📈' },
-  { href: '/notes',    label: 'Spanish', emoji: '🇪🇸' },
+  { href: '/food',      label: 'Food',      emoji: '🥗' },
+  { href: '/workout',   label: 'Workout',   emoji: '💪' },
+  { href: '/valorant',  label: 'Valorant',  emoji: '🎮' },
+  { href: '/trading',   label: 'Trading',   emoji: '📈' },
+  { href: '/notes',     label: 'Spanish',   emoji: '🇪🇸' },
+  { href: '/pomodoro',  label: 'Pomodoro',  emoji: '🍅' },
 ]
 
 // ── Default daily tasks (from the board screenshot) ───────────────────────
@@ -268,7 +269,7 @@ export default function Navbar() {
 
           {/* FAB — centre */}
           <div className="flex-1 flex justify-center">
-            <button onClick={() => { setOpen(true); setDrawerTab('day') }}
+            <button onClick={() => { setOpen(true); setDrawerTab('menu') }}
               className="w-14 h-14 rounded-full flex items-center justify-center transition-transform active:scale-90 hover:scale-105"
               style={{
                 marginBottom: '28px',

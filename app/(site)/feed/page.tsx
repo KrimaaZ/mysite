@@ -15,11 +15,12 @@ type FeedItem = {
 }
 
 const QUICK_LINKS = [
-  { href: '/food',     label: 'Food',    emoji: '🥗',  bg: '#dcfce7', color: '#15803d' },
-  { href: '/workout',  label: 'Workout', emoji: '💪',  bg: '#fef3c7', color: '#92400e' },
-  { href: '/valorant', label: 'Valorant',emoji: '🎮',  bg: '#fee2e2', color: '#991b1b' },
-  { href: '/trading',  label: 'Trading', emoji: '📈',  bg: '#fef9c3', color: '#854d0e' },
-  { href: '/notes',    label: 'Spanish', emoji: '🇪🇸', bg: '#dbeafe', color: '#1e40af' },
+  { href: '/food',     label: 'Food',     emoji: '🥗',  bg: '#dcfce7', color: '#15803d' },
+  { href: '/workout',  label: 'Workout',  emoji: '💪',  bg: '#fef3c7', color: '#92400e' },
+  { href: '/valorant', label: 'Valorant', emoji: '🎮',  bg: '#fee2e2', color: '#991b1b' },
+  { href: '/trading',  label: 'Trading',  emoji: '📈',  bg: '#fef9c3', color: '#854d0e' },
+  { href: '/notes',    label: 'Spanish',  emoji: '🇪🇸', bg: '#dbeafe', color: '#1e40af' },
+  { href: '/pomodoro', label: 'Pomodoro', emoji: '🍅',  bg: '#fee2e2', color: '#991b1b' },
 ]
 
 const CAT_STYLE: Record<string, { bg: string; color: string; border: string; emoji: string }> = {
