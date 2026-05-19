@@ -6,7 +6,7 @@ import { useTheme } from '@/lib/theme'
 type Mode = 'work' | 'short' | 'long'
 
 const MODES: Record<Mode, { label: string; seconds: number; color: string; emoji: string }> = {
-  work:  { label: 'Focus',       seconds: 25 * 60, color: '#e84057', emoji: '🍅' },
+  work:  { label: 'Focus',       seconds: 45 * 60, color: '#e84057', emoji: '🍅' },
   short: { label: 'Short Break', seconds:  5 * 60, color: '#22c55e', emoji: '☕' },
   long:  { label: 'Long Break',  seconds: 15 * 60, color: '#3b82f6', emoji: '🛌' },
 }
