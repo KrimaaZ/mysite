@@ -190,13 +190,13 @@ export default function FeedPage() {
       >
         {QUICK_LINKS.map(item => (
           <Link key={item.href} href={item.href}
-            className="flex-shrink-0 flex flex-col items-center transition-all active:scale-90"
+            className="quick-link-item flex-shrink-0 flex flex-col items-center active:scale-90"
             style={{ minWidth: 68 }}>
             {/* Bulle + label superposé */}
             <div className="relative flex items-center justify-center" style={{ width: 78, height: 82 }}>
               {/* Bulle organique blanche */}
               <div
-                className="flex items-center justify-center text-3xl"
+                className="quick-link-bubble flex items-center justify-center text-3xl"
                 style={{
                   width: 68,
                   height: 68,
@@ -205,18 +205,20 @@ export default function FeedPage() {
                   boxShadow: '0 6px 20px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.1)',
                   border: '2.5px solid rgba(255,255,255,0.9)',
                   paddingBottom: 12,
+                  transition: 'box-shadow 0.2s ease',
                 }}
               >
                 {item.emoji}
               </div>
               {/* Label — capsule en bas de la bulle */}
               <span
-                className="absolute bottom-0 left-1/2 text-xs font-bold text-center leading-tight px-2 py-0.5 rounded-full whitespace-nowrap"
+                className="quick-link-label absolute bottom-0 left-1/2 text-xs font-bold text-center leading-tight px-2 py-0.5 rounded-full whitespace-nowrap"
                 style={{
                   transform: 'translateX(-50%)',
                   background: '#fff',
                   color: '#000',
                   boxShadow: '0 2px 6px rgba(0,0,0,0.18)',
+                  transition: 'box-shadow 0.2s ease',
                 }}
               >
                 {item.label}
