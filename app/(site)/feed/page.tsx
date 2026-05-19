@@ -179,13 +179,38 @@ export default function FeedPage() {
       )}
 
       {/* ── Quick links ── */}
-      <div className="flex gap-2.5 overflow-x-auto pb-1 mb-6" style={{ scrollbarWidth: 'none' }}>
+      <div
+        className="flex gap-4 overflow-x-auto px-4 py-5 mb-6 rounded-2xl"
+        style={{
+          scrollbarWidth: 'none',
+          background: 'linear-gradient(135deg, var(--t-fab-from), var(--t-fab-to))',
+        }}
+      >
         {QUICK_LINKS.map(item => (
           <Link key={item.href} href={item.href}
-            className="flex-shrink-0 flex flex-col items-center gap-1.5 px-4 py-3 rounded-2xl transition-all active:scale-95"
-            style={{ backgroundColor: dark ? 'var(--t-item-bg)' : item.bg, minWidth: 72 }}>
-            <span className="text-2xl">{item.emoji}</span>
-            <span className="text-xs font-semibold" style={{ color: dark ? 'var(--t-text-muted)' : item.color }}>{item.label}</span>
+            className="flex-shrink-0 flex flex-col items-center gap-2 transition-all active:scale-90"
+            style={{ minWidth: 72 }}>
+            {/* Bulle organique */}
+            <div
+              className="flex items-center justify-center text-4xl"
+              style={{
+                width: 72,
+                height: 72,
+                background: dark ? 'rgba(255,255,255,0.13)' : '#fff',
+                borderRadius: '46% 54% 58% 42% / 52% 44% 56% 48%',
+                boxShadow: '0 6px 18px rgba(0,0,0,0.18)',
+                border: '2px solid rgba(255,255,255,0.55)',
+              }}
+            >
+              {item.emoji}
+            </div>
+            {/* Label */}
+            <span
+              className="text-xs font-bold text-center leading-tight"
+              style={{ color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.25)', maxWidth: 72 }}
+            >
+              {item.label}
+            </span>
           </Link>
         ))}
       </div>

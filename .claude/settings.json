@@ -1,0 +1,23 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "powershell",
+            "command": "Set-Location 'C:\\Users\\Mon-PC\\Desktop\\Website'; $f = $input | ConvertFrom-Json | Select-Object -ExpandProperty tool_input | Select-Object -ExpandProperty file_path -ErrorAction SilentlyContinue; git add .; git commit -m \"auto: update files\" 2>&1 | Out-Null; git push 2>&1 | Out-Null",
+            "statusMessage": "Pushing to GitHub...",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git *)"
+    ]
+  }
+}
