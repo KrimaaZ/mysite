@@ -657,7 +657,7 @@ export default function FoodPage() {
               className="px-4 py-2 rounded-xl text-sm font-medium transition-all relative whitespace-nowrap"
               style={tab === tb.key
                 ? { backgroundColor: '#2d6a4f', color: '#fff', border: '2px solid #2d6a4f' }
-                : { backgroundColor: 'transparent', color: 'var(--t-text-muted)', border: '2px solid var(--t-border-soft)' }}>
+                : { backgroundColor: 'rgba(45,106,79,0.20)', color: 'var(--t-text-muted)', border: '2px solid rgba(45,106,79,0.35)' }}>
               {tb.label}
               {tb.key === 'week' && weekPlan.size > 0 && (
                 <span className="inline-flex items-center justify-center w-4 h-4 rounded-full font-bold ml-1 align-middle"
