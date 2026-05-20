@@ -17,7 +17,6 @@ type FeedItem = {
 const QUICK_LINKS = [
   { href: '/food',     label: 'Food',     emoji: '🥗',  bg: '#dcfce7', color: '#15803d' },
   { href: '/workout',  label: 'Workout',  emoji: '💪',  bg: '#fef3c7', color: '#92400e' },
-  { href: '/valorant', label: 'Valorant', emoji: '🎮',  bg: '#fee2e2', color: '#991b1b' },
   { href: '/trading',  label: 'Trading',  emoji: '📈',  bg: '#fef9c3', color: '#854d0e' },
   { href: '/notes',    label: 'Spanish',  emoji: '🇪🇸', bg: '#dbeafe', color: '#1e40af' },
   { href: '/pomodoro', label: 'Pomodoro', emoji: '🍅',  bg: '#fee2e2', color: '#991b1b' },
@@ -26,7 +25,6 @@ const QUICK_LINKS = [
 const CAT_STYLE: Record<string, { bg: string; color: string; border: string; emoji: string }> = {
   food:     { bg: '#dcfce7', color: '#15803d', border: '#bbf7d0', emoji: '🥗' },
   workout:  { bg: '#fef3c7', color: '#92400e', border: '#fde68a', emoji: '💪' },
-  valorant: { bg: '#fee2e2', color: '#991b1b', border: '#fca5a5', emoji: '🎮' },
   trading:  { bg: '#fef9c3', color: '#854d0e', border: '#fde047', emoji: '📈' },
   backtest: { bg: '#d1fae5', color: '#065f46', border: '#6ee7b7', emoji: '📊' },
   spanish:  { bg: '#dbeafe', color: '#1e40af', border: '#93c5fd', emoji: '🇪🇸' },

@@ -10,7 +10,6 @@ import { useTheme } from '@/lib/theme'
 const menuLinks = [
   { href: '/food',      label: 'Food',      emoji: '🥗' },
   { href: '/workout',   label: 'Workout',   emoji: '💪' },
-  { href: '/valorant',  label: 'Valorant',  emoji: '🎮' },
   { href: '/trading',   label: 'Trading',   emoji: '📈' },
   { href: '/notes',     label: 'Spanish',   emoji: '🇪🇸' },
   { href: '/pomodoro',  label: 'Pomodoro',  emoji: '🍅' },
