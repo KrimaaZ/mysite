@@ -646,36 +646,12 @@ export default function FoodPage() {
               : t.recipesSubtitle(recipes.length)}
           </p>
         </div>
-      </div>
 
-      {/* Main tabs + search */}
-      <div className="flex items-center gap-2 mb-5">
-        {/* Scrollable tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-1 flex-1" style={{ scrollbarWidth: 'none' }}>
-          {[{ key: 'rotation', label: t.mealRotation }, { key: 'week', label: t.weekTab }, { key: 'recipes', label: t.myRecipes }, { key: 'videos', label: '🎬 Vidéos' }, { key: 'list', label: '🛒 Liste' }].map(tb => (
-            <button key={tb.key} onClick={() => setTab(tb.key as 'rotation' | 'recipes' | 'week' | 'videos' | 'list')}
-              className="px-4 py-2 rounded-xl text-sm font-medium transition-all relative whitespace-nowrap"
-              style={tab === tb.key
-                ? { backgroundColor: '#2d6a4f', color: '#fff', border: '2px solid #2d6a4f' }
-                : { backgroundColor: 'rgba(45,106,79,0.20)', color: 'var(--t-text-muted)', border: '2px solid rgba(45,106,79,0.35)' }}>
-              {tb.label}
-              {tb.key === 'week' && weekPlan.size > 0 && (
-                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full font-bold ml-1 align-middle"
-                  style={{ backgroundColor: '#c0303e', color: '#fff', fontSize: '9px' }}>{weekPlan.size}</span>
-              )}
-              {tb.key === 'list' && buyItems.filter(i => !i.checked).length > 0 && (
-                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full font-bold ml-1 align-middle"
-                  style={{ backgroundColor: '#c0303e', color: '#fff', fontSize: '9px' }}>{buyItems.filter(i => !i.checked).length}</span>
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* Search bar — expands on click, only filters rotation */}
+        {/* Search — lives in header, aligned with title */}
         <div className="shrink-0 flex items-center transition-all duration-200"
-          style={{ width: searchOpen ? 160 : 'auto' }}>
+          style={{ width: searchOpen ? 180 : 'auto' }}>
           {searchOpen ? (
-            <div className="flex items-center gap-1 rounded-xl px-2.5 py-1.5 w-full"
+            <div className="flex items-center gap-1 rounded-xl px-3 py-2 w-full"
               style={{ backgroundColor: 'var(--t-card-bg)', border: '1.5px solid var(--t-border-soft)' }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--t-text-muted)" strokeWidth="2.5" strokeLinecap="round">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
@@ -685,27 +661,48 @@ export default function FoodPage() {
                 value={mealSearch}
                 onChange={e => setMealSearch(e.target.value)}
                 placeholder="Rechercher…"
-                className="flex-1 bg-transparent text-xs outline-none min-w-0"
+                className="flex-1 bg-transparent text-sm outline-none min-w-0"
                 style={{ color: 'var(--t-text-main)' }}
                 onBlur={() => { if (!mealSearch) { setSearchOpen(false) } }}
               />
               {mealSearch && (
                 <button onClick={() => { setMealSearch(''); searchInputRef.current?.focus() }}
-                  className="text-xs leading-none" style={{ color: 'var(--t-text-muted)' }}>✕</button>
+                  className="text-sm leading-none" style={{ color: 'var(--t-text-muted)' }}>✕</button>
               )}
             </div>
           ) : (
             <button
               onClick={() => { setSearchOpen(true); setTimeout(() => searchInputRef.current?.focus(), 50) }}
-              className="h-9 px-3 rounded-xl flex items-center gap-1.5 transition-all active:scale-95 whitespace-nowrap text-sm font-medium"
-              style={{ backgroundColor: 'var(--t-card-bg)', color: 'var(--t-text-muted)', border: '1px solid var(--t-border-soft)' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              className="px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all active:scale-95 whitespace-nowrap text-sm font-semibold"
+              style={{ backgroundColor: 'var(--t-card-bg)', color: 'var(--t-text-muted)', border: '1.5px solid var(--t-border-soft)' }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
               </svg>
               <span>Chercher</span>
             </button>
           )}
         </div>
+      </div>
+
+      {/* Main tabs */}
+      <div className="flex gap-2 mb-5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+        {[{ key: 'rotation', label: t.mealRotation }, { key: 'week', label: t.weekTab }, { key: 'recipes', label: t.myRecipes }, { key: 'videos', label: '🎬 Vidéos' }, { key: 'list', label: '🛒 Liste' }].map(tb => (
+          <button key={tb.key} onClick={() => setTab(tb.key as 'rotation' | 'recipes' | 'week' | 'videos' | 'list')}
+            className="px-4 py-2 rounded-xl text-sm font-medium transition-all relative whitespace-nowrap"
+            style={tab === tb.key
+              ? { backgroundColor: '#2d6a4f', color: '#fff', border: '2px solid #2d6a4f' }
+              : { backgroundColor: 'var(--t-card-bg)', color: 'var(--t-text-muted)', border: '2px solid #2d6a4f' }}>
+            {tb.label}
+            {tb.key === 'week' && weekPlan.size > 0 && (
+              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full font-bold ml-1 align-middle"
+                style={{ backgroundColor: '#c0303e', color: '#fff', fontSize: '9px' }}>{weekPlan.size}</span>
+            )}
+            {tb.key === 'list' && buyItems.filter(i => !i.checked).length > 0 && (
+              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full font-bold ml-1 align-middle"
+                style={{ backgroundColor: '#c0303e', color: '#fff', fontSize: '9px' }}>{buyItems.filter(i => !i.checked).length}</span>
+            )}
+          </button>
+        ))}
       </div>
 
       {/* ── MEAL ROTATION ── */}
