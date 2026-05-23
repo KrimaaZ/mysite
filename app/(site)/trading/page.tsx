@@ -182,15 +182,16 @@ function PreTradeTab() {
               <div className="flex gap-1.5" style={{ width: '62%' }}>
                 {SESSION_BTNS.map(s => (
                   <button key={s.key} onClick={() => toggleSession(s.key)}
-                    className="flex-1 rounded-xl font-bold transition-all active:scale-95 flex flex-col items-center"
+                    className="flex-1 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-1"
                     style={{
+                      fontSize: 11,
                       padding: '5px 2px',
                       border: `2px solid ${s.color}`,
                       backgroundColor: activeSession === s.key ? `${s.color}73` : 'transparent',
                       color: activeSession === s.key ? '#fff' : s.color,
                     }}>
-                    <span style={{ fontSize: 10 }}>{s.label}</span>
-                    <span style={{ fontSize: 8, opacity: 0.85, fontWeight: 500 }}>{s.time}</span>
+                    <span>{s.label}</span>
+                    <span style={{ fontSize: 8, opacity: 0.8, fontWeight: 500 }}>{s.time}</span>
                   </button>
                 ))}
               </div>
