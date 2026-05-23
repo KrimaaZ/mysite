@@ -12,7 +12,7 @@ const emptyStrategy = { name: '', description: '', rules: '', timeframe: '', win
 
 // ── Pre-Trade Checklist ────────────────────────────────────────────────────
 const DEFAULT_CHECKS = [
-  { id: 'trend',    label: 'Trend confirmed (HTF)' },
+  { id: 'trend',    label: 'Trend confirmed 4H TF' },
   { id: 'volume',   label: 'Volume above average' },
   { id: 'sr',       label: 'Support / Resistance clear' },
   { id: 'entry',    label: 'Entry price defined' },
@@ -23,11 +23,19 @@ const DEFAULT_CHECKS = [
 ]
 const PRE_CHECK_KEY = 'pre-trade-checklist-v1'
 
+const BIAS_BTNS = [
+  { key: 'bull', label: 'Bull', color: '#22c55e' },
+  { key: 'bear', label: 'Bear', color: '#e84057' },
+  { key: 'cons', label: 'Cons', color: '#f59e0b' },
+]
+
 function PreTradeTab() {
   const [checks, setChecks] = useState<Record<string, boolean>>({})
+  const [bias, setBias] = useState<string | null>(null)
 
   useEffect(() => {
     try { setChecks(JSON.parse(localStorage.getItem(PRE_CHECK_KEY) || '{}')) } catch { /**/ }
+    try { setBias(localStorage.getItem(PRE_CHECK_KEY + '-bias') || null) } catch { /**/ }
   }, [])
 
   const toggle = (id: string) => {
@@ -36,7 +44,18 @@ function PreTradeTab() {
     localStorage.setItem(PRE_CHECK_KEY, JSON.stringify(next))
   }
 
-  const reset = () => { setChecks({}); localStorage.removeItem(PRE_CHECK_KEY) }
+  const toggleBias = (key: string) => {
+    const next = bias === key ? null : key
+    setBias(next)
+    if (next) localStorage.setItem(PRE_CHECK_KEY + '-bias', next)
+    else localStorage.removeItem(PRE_CHECK_KEY + '-bias')
+  }
+
+  const reset = () => {
+    setChecks({}); setBias(null)
+    localStorage.removeItem(PRE_CHECK_KEY)
+    localStorage.removeItem(PRE_CHECK_KEY + '-bias')
+  }
 
   const done = DEFAULT_CHECKS.filter(c => checks[c.id]).length
   const allGood = done === DEFAULT_CHECKS.length
@@ -45,9 +64,23 @@ function PreTradeTab() {
     <div className="flex flex-col gap-4">
       {/* Header */}
       <div className="rounded-2xl p-4 border-2" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: allGood ? '#22c55e' : 'var(--t-border-soft)' }}>
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-3">
           <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#b8860b' }}>🎯 Pre-Trade Checklist</p>
           <button onClick={reset} className="text-xs px-2 py-1 rounded-lg" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>Reset</button>
+        </div>
+        {/* Bias buttons */}
+        <div className="flex gap-2 mb-3">
+          {BIAS_BTNS.map(b => (
+            <button key={b.key} onClick={() => toggleBias(b.key)}
+              className="flex-1 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95"
+              style={{
+                border: `2px solid ${b.color}`,
+                backgroundColor: bias === b.key ? `${b.color}73` : 'transparent',
+                color: bias === b.key ? '#fff' : b.color,
+              }}>
+              {b.label}
+            </button>
+          ))}
         </div>
         {/* Progress bar */}
         <div className="h-2 rounded-full overflow-hidden mb-1" style={{ backgroundColor: 'var(--t-item-bg)' }}>
