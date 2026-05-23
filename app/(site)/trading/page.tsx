@@ -68,20 +68,6 @@ function PreTradeTab() {
           <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#b8860b' }}>🎯 Pre-Trade Checklist</p>
           <button onClick={reset} className="text-xs px-2 py-1 rounded-lg" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>Reset</button>
         </div>
-        {/* Bias buttons */}
-        <div className="flex gap-2 mb-3">
-          {BIAS_BTNS.map(b => (
-            <button key={b.key} onClick={() => toggleBias(b.key)}
-              className="flex-1 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95"
-              style={{
-                border: `2px solid ${b.color}`,
-                backgroundColor: bias === b.key ? `${b.color}73` : 'transparent',
-                color: bias === b.key ? '#fff' : b.color,
-              }}>
-              {b.label}
-            </button>
-          ))}
-        </div>
         {/* Progress bar */}
         <div className="h-2 rounded-full overflow-hidden mb-1" style={{ backgroundColor: 'var(--t-item-bg)' }}>
           <div className="h-full rounded-full transition-all duration-500"
@@ -95,20 +81,43 @@ function PreTradeTab() {
       {/* Checklist */}
       <div className="flex flex-col gap-2">
         {DEFAULT_CHECKS.map(c => (
-          <button key={c.id} onClick={() => toggle(c.id)}
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl border-2 text-left transition-all active:scale-95"
+          <div key={c.id}
+            className="flex items-center gap-3 px-4 py-3 rounded-2xl border-2 transition-all"
             style={{
               backgroundColor: checks[c.id] ? 'rgba(34,197,94,0.08)' : 'var(--t-card-bg)',
               borderColor: checks[c.id] ? '#22c55e' : 'var(--t-border-soft)',
             }}>
-            <div className="w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all"
+            {/* Checkbox */}
+            <button onClick={() => toggle(c.id)}
+              className="w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all"
               style={{ borderColor: checks[c.id] ? '#22c55e' : '#d1d5db', backgroundColor: checks[c.id] ? '#22c55e' : 'transparent' }}>
               {checks[c.id] && <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><polyline points="2,6 5,9 10,3"/></svg>}
-            </div>
-            <span className="text-sm font-semibold" style={{ color: checks[c.id] ? '#16a34a' : 'var(--t-text-main)', textDecoration: checks[c.id] ? 'line-through' : 'none' }}>
+            </button>
+            {/* Label */}
+            <span onClick={() => toggle(c.id)} className="text-sm font-semibold flex-1 cursor-pointer"
+              style={{ color: checks[c.id] ? '#16a34a' : 'var(--t-text-main)', textDecoration: checks[c.id] ? 'line-through' : 'none' }}>
               {c.label}
             </span>
-          </button>
+            {/* Bias btns — only on trend row */}
+            {c.id === 'trend' && (
+              <div className="flex gap-1 shrink-0">
+                {BIAS_BTNS.map(b => (
+                  <button key={b.key} onClick={() => toggleBias(b.key)}
+                    className="rounded-lg font-bold transition-all active:scale-95"
+                    style={{
+                      fontSize: 10,
+                      padding: '2px 7px',
+                      border: `1.5px solid ${b.color}`,
+                      backgroundColor: bias === b.key ? `${b.color}73` : 'transparent',
+                      color: bias === b.key ? '#fff' : b.color,
+                      whiteSpace: 'nowrap',
+                    }}>
+                    {b.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         ))}
       </div>
     </div>
