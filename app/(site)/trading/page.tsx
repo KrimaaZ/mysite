@@ -52,17 +52,14 @@ const KEY_LEVEL_BTNS = [
   { key: 'NC',   color: '#94a3b8' },
 ]
 const AMD_BTNS = [
-  { key: 'accum', label: 'Accumulation', color: '#22c55e' },
-  { key: 'manip', label: 'Manipulation', color: '#e84057' },
-  { key: 'dist',  label: 'Distribution', color: '#3b82f6' },
-]
-const AMD_MID_BTNS = [
-  { key: 'retrace',  label: 'Retracement',    color: '#f59e0b' },
-  { key: 'redistrib', label: 'Redistribution', color: '#ec4899' },
+  { key: 'accum',   label: 'Accumulation', color: '#22c55e' },
+  { key: 'manip',   label: 'Manipulation', color: '#e84057' },
+  { key: 'dist',    label: 'Distribution', color: '#3b82f6' },
+  { key: 'retrace', label: 'Retracement',  color: '#f59e0b' },
 ]
 const AMD_STACK_BTNS = [
-  { key: 'retrace2', label: 'Retracement',   color: '#f59e0b' },
-  { key: 'consol',   label: 'Consolidation', color: '#8b5cf6' },
+  { key: 'redistrib', label: 'Redistribution', color: '#ec4899' },
+  { key: 'consol',    label: 'Consolidation',  color: '#8b5cf6' },
 ]
 
 const DOP_BTNS = [
@@ -404,7 +401,7 @@ function PreTradeTab() {
                 </div>
               )}
 
-              {/* AMD — 3 main + 2 mid stacked + 2 end stacked */}
+              {/* AMD — 4 horizontal + 2 stacked */}
               {c.id === 'amd' && (
                 <div style={{ width: '66%', flexShrink: 0, display: 'flex', gap: 6, alignItems: 'stretch' }}>
                   {AMD_BTNS.map(b => (
@@ -416,17 +413,6 @@ function PreTradeTab() {
                       {b.label}
                     </button>
                   ))}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
-                    {AMD_MID_BTNS.map(b => (
-                      <button key={b.key} onClick={() => toggleAMD(b.key)}
-                        className="flex-1 rounded-xl font-bold transition-all active:scale-95"
-                        style={{ fontSize: 10, padding: '3px 2px', border: `2px solid ${b.color}`,
-                          backgroundColor: activeAMD === b.key ? `${b.color}73` : 'transparent',
-                          color: activeAMD === b.key ? '#fff' : b.color }}>
-                        {b.label}
-                      </button>
-                    ))}
-                  </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
                     {AMD_STACK_BTNS.map(b => (
                       <button key={b.key} onClick={() => toggleAMD(b.key)}
