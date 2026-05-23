@@ -13,7 +13,7 @@ const emptyStrategy = { name: '', description: '', rules: '', timeframe: '', win
 // ── Pre-Trade Checklist ────────────────────────────────────────────────────
 const DEFAULT_CHECKS = [
   { id: 'trend',    label: 'Trend confirmed 4H TF' },
-  { id: 'volume',   label: 'Volume above average' },
+  { id: 'volume',   label: 'Day' },
   { id: 'sr',       label: 'Support / Resistance clear' },
   { id: 'entry',    label: 'Entry price defined' },
   { id: 'sl',       label: 'Stop Loss placed' },
@@ -29,13 +29,17 @@ const BIAS_BTNS = [
   { key: 'cons', label: 'Cons', color: '#f59e0b' },
 ]
 
+const DAY_BTNS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+
 function PreTradeTab() {
   const [checks, setChecks] = useState<Record<string, boolean>>({})
   const [bias, setBias] = useState<string | null>(null)
+  const [activeDay, setActiveDay] = useState<string | null>(null)
 
   useEffect(() => {
     try { setChecks(JSON.parse(localStorage.getItem(PRE_CHECK_KEY) || '{}')) } catch { /**/ }
     try { setBias(localStorage.getItem(PRE_CHECK_KEY + '-bias') || null) } catch { /**/ }
+    try { setActiveDay(localStorage.getItem(PRE_CHECK_KEY + '-day') || null) } catch { /**/ }
   }, [])
 
   const toggle = (id: string) => {
@@ -51,10 +55,18 @@ function PreTradeTab() {
     else localStorage.removeItem(PRE_CHECK_KEY + '-bias')
   }
 
+  const toggleDay = (day: string) => {
+    const next = activeDay === day ? null : day
+    setActiveDay(next)
+    if (next) localStorage.setItem(PRE_CHECK_KEY + '-day', next)
+    else localStorage.removeItem(PRE_CHECK_KEY + '-day')
+  }
+
   const reset = () => {
-    setChecks({}); setBias(null)
+    setChecks({}); setBias(null); setActiveDay(null)
     localStorage.removeItem(PRE_CHECK_KEY)
     localStorage.removeItem(PRE_CHECK_KEY + '-bias')
+    localStorage.removeItem(PRE_CHECK_KEY + '-day')
   }
 
   const done = DEFAULT_CHECKS.filter(c => checks[c.id]).length
@@ -98,6 +110,24 @@ function PreTradeTab() {
               style={{ color: checks[c.id] ? '#16a34a' : 'var(--t-text-main)', textDecoration: checks[c.id] ? 'line-through' : 'none' }}>
               {c.label}
             </span>
+            {/* Day btns — only on volume row */}
+            {c.id === 'volume' && (
+              <div className="flex gap-1.5" style={{ width: '62%' }}>
+                {DAY_BTNS.map(d => (
+                  <button key={d} onClick={() => toggleDay(d)}
+                    className="flex-1 rounded-xl font-bold transition-all active:scale-95"
+                    style={{
+                      fontSize: 11,
+                      padding: '5px 0',
+                      border: '2px solid #b8860b',
+                      backgroundColor: activeDay === d ? 'rgba(184,134,11,0.45)' : 'transparent',
+                      color: activeDay === d ? '#fff' : '#b8860b',
+                    }}>
+                    {d}
+                  </button>
+                ))}
+              </div>
+            )}
             {/* Bias btns — only on trend row */}
             {c.id === 'trend' && (
               <div className="flex gap-1.5" style={{ width: '62%' }}>
