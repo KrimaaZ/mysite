@@ -612,9 +612,178 @@ function CheckerTab() {
   )
 }
 
+// ── Strategy Guide ────────────────────────────────────────────────────────
+const STEPS = [
+  {
+    letter: 'A', icon: '📅', title: 'Day & News filter',
+    ref: 'Day · No major news incoming',
+    lines: [
+      'Select the current day on the checklist.',
+      'Prefer Tuesday → Wednesday → Thursday (highest probability).',
+      'Avoid Mondays (Asian manipulation carry-over) and Fridays (low liquidity, early close).',
+      'Check economic calendar — skip the session if NFP, FOMC or CPI drops within the next 2h.',
+    ],
+  },
+  {
+    letter: 'B', icon: '🕯️', title: 'Mark the Daily Open Price (DOP)',
+    ref: 'DOP (Daily Open Price)',
+    lines: [
+      'Gold: DOP is fixed at 18h00 (prior day NY close).',
+      'Forex: DOP is fixed at 17h00.',
+      'Draw a horizontal line at the DOP on your chart.',
+      'Price will often gravitate back to this level — it is a magnet and a bias reference.',
+    ],
+  },
+  {
+    letter: 'C', icon: '📍', title: 'Mark Previous Levels (H/L)',
+    ref: 'High/Low (PDH · PDL · PSH · PSL)',
+    lines: [
+      'Input Previous Day High (PDH) and Previous Day Low (PDL) in the High/Low inputs.',
+      'Input Previous Session High (PSH) and Previous Session Low (PSL).',
+      'These are the key liquidity pools — Smart Money will target them first.',
+      'Draw these levels on every TF you will trade.',
+    ],
+  },
+  {
+    letter: 'D', icon: '📊', title: 'Determine bias on 4H TF',
+    ref: 'Trend confirmed 4H TF → Bullish / Bearish / Consolidation',
+    lines: [
+      'Open the 4H chart.',
+      'Ask: is price making Higher Highs + Higher Lows (Bullish), Lower Highs + Lower Lows (Bearish), or ranging (Consolidation)?',
+      'Bullish bias → look ONLY for long setups in the session.',
+      'Bearish bias → look ONLY for short setups.',
+      'Consolidation → wait for a break or skip the session.',
+      'Mark bias button on checklist.',
+    ],
+  },
+  {
+    letter: 'E', icon: '⏰', title: 'Select your session & confirm time',
+    ref: 'Time UTC-4 (Ali) · Time UTC-4 (Jamo)',
+    lines: [
+      'Ali method — London: 2am–7am | NY: 8am–12pm.',
+      'Jamo method — London: 1am–4am | NY: 8am–12am.',
+      'The highest-probability window is 2–3h after the session open.',
+      'Select the active session on the checklist.',
+      'Do NOT trade outside your selected session window.',
+    ],
+  },
+  {
+    letter: 'F', icon: '🔄', title: 'Read the AMD phase',
+    ref: 'AMD → Accumulation · Manipulation · Distribution · Retracement · Redistribution · Consolidation',
+    lines: [
+      'Accumulation: price ranging tightly — Smart Money loading positions.',
+      'Manipulation (Stop Hunt): price spikes above/below the range to grab liquidity, then reverses.',
+      'Distribution: the real directional move begins — this is your entry zone.',
+      'Retracement: price pulls back into a discount/premium before continuing.',
+      'Redistribution: second push in the same direction after a retracement.',
+      'Wait for the Manipulation phase to complete before entering — entering in Accumulation is too early.',
+    ],
+  },
+  {
+    letter: 'G', icon: '🔎', title: 'Identify Key Levels on 15min TF',
+    ref: 'Key level: OB · BB · FVG · iFVG · CISD · PsyN · Lq · NC',
+    lines: [
+      'Open 15min chart. Mark all relevant structures in the direction of your 4H bias.',
+      'OB (Order Block): last opposing candle before a strong impulse move.',
+      'BB (Breaker Block): an OB that was broken through — now acts as resistance/support.',
+      'FVG (Fair Value Gap): 3-candle imbalance — price often returns to fill it.',
+      'iFVG (Inverse FVG): a filled FVG that flips into support/resistance.',
+      'CISD (Change In State of Delivery): structural shift confirming the new direction.',
+      'PsyN (Psychological Number): round price levels (.00, .50) — strong magnets.',
+      'Lq (Liquidity): equal highs/lows, old session highs/lows — where stops are sitting.',
+    ],
+  },
+  {
+    letter: 'H', icon: '📈', title: 'Analyse 15min — wait for the setup',
+    ref: 'Analyse 15min',
+    lines: [
+      'Stay on the 15min chart.',
+      'Wait for price to reach one of your key levels (OB, FVG, PsyN, PDH/PDL…).',
+      'Confirm AMD context: the Manipulation spike should be visible and over.',
+      'Look for a Market Structure Shift (MSS) — a break of a short-term swing point in your bias direction.',
+      'DO NOT enter until MSS is confirmed on this timeframe.',
+    ],
+  },
+  {
+    letter: 'I', icon: '✅', title: 'Confirm entry on 5min TF',
+    ref: 'Confirmation 5min',
+    lines: [
+      'Drop to 5min chart only after 15min MSS is confirmed.',
+      'Look for: a displacement candle, a 5min FVG or OB forming at the key level.',
+      'Enter on the reaction to the 5min key level (limit order into OB/FVG) or on the close of the confirmation candle.',
+      'This is your entry — no earlier.',
+    ],
+  },
+  {
+    letter: 'J', icon: '🎯', title: 'Execute — SL, TP, R:R',
+    ref: 'Stop Loss · Take Profit · R:R ≥ 2',
+    lines: [
+      'Stop Loss: place it 2–5 pips beyond the key level that triggered entry (below OB low / above OB high).',
+      'Take Profit: target the nearest significant liquidity pool in your bias direction (PDH, PDL, PSH, PSL, PsyN).',
+      'Calculate R:R — if R:R < 2, skip the trade. Move TP further or wait for a better entry.',
+      'Confirm R:R ≥ 2 on checklist before submitting the order.',
+      'Once in trade: do not move SL against the position. Let the trade breathe.',
+    ],
+  },
+]
+
+function StrategyGuideTab() {
+  const [open, setOpen] = useState<string | null>(null)
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Header */}
+      <div className="rounded-2xl p-4 border-2" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
+        <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#b8860b' }}>📚 ICT / SMC Strategy — A to J</p>
+        <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Every step maps to an item in your Pre-Trade checklist. Follow in order.</p>
+      </div>
+
+      {STEPS.map(s => {
+        const isOpen = open === s.letter
+        return (
+          <div key={s.letter}
+            className="rounded-2xl border-2 overflow-hidden transition-all"
+            style={{ backgroundColor: 'var(--t-card-bg)', borderColor: isOpen ? '#b8860b' : 'var(--t-border-soft)' }}>
+            {/* Header row */}
+            <button
+              className="w-full flex items-center gap-3 px-4 py-3 text-left"
+              onClick={() => setOpen(isOpen ? null : s.letter)}>
+              {/* Letter badge */}
+              <span className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black shrink-0"
+                style={{ backgroundColor: isOpen ? '#b8860b' : 'var(--t-item-bg)', color: isOpen ? '#fff' : 'var(--t-text-muted)' }}>
+                {s.letter}
+              </span>
+              <span className="text-base mr-1">{s.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold" style={{ color: 'var(--t-text-main)' }}>{s.title}</p>
+                <p className="text-xs truncate" style={{ color: 'var(--t-text-soft)' }}>✅ {s.ref}</p>
+              </div>
+              <span className="text-xs shrink-0" style={{ color: 'var(--t-text-soft)' }}>{isOpen ? '▲' : '▼'}</span>
+            </button>
+
+            {/* Content */}
+            {isOpen && (
+              <div className="px-4 pb-4 border-t" style={{ borderColor: 'var(--t-border-soft)' }}>
+                <ol className="mt-3 flex flex-col gap-2">
+                  {s.lines.map((line, i) => (
+                    <li key={i} className="flex gap-2 text-sm" style={{ color: 'var(--t-text-muted)' }}>
+                      <span className="shrink-0 font-bold" style={{ color: '#b8860b' }}>{i + 1}.</span>
+                      <span>{line}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function TradingPage() {
   const [tab, setTab] = useState<'log' | 'backtest' | 'checker'>('checker')
-  const [subTab, setSubTab] = useState<'pre' | 'counter'>('pre')
+  const [subTab, setSubTab] = useState<'pre' | 'counter' | 'guide'>('pre')
   const [trades, setTrades] = useState<Trade[]>([])
   const [strategies, setStrategies] = useState<Strategy[]>([])
   const [tradeModal, setTradeModal] = useState(false)
@@ -831,15 +1000,15 @@ export default function TradingPage() {
         <div className="flex flex-col gap-4">
           {/* Sub-tabs */}
           <div className="flex gap-2">
-            {[{ key: 'pre', label: '🎯 Pre-Trade' }, { key: 'counter', label: '📊 Counter' }].map(st => (
-              <button key={st.key} onClick={() => setSubTab(st.key as 'pre' | 'counter')}
+            {[{ key: 'pre', label: '🎯 Pre-Trade' }, { key: 'counter', label: '📊 Counter' }, { key: 'guide', label: '📚 Guide' }].map(st => (
+              <button key={st.key} onClick={() => setSubTab(st.key as 'pre' | 'counter' | 'guide')}
                 className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
                 style={{ backgroundColor: subTab === st.key ? '#b8860b' : 'var(--t-item-bg)', color: subTab === st.key ? '#fff' : 'var(--t-text-muted)' }}>
                 {st.label}
               </button>
             ))}
           </div>
-          {subTab === 'pre' ? <PreTradeTab /> : <CheckerTab />}
+          {subTab === 'pre' ? <PreTradeTab /> : subTab === 'counter' ? <CheckerTab /> : <StrategyGuideTab />}
         </div>
       )}
 
