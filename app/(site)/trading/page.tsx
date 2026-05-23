@@ -417,28 +417,32 @@ function PreTradeTab() {
                 </div>
               )}
 
-              {/* AMD — 4 horizontal + 2 stacked */}
+              {/* AMD — horizontally scrollable, 4 btns + 2 stacked */}
               {c.id === 'amd' && (
-                <div style={{ width: '66%', flexShrink: 0, display: 'flex', gap: 6, alignItems: 'stretch' }}>
-                  {AMD_BTNS.map(b => (
-                    <button key={b.key} onClick={() => toggleAMD(b.key)}
-                      className="flex-1 rounded-xl font-bold transition-all active:scale-95"
-                      style={{ fontSize: 10, padding: '5px 2px', border: `2px solid ${b.color}`,
-                        backgroundColor: activeAMD.includes(b.key) ? `${b.color}73` : 'transparent',
-                        color: activeAMD.includes(b.key) ? '#fff' : b.color }}>
-                      {b.label}
-                    </button>
-                  ))}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
-                    {AMD_STACK_BTNS.map(b => (
+                <div className="no-scrollbar" style={{ flex: 1, minWidth: 0, overflowX: 'auto' }}>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'stretch', minWidth: 'max-content' }}>
+                    {AMD_BTNS.map(b => (
                       <button key={b.key} onClick={() => toggleAMD(b.key)}
-                        className="flex-1 rounded-xl font-bold transition-all active:scale-95"
-                        style={{ fontSize: 10, padding: '3px 2px', border: `2px solid ${b.color}`,
-                          backgroundColor: activeAMD === b.key ? `${b.color}73` : 'transparent',
-                          color: activeAMD === b.key ? '#fff' : b.color }}>
+                        className="rounded-xl font-bold transition-all active:scale-95"
+                        style={{ fontSize: 10, padding: '5px 10px', whiteSpace: 'nowrap',
+                          border: `2px solid ${b.color}`,
+                          backgroundColor: activeAMD.includes(b.key) ? `${b.color}73` : 'transparent',
+                          color: activeAMD.includes(b.key) ? '#fff' : b.color }}>
                         {b.label}
                       </button>
                     ))}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+                      {AMD_STACK_BTNS.map(b => (
+                        <button key={b.key} onClick={() => toggleAMD(b.key)}
+                          className="rounded-xl font-bold transition-all active:scale-95"
+                          style={{ fontSize: 10, padding: '3px 10px', whiteSpace: 'nowrap',
+                            border: `2px solid ${b.color}`,
+                            backgroundColor: activeAMD.includes(b.key) ? `${b.color}73` : 'transparent',
+                            color: activeAMD.includes(b.key) ? '#fff' : b.color }}>
+                          {b.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
