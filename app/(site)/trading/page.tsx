@@ -315,14 +315,6 @@ function PreTradeTab() {
               {/* flex-1 spacer for plain rows */}
               {!['volume','trend','sr','sr_jamo','dop','key_level','high_low','amd'].includes(c.id) && <span className="flex-1" />}
 
-              {/* Full reset btn — only on news row */}
-              {c.id === 'news' && (
-                <button onClick={reset}
-                  className="shrink-0 rounded-xl text-xs font-bold transition-all active:scale-95"
-                  style={{ padding: '5px 10px', border: '2px solid #e84057', color: '#e84057', backgroundColor: 'transparent' }}>
-                  Reset All
-                </button>
-              )}
 
               {/* Day btns */}
               {c.id === 'volume' && (
@@ -417,25 +409,25 @@ function PreTradeTab() {
                 </div>
               )}
 
-              {/* AMD — horizontally scrollable, 4 btns + 2 stacked */}
+              {/* AMD — mobile: swipe / desktop: fixed 66% */}
               {c.id === 'amd' && (
-                <div className="no-scrollbar" style={{ flex: 1, minWidth: 0, overflowX: 'auto' }}>
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'stretch', minWidth: 'max-content' }}>
+                <div className="no-scrollbar amd-container">
+                  <div className="amd-inner">
                     {AMD_BTNS.map(b => (
                       <button key={b.key} onClick={() => toggleAMD(b.key)}
-                        className="rounded-xl font-bold transition-all active:scale-95"
-                        style={{ fontSize: 10, padding: '5px 10px', whiteSpace: 'nowrap',
+                        className="amd-btn-main rounded-xl font-bold transition-all active:scale-95"
+                        style={{ fontSize: 10, padding: '5px 10px',
                           border: `2px solid ${b.color}`,
                           backgroundColor: activeAMD.includes(b.key) ? `${b.color}73` : 'transparent',
                           color: activeAMD.includes(b.key) ? '#fff' : b.color }}>
                         {b.label}
                       </button>
                     ))}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+                    <div className="amd-stack">
                       {AMD_STACK_BTNS.map(b => (
                         <button key={b.key} onClick={() => toggleAMD(b.key)}
                           className="rounded-xl font-bold transition-all active:scale-95"
-                          style={{ fontSize: 10, padding: '3px 10px', whiteSpace: 'nowrap',
+                          style={{ fontSize: 10, padding: '3px 10px',
                             border: `2px solid ${b.color}`,
                             backgroundColor: activeAMD.includes(b.key) ? `${b.color}73` : 'transparent',
                             color: activeAMD.includes(b.key) ? '#fff' : b.color }}>
@@ -475,6 +467,13 @@ function PreTradeTab() {
           )
         })}
       </div>
+
+      {/* Reset All — standalone below checklist */}
+      <button onClick={reset}
+        className="w-full rounded-xl text-sm font-bold transition-all active:scale-95"
+        style={{ padding: '10px', border: '2px solid #e84057', color: '#e84057', backgroundColor: 'transparent' }}>
+        🔄 Reset All
+      </button>
     </div>
   )
 }
