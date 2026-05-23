@@ -100,17 +100,16 @@ function PreTradeTab() {
             </span>
             {/* Bias btns — only on trend row */}
             {c.id === 'trend' && (
-              <div className="flex gap-1 shrink-0">
+              <div className="flex gap-1.5" style={{ width: '62%' }}>
                 {BIAS_BTNS.map(b => (
                   <button key={b.key} onClick={() => toggleBias(b.key)}
-                    className="rounded-lg font-bold transition-all active:scale-95"
+                    className="flex-1 rounded-xl font-bold transition-all active:scale-95"
                     style={{
-                      fontSize: 10,
-                      padding: '2px 7px',
-                      border: `1.5px solid ${b.color}`,
+                      fontSize: 11,
+                      padding: '5px 0',
+                      border: `2px solid ${b.color}`,
                       backgroundColor: bias === b.key ? `${b.color}73` : 'transparent',
                       color: bias === b.key ? '#fff' : b.color,
-                      whiteSpace: 'nowrap',
                     }}>
                     {b.label}
                   </button>
@@ -228,7 +227,7 @@ function CheckerTab() {
 }
 
 export default function TradingPage() {
-  const [tab, setTab] = useState<'log' | 'backtest' | 'checker'>('log')
+  const [tab, setTab] = useState<'log' | 'backtest' | 'checker'>('checker')
   const [subTab, setSubTab] = useState<'pre' | 'counter'>('pre')
   const [trades, setTrades] = useState<Trade[]>([])
   const [strategies, setStrategies] = useState<Strategy[]>([])
