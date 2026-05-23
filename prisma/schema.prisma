@@ -146,3 +146,8 @@ model AppPreference {
   key   String @id
   value String @default("[]")
 }
+
+model PreTradeState {
+  id   Int    @id @default(1)
+  data String @default("{}")
+}

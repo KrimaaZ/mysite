@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Modal from '@/components/Modal'
 import { useLang } from '@/lib/lang'
 
@@ -111,8 +111,11 @@ function PreTradeTab() {
   const edt = isEDT()
   const utcLabelAli  = edt ? 'Time UTC-4 (Ali)'  : 'Time UTC-5 (Ali)'
   const utcLabelJamo = edt ? 'Time UTC-4 (Jamo)' : 'Time UTC-5 (Jamo)'
+  const initialLoaded = useRef(false)
 
+  // ── Load: localStorage first (instant), then API overrides ──
   useEffect(() => {
+    // 1. Instant load from localStorage
     try { setChecks(JSON.parse(localStorage.getItem(PRE_CHECK_KEY) || '{}')) } catch { /**/ }
     try { setBias(localStorage.getItem(PRE_CHECK_KEY + '-bias') || null) } catch { /**/ }
     try { setActiveDay(localStorage.getItem(PRE_CHECK_KEY + '-day') || null) } catch { /**/ }
@@ -122,7 +125,35 @@ function PreTradeTab() {
     try { setActiveKeyLevels(JSON.parse(localStorage.getItem(PRE_CHECK_KEY + '-keylevels') || '[]')) } catch { /**/ }
     try { setActiveAMD(JSON.parse(localStorage.getItem(PRE_CHECK_KEY + '-amd') || '[]')) } catch { /**/ }
     try { setActiveDOP(localStorage.getItem(PRE_CHECK_KEY + '-dop') || null) } catch { /**/ }
+
+    // 2. Fetch from DB (overrides local if more recent)
+    fetch('/api/pretrade')
+      .then(r => r.json())
+      .then(({ data }) => {
+        const d = JSON.parse(data || '{}')
+        if (d.checks)            setChecks(d.checks)
+        if (d.bias !== undefined)  setBias(d.bias)
+        if (d.activeDay !== undefined) setActiveDay(d.activeDay)
+        if (d.activeSession !== undefined) setActiveSession(d.activeSession)
+        if (d.activeJamoSession !== undefined) setActiveJamoSession(d.activeJamoSession)
+        if (d.priceValues)       setPriceValues(d.priceValues)
+        if (d.activeKeyLevels)   setActiveKeyLevels(d.activeKeyLevels)
+        if (d.activeAMD)         setActiveAMD(d.activeAMD)
+        if (d.activeDOP !== undefined) setActiveDOP(d.activeDOP)
+      })
+      .catch(() => { /* offline — localStorage already loaded */ })
+      .finally(() => { initialLoaded.current = true })
   }, [])
+
+  // ── Auto-save to DB: debounced 800ms after any change ──
+  useEffect(() => {
+    if (!initialLoaded.current) return
+    const payload = JSON.stringify({ checks, bias, activeDay, activeSession, activeJamoSession, priceValues, activeKeyLevels, activeAMD, activeDOP })
+    const timer = setTimeout(() => {
+      fetch('/api/pretrade', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: payload }) })
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [checks, bias, activeDay, activeSession, activeJamoSession, priceValues, activeKeyLevels, activeAMD, activeDOP])
 
   const toggle = (id: string) => {
     const next = { ...checks, [id]: !checks[id] }
