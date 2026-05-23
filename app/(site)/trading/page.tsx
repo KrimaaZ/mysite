@@ -22,7 +22,6 @@ const DEFAULT_CHECKS = [
   { id: 'high_low',       label: 'High/Low' },
   { id: 'amd',            label: 'AMD' },
   { id: 'confirm_5',      label: 'Confirmation 5min' },
-  { id: 'entry',          label: 'Entry price defined' },
   { id: 'sl',             label: 'Stop Loss placed' },
   { id: 'tp',             label: 'Take Profit target set' },
   { id: 'rr',             label: 'R:R ≥ 2' },
@@ -107,7 +106,7 @@ function PreTradeTab() {
   const [popupInput, setPopupInput] = useState('')
   const [activeJamoSession, setActiveJamoSession] = useState<string | null>(null)
   const [activeKeyLevels, setActiveKeyLevels] = useState<string[]>([])
-  const [activeAMD, setActiveAMD] = useState<string | null>(null)
+  const [activeAMD, setActiveAMD] = useState<string[]>([])
   const [activeDOP, setActiveDOP] = useState<string | null>(null)
   const edt = isEDT()
   const utcLabelAli  = edt ? 'Time UTC-4 (Ali)'  : 'Time UTC-5 (Ali)'
@@ -121,7 +120,7 @@ function PreTradeTab() {
     try { setPriceValues(JSON.parse(localStorage.getItem(PRE_CHECK_KEY + '-prices') || '{}')) } catch { /**/ }
     try { setActiveJamoSession(localStorage.getItem(PRE_CHECK_KEY + '-jamo') || null) } catch { /**/ }
     try { setActiveKeyLevels(JSON.parse(localStorage.getItem(PRE_CHECK_KEY + '-keylevels') || '[]')) } catch { /**/ }
-    try { setActiveAMD(localStorage.getItem(PRE_CHECK_KEY + '-amd') || null) } catch { /**/ }
+    try { setActiveAMD(JSON.parse(localStorage.getItem(PRE_CHECK_KEY + '-amd') || '[]')) } catch { /**/ }
     try { setActiveDOP(localStorage.getItem(PRE_CHECK_KEY + '-dop') || null) } catch { /**/ }
   }, [])
 
@@ -181,10 +180,18 @@ function PreTradeTab() {
   }
 
   const toggleAMD = (key: string) => {
-    const next = activeAMD === key ? null : key
+    const next = activeAMD.includes(key)
+      ? activeAMD.filter(k => k !== key)
+      : [...activeAMD, key]
     setActiveAMD(next)
-    if (next) localStorage.setItem(PRE_CHECK_KEY + '-amd', next)
-    else localStorage.removeItem(PRE_CHECK_KEY + '-amd')
+    localStorage.setItem(PRE_CHECK_KEY + '-amd', JSON.stringify(next))
+  }
+
+  const resetPrices = () => {
+    const next = { ...priceValues }
+    HIGH_LOW_BTNS.forEach(b => delete next[b.id])
+    setPriceValues(next)
+    localStorage.setItem(PRE_CHECK_KEY + '-prices', JSON.stringify(next))
   }
 
   const toggleKeyLevel = (key: string) => {
@@ -197,7 +204,7 @@ function PreTradeTab() {
 
   const reset = () => {
     setChecks({}); setBias(null); setActiveDay(null); setActiveSession(null)
-    setPriceValues({}); setActiveJamoSession(null); setActiveKeyLevels([])
+    setPriceValues({}); setActiveJamoSession(null); setActiveKeyLevels([]); setActiveAMD([])
     localStorage.removeItem(PRE_CHECK_KEY)
     localStorage.removeItem(PRE_CHECK_KEY + '-bias')
     localStorage.removeItem(PRE_CHECK_KEY + '-day')
@@ -308,6 +315,15 @@ function PreTradeTab() {
               {/* flex-1 spacer for plain rows */}
               {!['volume','trend','sr','sr_jamo','dop','key_level','high_low','amd'].includes(c.id) && <span className="flex-1" />}
 
+              {/* Full reset btn — only on news row */}
+              {c.id === 'news' && (
+                <button onClick={reset}
+                  className="shrink-0 rounded-xl text-xs font-bold transition-all active:scale-95"
+                  style={{ padding: '5px 10px', border: '2px solid #e84057', color: '#e84057', backgroundColor: 'transparent' }}>
+                  Reset All
+                </button>
+              )}
+
               {/* Day btns */}
               {c.id === 'volume' && (
                 <div className="flex gap-1.5" style={{ width: '66%' }}>
@@ -408,8 +424,8 @@ function PreTradeTab() {
                     <button key={b.key} onClick={() => toggleAMD(b.key)}
                       className="flex-1 rounded-xl font-bold transition-all active:scale-95"
                       style={{ fontSize: 10, padding: '5px 2px', border: `2px solid ${b.color}`,
-                        backgroundColor: activeAMD === b.key ? `${b.color}73` : 'transparent',
-                        color: activeAMD === b.key ? '#fff' : b.color }}>
+                        backgroundColor: activeAMD.includes(b.key) ? `${b.color}73` : 'transparent',
+                        color: activeAMD.includes(b.key) ? '#fff' : b.color }}>
                       {b.label}
                     </button>
                   ))}
@@ -425,6 +441,14 @@ function PreTradeTab() {
                     ))}
                   </div>
                 </div>
+              )}
+
+              {/* High/Low reset btn */}
+              {c.id === 'high_low' && (
+                <button onClick={resetPrices}
+                  className="shrink-0 rounded-lg transition-all active:scale-90"
+                  style={{ fontSize: 11, padding: '3px 7px', border: '1.5px solid #d1d5db', color: '#9ca3af', backgroundColor: 'transparent' }}
+                  title="Reset prices">↺</button>
               )}
 
               {/* High/Low — 4 price buttons in one line */}
