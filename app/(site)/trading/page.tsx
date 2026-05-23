@@ -10,6 +10,78 @@ type Strategy = { id: number; name: string; description: string; rules: string; 
 const emptyTrade = { date: new Date().toISOString().split('T')[0], instrument: '', type: 'LONG', entry: '', exit: '', size: '', pnl: '', notes: '', status: 'OPEN' }
 const emptyStrategy = { name: '', description: '', rules: '', timeframe: '', winRate: '', riskReward: '', notes: '' }
 
+// ── Pre-Trade Checklist ────────────────────────────────────────────────────
+const DEFAULT_CHECKS = [
+  { id: 'trend',    label: 'Trend confirmed (HTF)' },
+  { id: 'volume',   label: 'Volume above average' },
+  { id: 'sr',       label: 'Support / Resistance clear' },
+  { id: 'entry',    label: 'Entry price defined' },
+  { id: 'sl',       label: 'Stop Loss placed' },
+  { id: 'tp',       label: 'Take Profit target set' },
+  { id: 'rr',       label: 'R:R ≥ 2' },
+  { id: 'news',     label: 'No major news incoming' },
+]
+const PRE_CHECK_KEY = 'pre-trade-checklist-v1'
+
+function PreTradeTab() {
+  const [checks, setChecks] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    try { setChecks(JSON.parse(localStorage.getItem(PRE_CHECK_KEY) || '{}')) } catch { /**/ }
+  }, [])
+
+  const toggle = (id: string) => {
+    const next = { ...checks, [id]: !checks[id] }
+    setChecks(next)
+    localStorage.setItem(PRE_CHECK_KEY, JSON.stringify(next))
+  }
+
+  const reset = () => { setChecks({}); localStorage.removeItem(PRE_CHECK_KEY) }
+
+  const done = DEFAULT_CHECKS.filter(c => checks[c.id]).length
+  const allGood = done === DEFAULT_CHECKS.length
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Header */}
+      <div className="rounded-2xl p-4 border-2" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: allGood ? '#22c55e' : 'var(--t-border-soft)' }}>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#b8860b' }}>🎯 Pre-Trade Checklist</p>
+          <button onClick={reset} className="text-xs px-2 py-1 rounded-lg" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>Reset</button>
+        </div>
+        {/* Progress bar */}
+        <div className="h-2 rounded-full overflow-hidden mb-1" style={{ backgroundColor: 'var(--t-item-bg)' }}>
+          <div className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${(done / DEFAULT_CHECKS.length) * 100}%`, background: allGood ? '#22c55e' : 'linear-gradient(90deg,#d4a017,#b8860b)' }} />
+        </div>
+        <p className="text-xs font-semibold" style={{ color: allGood ? '#16a34a' : 'var(--t-text-muted)' }}>
+          {allGood ? '✅ Ready to trade!' : `${done} / ${DEFAULT_CHECKS.length} conditions`}
+        </p>
+      </div>
+
+      {/* Checklist */}
+      <div className="flex flex-col gap-2">
+        {DEFAULT_CHECKS.map(c => (
+          <button key={c.id} onClick={() => toggle(c.id)}
+            className="flex items-center gap-3 px-4 py-3 rounded-2xl border-2 text-left transition-all active:scale-95"
+            style={{
+              backgroundColor: checks[c.id] ? 'rgba(34,197,94,0.08)' : 'var(--t-card-bg)',
+              borderColor: checks[c.id] ? '#22c55e' : 'var(--t-border-soft)',
+            }}>
+            <div className="w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all"
+              style={{ borderColor: checks[c.id] ? '#22c55e' : '#d1d5db', backgroundColor: checks[c.id] ? '#22c55e' : 'transparent' }}>
+              {checks[c.id] && <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><polyline points="2,6 5,9 10,3"/></svg>}
+            </div>
+            <span className="text-sm font-semibold" style={{ color: checks[c.id] ? '#16a34a' : 'var(--t-text-main)', textDecoration: checks[c.id] ? 'line-through' : 'none' }}>
+              {c.label}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Checker types ─────────────────────────────────────────────────────────
 type CheckerItem = { id: string; title: string; plus: number; minus: number }
 const CHECKER_KEY = 'trading-checker-v1'
@@ -115,6 +187,7 @@ function CheckerTab() {
 
 export default function TradingPage() {
   const [tab, setTab] = useState<'log' | 'backtest' | 'checker'>('log')
+  const [subTab, setSubTab] = useState<'pre' | 'counter'>('pre')
   const [trades, setTrades] = useState<Trade[]>([])
   const [strategies, setStrategies] = useState<Strategy[]>([])
   const [tradeModal, setTradeModal] = useState(false)
@@ -327,7 +400,21 @@ export default function TradingPage() {
       )}
 
       {/* Checker */}
-      {tab === 'checker' && <CheckerTab />}
+      {tab === 'checker' && (
+        <div className="flex flex-col gap-4">
+          {/* Sub-tabs */}
+          <div className="flex gap-2">
+            {[{ key: 'pre', label: '🎯 Pre-Trade' }, { key: 'counter', label: '📊 Counter' }].map(st => (
+              <button key={st.key} onClick={() => setSubTab(st.key as 'pre' | 'counter')}
+                className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
+                style={{ backgroundColor: subTab === st.key ? '#b8860b' : 'var(--t-item-bg)', color: subTab === st.key ? '#fff' : 'var(--t-text-muted)' }}>
+                {st.label}
+              </button>
+            ))}
+          </div>
+          {subTab === 'pre' ? <PreTradeTab /> : <CheckerTab />}
+        </div>
+      )}
 
       {/* Trade Modal */}
       {tradeModal && (
