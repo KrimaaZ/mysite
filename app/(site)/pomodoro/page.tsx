@@ -23,48 +23,76 @@ export default function PomodoroPage() {
   const [timeLeft, setTimeLeft] = useState(MODES.work.seconds)
   const [running, setRunning] = useState(false)
   const [sessions, setSessions] = useState(0)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const intervalRef  = useRef<ReturnType<typeof setInterval> | null>(null)
+  const startTimeRef = useRef<number | null>(null)   // wall-clock timestamp when timer started
+  const baseLeftRef  = useRef<number>(MODES.work.seconds) // timeLeft at the moment of last start
 
   const cfg = MODES[mode]
   const total = cfg.seconds
   const pct = ((total - timeLeft) / total) * 100
+
+  const notify = (m: Mode) => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      new Notification(m === 'work' ? '🍅 Focus terminé !' : '☕ Break terminé !', {
+        body: m === 'work' ? 'Prends une pause !' : 'Retour au focus !',
+      })
+    }
+  }
+
+  const finish = (m: Mode) => {
+    setRunning(false)
+    setTimeLeft(0)
+    if (m === 'work') setSessions(s => s + 1)
+    notify(m)
+  }
 
   // Switch mode
   const switchMode = (m: Mode) => {
     setMode(m)
     setTimeLeft(MODES[m].seconds)
     setRunning(false)
+    startTimeRef.current = null
     if (intervalRef.current) clearInterval(intervalRef.current)
   }
 
-  // Timer tick
+  // Timestamp-based tick — accurate even when tab is throttled
   useEffect(() => {
     if (running) {
+      startTimeRef.current = Date.now()
+      baseLeftRef.current  = timeLeft
+
       intervalRef.current = setInterval(() => {
-        setTimeLeft(t => {
-          if (t <= 1) {
-            clearInterval(intervalRef.current!)
-            setRunning(false)
-            if (mode === 'work') setSessions(s => s + 1)
-            // Auto notify
-            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-              new Notification(mode === 'work' ? '🍅 Focus terminé !' : '☕ Break terminé !', {
-                body: mode === 'work' ? 'Prends une pause !' : 'Retour au focus !',
-              })
-            }
-            return 0
-          }
-          return t - 1
-        })
-      }, 1000)
+        const elapsed = Math.floor((Date.now() - startTimeRef.current!) / 1000)
+        const next    = baseLeftRef.current - elapsed
+        if (next <= 0) {
+          clearInterval(intervalRef.current!)
+          finish(mode)
+        } else {
+          setTimeLeft(next)
+        }
+      }, 500) // 500 ms for snappy display; wall-clock keeps it accurate
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current)
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running, mode])
+
+  // Sync immediately when tab becomes visible again
+  useEffect(() => {
+    const onVisible = () => {
+      if (!running || startTimeRef.current === null) return
+      const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000)
+      const next    = baseLeftRef.current - elapsed
+      if (next <= 0) { finish(mode) } else { setTimeLeft(next) }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, mode])
 
   const toggle = () => setRunning(r => !r)
-  const reset = () => { setTimeLeft(cfg.seconds); setRunning(false) }
+  const reset  = () => { setTimeLeft(cfg.seconds); setRunning(false); startTimeRef.current = null }
 
   const requestNotif = () => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
