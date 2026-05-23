@@ -16,6 +16,7 @@ const DEFAULT_CHECKS = [
   { id: 'volume',         label: 'Day' },
   { id: 'sr',             label: 'Time' },         // Time UTC-x (Ali)
   { id: 'sr_jamo',        label: 'Time (Jamo)' },  // Time UTC-x (Jamo)
+  { id: 'dop',            label: 'DOP (Daily Open Price)' },
   { id: 'analyse_15',     label: 'Analyse 15min' },
   { id: 'key_level',      label: 'Key level' },
   { id: 'high_low',       label: 'High/Low' },
@@ -55,9 +56,18 @@ const AMD_BTNS = [
   { key: 'manip', label: 'Manipulation', color: '#e84057' },
   { key: 'dist',  label: 'Distribution', color: '#3b82f6' },
 ]
+const AMD_MID_BTNS = [
+  { key: 'retrace',  label: 'Retracement',    color: '#f59e0b' },
+  { key: 'redistrib', label: 'Redistribution', color: '#ec4899' },
+]
 const AMD_STACK_BTNS = [
-  { key: 'retrace', label: 'Retracement',  color: '#f59e0b' },
-  { key: 'consol',  label: 'Consolidation', color: '#8b5cf6' },
+  { key: 'retrace2', label: 'Retracement',   color: '#f59e0b' },
+  { key: 'consol',   label: 'Consolidation', color: '#8b5cf6' },
+]
+
+const DOP_BTNS = [
+  { key: 'gold',  label: 'Gold',  time: '18h', color: '#b8860b' },
+  { key: 'forex', label: 'Forex', time: '17h', color: '#3b82f6' },
 ]
 
 const PRE_CHECK_KEY = 'pre-trade-checklist-v1'
@@ -101,6 +111,7 @@ function PreTradeTab() {
   const [activeJamoSession, setActiveJamoSession] = useState<string | null>(null)
   const [activeKeyLevels, setActiveKeyLevels] = useState<string[]>([])
   const [activeAMD, setActiveAMD] = useState<string | null>(null)
+  const [activeDOP, setActiveDOP] = useState<string | null>(null)
   const edt = isEDT()
   const utcLabelAli  = edt ? 'Time UTC-4 (Ali)'  : 'Time UTC-5 (Ali)'
   const utcLabelJamo = edt ? 'Time UTC-4 (Jamo)' : 'Time UTC-5 (Jamo)'
@@ -114,6 +125,7 @@ function PreTradeTab() {
     try { setActiveJamoSession(localStorage.getItem(PRE_CHECK_KEY + '-jamo') || null) } catch { /**/ }
     try { setActiveKeyLevels(JSON.parse(localStorage.getItem(PRE_CHECK_KEY + '-keylevels') || '[]')) } catch { /**/ }
     try { setActiveAMD(localStorage.getItem(PRE_CHECK_KEY + '-amd') || null) } catch { /**/ }
+    try { setActiveDOP(localStorage.getItem(PRE_CHECK_KEY + '-dop') || null) } catch { /**/ }
   }, [])
 
   const toggle = (id: string) => {
@@ -164,6 +176,13 @@ function PreTradeTab() {
     else localStorage.removeItem(PRE_CHECK_KEY + '-jamo')
   }
 
+  const toggleDOP = (key: string) => {
+    const next = activeDOP === key ? null : key
+    setActiveDOP(next)
+    if (next) localStorage.setItem(PRE_CHECK_KEY + '-dop', next)
+    else localStorage.removeItem(PRE_CHECK_KEY + '-dop')
+  }
+
   const toggleAMD = (key: string) => {
     const next = activeAMD === key ? null : key
     setActiveAMD(next)
@@ -190,6 +209,7 @@ function PreTradeTab() {
     localStorage.removeItem(PRE_CHECK_KEY + '-jamo')
     localStorage.removeItem(PRE_CHECK_KEY + '-keylevels')
     localStorage.removeItem(PRE_CHECK_KEY + '-amd')
+    localStorage.removeItem(PRE_CHECK_KEY + '-dop')
   }
 
   const done = DEFAULT_CHECKS.filter(c => checks[c.id]).length
@@ -283,13 +303,13 @@ function PreTradeTab() {
                 style={{
                   color: isChecked ? '#16a34a' : 'var(--t-text-main)',
                   textDecoration: isChecked ? 'line-through' : 'none',
-                  flex: ['volume','trend','sr','sr_jamo','key_level','high_low','amd'].includes(c.id) ? '1' : '0 0 auto',
+                  flex: ['volume','trend','sr','sr_jamo','dop','key_level','high_low','amd'].includes(c.id) ? '1' : '0 0 auto',
                 }}>
                 {displayLabel}
               </span>
 
               {/* flex-1 spacer for plain rows */}
-              {!['volume','trend','sr','sr_jamo','key_level','high_low','amd'].includes(c.id) && <span className="flex-1" />}
+              {!['volume','trend','sr','sr_jamo','dop','key_level','high_low','amd'].includes(c.id) && <span className="flex-1" />}
 
               {/* Day btns */}
               {c.id === 'volume' && (
@@ -368,7 +388,23 @@ function PreTradeTab() {
                 </div>
               )}
 
-              {/* AMD — 3 main btns + 2 stacked on the right */}
+              {/* DOP — 2 toggle btns */}
+              {c.id === 'dop' && (
+                <div className="flex gap-1.5" style={{ width: '66%', flexShrink: 0 }}>
+                  {DOP_BTNS.map(b => (
+                    <button key={b.key} onClick={() => toggleDOP(b.key)}
+                      className="flex-1 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-1"
+                      style={{ fontSize: 11, padding: '5px 2px', border: `2px solid ${b.color}`,
+                        backgroundColor: activeDOP === b.key ? `${b.color}73` : 'transparent',
+                        color: activeDOP === b.key ? '#fff' : b.color }}>
+                      <span>{b.label}</span>
+                      <span style={{ fontSize: 9, opacity: 0.85, fontWeight: 500 }}>{b.time}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* AMD — 3 main + 2 mid stacked + 2 end stacked */}
               {c.id === 'amd' && (
                 <div style={{ width: '66%', flexShrink: 0, display: 'flex', gap: 6, alignItems: 'stretch' }}>
                   {AMD_BTNS.map(b => (
@@ -380,6 +416,17 @@ function PreTradeTab() {
                       {b.label}
                     </button>
                   ))}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
+                    {AMD_MID_BTNS.map(b => (
+                      <button key={b.key} onClick={() => toggleAMD(b.key)}
+                        className="flex-1 rounded-xl font-bold transition-all active:scale-95"
+                        style={{ fontSize: 10, padding: '3px 2px', border: `2px solid ${b.color}`,
+                          backgroundColor: activeAMD === b.key ? `${b.color}73` : 'transparent',
+                          color: activeAMD === b.key ? '#fff' : b.color }}>
+                        {b.label}
+                      </button>
+                    ))}
+                  </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
                     {AMD_STACK_BTNS.map(b => (
                       <button key={b.key} onClick={() => toggleAMD(b.key)}
