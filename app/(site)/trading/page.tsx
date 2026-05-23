@@ -30,9 +30,9 @@ const PRICE_IDS = new Set(['prev_high_sess', 'prev_low_sess', 'prev_day_high', '
 const PRE_CHECK_KEY = 'pre-trade-checklist-v1'
 
 const BIAS_BTNS = [
-  { key: 'bull', label: 'Bull', color: '#22c55e' },
-  { key: 'bear', label: 'Bear', color: '#e84057' },
-  { key: 'cons', label: 'Cons', color: '#f59e0b' },
+  { key: 'bull', label: 'Bullish Trend',   color: '#22c55e' },
+  { key: 'bear', label: 'Bearish Trend',   color: '#e84057' },
+  { key: 'cons', label: 'Consolidation',   color: '#f59e0b' },
 ]
 
 const DAY_BTNS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
