@@ -258,8 +258,12 @@ function PreTradeTab() {
               </button>
 
               {/* Label */}
-              <span onClick={() => toggle(c.id)} className="text-sm font-semibold shrink-0 cursor-pointer"
-                style={{ color: isChecked ? '#16a34a' : 'var(--t-text-main)', textDecoration: isChecked ? 'line-through' : 'none' }}>
+              <span onClick={() => toggle(c.id)} className="text-sm font-semibold cursor-pointer"
+                style={{
+                  color: isChecked ? '#16a34a' : 'var(--t-text-main)',
+                  textDecoration: isChecked ? 'line-through' : 'none',
+                  flex: ['volume','trend','sr','sr_jamo','key_level','high_low'].includes(c.id) ? '1' : '0 0 auto',
+                }}>
                 {displayLabel}
               </span>
 
@@ -330,11 +334,11 @@ function PreTradeTab() {
 
               {/* Key level btns — same line, 66% width, wrap */}
               {c.id === 'key_level' && (
-                <div className="flex flex-wrap gap-1.5" style={{ width: '66%' }}>
+                <div className="flex flex-wrap gap-2" style={{ width: '66%', flexShrink: 0 }}>
                   {KEY_LEVEL_BTNS.map(kb => (
                     <button key={kb.key} onClick={() => toggleKeyLevel(kb.key)}
                       className="rounded-xl font-bold transition-all active:scale-95"
-                      style={{ fontSize: 11, padding: '4px 9px', border: `2px solid ${kb.color}`,
+                      style={{ fontSize: 12, padding: '6px 12px', border: `2px solid ${kb.color}`,
                         backgroundColor: activeKeyLevels.includes(kb.key) ? `${kb.color}73` : 'transparent',
                         color: activeKeyLevels.includes(kb.key) ? '#fff' : kb.color }}>
                       {kb.key}
