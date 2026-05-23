@@ -12,15 +12,21 @@ const emptyStrategy = { name: '', description: '', rules: '', timeframe: '', win
 
 // ── Pre-Trade Checklist ────────────────────────────────────────────────────
 const DEFAULT_CHECKS = [
-  { id: 'trend',    label: 'Trend confirmed 4H TF' },
-  { id: 'volume',   label: 'Day' },
-  { id: 'sr',       label: 'Time' },
-  { id: 'entry',    label: 'Entry price defined' },
-  { id: 'sl',       label: 'Stop Loss placed' },
-  { id: 'tp',       label: 'Take Profit target set' },
-  { id: 'rr',       label: 'R:R ≥ 2' },
-  { id: 'news',     label: 'No major news incoming' },
+  { id: 'trend',          label: 'Trend confirmed 4H TF' },
+  { id: 'volume',         label: 'Day' },
+  { id: 'sr',             label: 'Time' },
+  { id: 'prev_high_sess', label: 'Previous High Session' },
+  { id: 'prev_low_sess',  label: 'Previous Low Session' },
+  { id: 'prev_day_high',  label: 'Previous Day High' },
+  { id: 'prev_day_low',   label: 'Previous Day Low' },
+  { id: 'entry',          label: 'Entry price defined' },
+  { id: 'sl',             label: 'Stop Loss placed' },
+  { id: 'tp',             label: 'Take Profit target set' },
+  { id: 'rr',             label: 'R:R ≥ 2' },
+  { id: 'news',           label: 'No major news incoming' },
 ]
+
+const PRICE_IDS = new Set(['prev_high_sess', 'prev_low_sess', 'prev_day_high', 'prev_day_low'])
 const PRE_CHECK_KEY = 'pre-trade-checklist-v1'
 
 const BIAS_BTNS = [
@@ -56,6 +62,9 @@ function PreTradeTab() {
   const [bias, setBias] = useState<string | null>(null)
   const [activeDay, setActiveDay] = useState<string | null>(null)
   const [activeSession, setActiveSession] = useState<string | null>(null)
+  const [priceValues, setPriceValues] = useState<Record<string, string>>({})
+  const [openPopup, setOpenPopup] = useState<string | null>(null)
+  const [popupInput, setPopupInput] = useState('')
   const utcLabel = isEDT() ? 'Time UTC-4' : 'Time UTC-5'
 
   useEffect(() => {
@@ -63,6 +72,7 @@ function PreTradeTab() {
     try { setBias(localStorage.getItem(PRE_CHECK_KEY + '-bias') || null) } catch { /**/ }
     try { setActiveDay(localStorage.getItem(PRE_CHECK_KEY + '-day') || null) } catch { /**/ }
     try { setActiveSession(localStorage.getItem(PRE_CHECK_KEY + '-session') || null) } catch { /**/ }
+    try { setPriceValues(JSON.parse(localStorage.getItem(PRE_CHECK_KEY + '-prices') || '{}')) } catch { /**/ }
   }, [])
 
   const toggle = (id: string) => {
@@ -92,12 +102,27 @@ function PreTradeTab() {
     else localStorage.removeItem(PRE_CHECK_KEY + '-session')
   }
 
+  const openPricePopup = (id: string) => {
+    setPopupInput(priceValues[id] || '')
+    setOpenPopup(id)
+  }
+
+  const confirmPrice = () => {
+    if (!openPopup) return
+    const next = { ...priceValues, [openPopup]: popupInput.trim() }
+    if (!popupInput.trim()) delete next[openPopup]
+    setPriceValues(next)
+    localStorage.setItem(PRE_CHECK_KEY + '-prices', JSON.stringify(next))
+    setOpenPopup(null)
+  }
+
   const reset = () => {
-    setChecks({}); setBias(null); setActiveDay(null); setActiveSession(null)
+    setChecks({}); setBias(null); setActiveDay(null); setActiveSession(null); setPriceValues({})
     localStorage.removeItem(PRE_CHECK_KEY)
     localStorage.removeItem(PRE_CHECK_KEY + '-bias')
     localStorage.removeItem(PRE_CHECK_KEY + '-day')
     localStorage.removeItem(PRE_CHECK_KEY + '-session')
+    localStorage.removeItem(PRE_CHECK_KEY + '-prices')
   }
 
   const done = DEFAULT_CHECKS.filter(c => checks[c.id]).length
@@ -120,6 +145,48 @@ function PreTradeTab() {
           {allGood ? '✅ Ready to trade!' : `${done} / ${DEFAULT_CHECKS.length} conditions`}
         </p>
       </div>
+
+      {/* Price popup */}
+      {openPopup && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
+          onClick={() => setOpenPopup(null)}>
+          <div
+            className="rounded-2xl p-5 w-72 flex flex-col gap-3"
+            style={{ backgroundColor: 'var(--t-card-bg)', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}
+            onClick={e => e.stopPropagation()}>
+            <p className="text-sm font-bold" style={{ color: 'var(--t-text-main)' }}>
+              {DEFAULT_CHECKS.find(c => c.id === openPopup)?.label}
+            </p>
+            <input
+              type="number"
+              step="any"
+              autoFocus
+              placeholder="Enter price..."
+              value={popupInput}
+              onChange={e => setPopupInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') confirmPrice(); if (e.key === 'Escape') setOpenPopup(null) }}
+              className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
+              style={{ borderColor: '#b8860b', backgroundColor: 'var(--t-input-bg)', color: 'var(--t-text-main)' }}
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => setOpenPopup(null)}
+                className="flex-1 py-2 rounded-xl text-sm font-medium"
+                style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>
+                Cancel
+              </button>
+              <button
+                onClick={confirmPrice}
+                className="flex-1 py-2 rounded-xl text-sm font-bold text-white"
+                style={{ background: 'linear-gradient(135deg,#d4a017,#b8860b)', boxShadow: '0 4px 12px rgba(184,134,11,0.3)' }}>
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Checklist */}
       <div className="flex flex-col gap-2">
@@ -195,6 +262,23 @@ function PreTradeTab() {
                   </button>
                 ))}
               </div>
+            )}
+            {/* Price btn — only on price rows */}
+            {PRICE_IDS.has(c.id) && (
+              <button
+                onClick={() => openPricePopup(c.id)}
+                className="rounded-xl font-bold transition-all active:scale-95 shrink-0"
+                style={{
+                  width: '42%',
+                  fontSize: 12,
+                  padding: '5px 8px',
+                  border: '2px solid #b8860b',
+                  backgroundColor: priceValues[c.id] ? 'rgba(184,134,11,0.15)' : 'transparent',
+                  color: priceValues[c.id] ? '#b8860b' : '#9ca3af',
+                  textAlign: 'center',
+                }}>
+                {priceValues[c.id] || '— —'}
+              </button>
             )}
           </div>
         ))}
