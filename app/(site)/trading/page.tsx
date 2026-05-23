@@ -10,8 +10,111 @@ type Strategy = { id: number; name: string; description: string; rules: string; 
 const emptyTrade = { date: new Date().toISOString().split('T')[0], instrument: '', type: 'LONG', entry: '', exit: '', size: '', pnl: '', notes: '', status: 'OPEN' }
 const emptyStrategy = { name: '', description: '', rules: '', timeframe: '', winRate: '', riskReward: '', notes: '' }
 
+// ── Checker types ─────────────────────────────────────────────────────────
+type CheckerItem = { id: string; title: string; plus: number; minus: number }
+const CHECKER_KEY = 'trading-checker-v1'
+function loadChecker(): CheckerItem[] {
+  try { return JSON.parse(localStorage.getItem(CHECKER_KEY) || '[]') } catch { return [] }
+}
+function saveChecker(items: CheckerItem[]) {
+  localStorage.setItem(CHECKER_KEY, JSON.stringify(items))
+}
+
+// ── Checker tab component ──────────────────────────────────────────────────
+function CheckerTab() {
+  const [items, setItems] = useState<CheckerItem[]>([])
+  const [input, setInput] = useState('')
+
+  useEffect(() => { setItems(loadChecker()) }, [])
+
+  const add = () => {
+    if (!input.trim()) return
+    const next = [...items, { id: Date.now().toString(), title: input.trim(), plus: 0, minus: 0 }]
+    setItems(next); saveChecker(next); setInput('')
+  }
+
+  const update = (id: string, field: 'plus' | 'minus', delta: number) => {
+    const next = items.map(i => i.id === id ? { ...i, [field]: Math.max(0, i[field] + delta) } : i)
+    setItems(next); saveChecker(next)
+  }
+
+  const remove = (id: string) => {
+    const next = items.filter(i => i.id !== id)
+    setItems(next); saveChecker(next)
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* ── Add form ── */}
+      <div className="rounded-2xl p-4 border-2" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
+        <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: '#b8860b' }}>✚ New Checker</p>
+        <div className="flex gap-2">
+          <input
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') add() }}
+            placeholder="Checker title..."
+            className="flex-1 px-3 py-2.5 rounded-xl border text-sm outline-none"
+            style={{ borderColor: 'var(--t-border-soft)', backgroundColor: 'var(--t-input-bg)', color: 'var(--t-text-main)' }}
+          />
+          <button
+            onClick={add}
+            className="px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all active:scale-95"
+            style={{ background: 'linear-gradient(135deg,#d4a017,#b8860b)', boxShadow: '0 4px 12px rgba(184,134,11,0.3)' }}
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+
+      {/* ── Checker cards ── */}
+      {items.length === 0 ? (
+        <div className="text-center py-14 rounded-2xl" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-soft)' }}>
+          <p className="text-4xl mb-2">📋</p>
+          <p className="text-sm font-medium">Add your first checker above</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {items.map(item => (
+            <div key={item.id} className="rounded-2xl border-2 p-4" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
+              {/* Title + delete */}
+              <div className="flex items-center justify-between mb-4">
+                <p className="font-bold text-base" style={{ color: 'var(--t-text-main)' }}>{item.title}</p>
+                <button onClick={() => remove(item.id)} className="text-xs px-2 py-1 rounded-lg" style={{ color: '#c0303e', backgroundColor: '#fde8ec' }}>✕</button>
+              </div>
+              {/* Counter buttons */}
+              <div className="flex gap-3">
+                {/* Plus */}
+                <div className="flex-1 flex flex-col items-center gap-2">
+                  <button
+                    onClick={() => update(item.id, 'plus', 1)}
+                    className="w-full py-3 rounded-xl text-xl font-black transition-all active:scale-95"
+                    style={{ background: 'linear-gradient(135deg,#22c55e,#15803d)', color: '#fff', boxShadow: '0 4px 12px rgba(34,197,94,0.3)' }}
+                  >＋</button>
+                  <span className="text-2xl font-black tabular-nums" style={{ color: '#16a34a' }}>{item.plus}</span>
+                </div>
+                {/* Divider */}
+                <div className="w-px my-1" style={{ backgroundColor: 'var(--t-border-soft)' }} />
+                {/* Minus */}
+                <div className="flex-1 flex flex-col items-center gap-2">
+                  <button
+                    onClick={() => update(item.id, 'minus', 1)}
+                    className="w-full py-3 rounded-xl text-xl font-black transition-all active:scale-95"
+                    style={{ background: 'linear-gradient(135deg,#e84057,#c0303e)', color: '#fff', boxShadow: '0 4px 12px rgba(232,64,87,0.3)' }}
+                  >－</button>
+                  <span className="text-2xl font-black tabular-nums" style={{ color: '#c0303e' }}>{item.minus}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function TradingPage() {
-  const [tab, setTab] = useState<'log' | 'backtest'>('log')
+  const [tab, setTab] = useState<'log' | 'backtest' | 'checker'>('log')
   const [trades, setTrades] = useState<Trade[]>([])
   const [strategies, setStrategies] = useState<Strategy[]>([])
   const [tradeModal, setTradeModal] = useState(false)
@@ -103,10 +206,12 @@ export default function TradingPage() {
           <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: 'var(--t-text-main)' }}>📈 Trading</h1>
           <p className="text-xs sm:text-sm mt-0.5" style={{ color: 'var(--t-text-muted)' }}>{t.tradesStrategies}</p>
         </div>
-        <button onClick={() => tab === 'log' ? openTradeModal() : openStratModal()}
-          className="btn-glass btn-glass-gold px-4 py-2.5 rounded-xl text-sm font-medium">
-          {tab === 'log' ? t.addTrade : t.addStrategy}
-        </button>
+        {tab !== 'checker' && (
+          <button onClick={() => tab === 'log' ? openTradeModal() : openStratModal()}
+            className="btn-glass btn-glass-gold px-4 py-2.5 rounded-xl text-sm font-medium">
+            {tab === 'log' ? t.addTrade : t.addStrategy}
+          </button>
+        )}
       </div>
 
       {/* Stats */}
@@ -128,8 +233,8 @@ export default function TradingPage() {
 
       {/* Tabs */}
       <div className="flex gap-2 mb-5">
-        {[{ key: 'log', label: t.tradeLog }, { key: 'backtest', label: t.backtestTab }].map(tb => (
-          <button key={tb.key} onClick={() => setTab(tb.key as 'log' | 'backtest')}
+        {[{ key: 'log', label: t.tradeLog }, { key: 'backtest', label: t.backtestTab }, { key: 'checker', label: '✅ Checker' }].map(tb => (
+          <button key={tb.key} onClick={() => setTab(tb.key as 'log' | 'backtest' | 'checker')}
             className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
             style={{ backgroundColor: tab === tb.key ? '#b8860b' : 'var(--t-item-bg)', color: tab === tb.key ? '#fff' : 'var(--t-text-muted)' }}>
             {tb.label}
@@ -220,6 +325,9 @@ export default function TradingPage() {
           </div>
         )
       )}
+
+      {/* Checker */}
+      {tab === 'checker' && <CheckerTab />}
 
       {/* Trade Modal */}
       {tradeModal && (
