@@ -19,10 +19,7 @@ const DEFAULT_CHECKS = [
   { id: 'analyse_15',     label: 'Analyse 15min' },
   { id: 'confirm_5',      label: 'Confirmation 5min' },
   { id: 'key_level',      label: 'Key level' },
-  { id: 'prev_high_sess', label: 'Previous High Session' },
-  { id: 'prev_low_sess',  label: 'Previous Low Session' },
-  { id: 'prev_day_high',  label: 'Previous Day High' },
-  { id: 'prev_day_low',   label: 'Previous Day Low' },
+  { id: 'high_low',       label: 'High/Low' },
   { id: 'entry',          label: 'Entry price defined' },
   { id: 'sl',             label: 'Stop Loss placed' },
   { id: 'tp',             label: 'Take Profit target set' },
@@ -30,14 +27,12 @@ const DEFAULT_CHECKS = [
   { id: 'news',           label: 'No major news incoming' },
 ]
 
-const PRICE_IDS = new Set(['prev_high_sess', 'prev_low_sess', 'prev_day_high', 'prev_day_low'])
-
-const PRICE_SHORT_LABELS: Record<string, string> = {
-  prev_high_sess: 'High',
-  prev_low_sess:  'Low',
-  prev_day_high:  'High',
-  prev_day_low:   'Low',
-}
+const HIGH_LOW_BTNS = [
+  { id: 'prev_high_sess', label: 'H Sess', fullLabel: 'Previous High Session' },
+  { id: 'prev_low_sess',  label: 'L Sess', fullLabel: 'Previous Low Session' },
+  { id: 'prev_day_high',  label: 'D High', fullLabel: 'Previous Day High' },
+  { id: 'prev_day_low',   label: 'D Low',  fullLabel: 'Previous Day Low' },
+]
 
 const JAMO_SESSION_BTNS = [
   { key: 'jamo_london', label: 'London', time: '1am-4am',  color: '#3b82f6' },
@@ -208,7 +203,7 @@ function PreTradeTab() {
             style={{ backgroundColor: 'var(--t-card-bg)', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}
             onClick={e => e.stopPropagation()}>
             <p className="text-sm font-bold" style={{ color: 'var(--t-text-main)' }}>
-              {DEFAULT_CHECKS.find(c => c.id === openPopup)?.label}
+              {HIGH_LOW_BTNS.find(b => b.id === openPopup)?.fullLabel ?? DEFAULT_CHECKS.find(c => c.id === openPopup)?.label}
             </p>
             <input
               type="number"
@@ -243,135 +238,123 @@ function PreTradeTab() {
       <div className="flex flex-col gap-2">
         {DEFAULT_CHECKS.map(c => {
           const isChecked = !!checks[c.id]
-          const isPrice   = PRICE_IDS.has(c.id)
-
-          // Displayed label on the left
           const displayLabel =
             c.id === 'sr'      ? utcLabelAli  :
             c.id === 'sr_jamo' ? utcLabelJamo :
-            isPrice            ? PRICE_SHORT_LABELS[c.id] :
             c.label
 
           return (
             <div key={c.id}
-              className="flex flex-col px-4 py-3 rounded-2xl border-2 transition-all gap-2"
+              className="flex items-center gap-3 px-4 py-3 rounded-2xl border-2 transition-all"
               style={{
                 backgroundColor: isChecked ? 'rgba(34,197,94,0.08)' : 'var(--t-card-bg)',
                 borderColor: isChecked ? '#22c55e' : 'var(--t-border-soft)',
               }}>
-              {/* Main row */}
-              <div className="flex items-center gap-3">
-                {/* Checkbox */}
-                <button onClick={() => toggle(c.id)}
-                  className="w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all"
-                  style={{ borderColor: isChecked ? '#22c55e' : '#d1d5db', backgroundColor: isChecked ? '#22c55e' : 'transparent' }}>
-                  {isChecked && <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><polyline points="2,6 5,9 10,3"/></svg>}
-                </button>
+              {/* Checkbox */}
+              <button onClick={() => toggle(c.id)}
+                className="w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all"
+                style={{ borderColor: isChecked ? '#22c55e' : '#d1d5db', backgroundColor: isChecked ? '#22c55e' : 'transparent' }}>
+                {isChecked && <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><polyline points="2,6 5,9 10,3"/></svg>}
+              </button>
 
-                {/* Label */}
-                <span onClick={() => toggle(c.id)} className="text-sm font-semibold cursor-pointer"
-                  style={{
-                    flex: isPrice ? '0 0 auto' : '1',
-                    minWidth: isPrice ? 32 : undefined,
-                    color: isChecked ? '#16a34a' : 'var(--t-text-main)',
-                    textDecoration: isChecked ? 'line-through' : 'none',
-                  }}>
-                  {displayLabel}
-                </span>
+              {/* Label */}
+              <span onClick={() => toggle(c.id)} className="text-sm font-semibold shrink-0 cursor-pointer"
+                style={{ color: isChecked ? '#16a34a' : 'var(--t-text-main)', textDecoration: isChecked ? 'line-through' : 'none' }}>
+                {displayLabel}
+              </span>
 
-                {/* Price btn — inline full label + value */}
-                {isPrice && (
-                  <button
-                    onClick={() => openPricePopup(c.id)}
-                    className="flex-1 rounded-xl font-semibold transition-all active:scale-95 text-left"
-                    style={{
-                      fontSize: 12,
-                      padding: '5px 10px',
-                      border: '2px solid #b8860b',
-                      backgroundColor: priceValues[c.id] ? 'rgba(184,134,11,0.15)' : 'transparent',
-                      color: priceValues[c.id] ? '#b8860b' : '#9ca3af',
-                    }}>
-                    {c.label} : {priceValues[c.id] || '--'}
-                  </button>
-                )}
+              {/* flex-1 spacer for plain rows */}
+              {!['volume','trend','sr','sr_jamo','key_level','high_low'].includes(c.id) && <span className="flex-1" />}
 
-                {/* Day btns */}
-                {c.id === 'volume' && (
-                  <div className="flex gap-1.5" style={{ width: '62%' }}>
-                    {DAY_BTNS.map(d => (
-                      <button key={d} onClick={() => toggleDay(d)}
-                        className="flex-1 rounded-xl font-bold transition-all active:scale-95"
-                        style={{ fontSize: 11, padding: '5px 0', border: '2px solid #b8860b',
-                          backgroundColor: activeDay === d ? 'rgba(184,134,11,0.45)' : 'transparent',
-                          color: activeDay === d ? '#fff' : '#b8860b' }}>
-                        {d}
-                      </button>
-                    ))}
-                  </div>
-                )}
+              {/* Day btns */}
+              {c.id === 'volume' && (
+                <div className="flex gap-1.5" style={{ width: '66%' }}>
+                  {DAY_BTNS.map(d => (
+                    <button key={d} onClick={() => toggleDay(d)}
+                      className="flex-1 rounded-xl font-bold transition-all active:scale-95"
+                      style={{ fontSize: 11, padding: '5px 0', border: '2px solid #b8860b',
+                        backgroundColor: activeDay === d ? 'rgba(184,134,11,0.45)' : 'transparent',
+                        color: activeDay === d ? '#fff' : '#b8860b' }}>
+                      {d}
+                    </button>
+                  ))}
+                </div>
+              )}
 
-                {/* Bias btns */}
-                {c.id === 'trend' && (
-                  <div className="flex gap-1.5" style={{ width: '62%' }}>
-                    {BIAS_BTNS.map(b => (
-                      <button key={b.key} onClick={() => toggleBias(b.key)}
-                        className="flex-1 rounded-xl font-bold transition-all active:scale-95"
-                        style={{ fontSize: 11, padding: '5px 0', border: `2px solid ${b.color}`,
-                          backgroundColor: bias === b.key ? `${b.color}73` : 'transparent',
-                          color: bias === b.key ? '#fff' : b.color }}>
-                        {b.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
+              {/* Bias btns */}
+              {c.id === 'trend' && (
+                <div className="flex gap-1.5" style={{ width: '66%' }}>
+                  {BIAS_BTNS.map(b => (
+                    <button key={b.key} onClick={() => toggleBias(b.key)}
+                      className="flex-1 rounded-xl font-bold transition-all active:scale-95"
+                      style={{ fontSize: 11, padding: '5px 0', border: `2px solid ${b.color}`,
+                        backgroundColor: bias === b.key ? `${b.color}73` : 'transparent',
+                        color: bias === b.key ? '#fff' : b.color }}>
+                      {b.label}
+                    </button>
+                  ))}
+                </div>
+              )}
 
-                {/* Ali session btns */}
-                {c.id === 'sr' && (
-                  <div className="flex gap-1.5" style={{ width: '62%' }}>
-                    {SESSION_BTNS.map(s => (
-                      <button key={s.key} onClick={() => toggleSession(s.key)}
-                        className="flex-1 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-1"
-                        style={{ fontSize: 11, padding: '5px 2px', border: `2px solid ${s.color}`,
-                          backgroundColor: activeSession === s.key ? `${s.color}73` : 'transparent',
-                          color: activeSession === s.key ? '#fff' : s.color }}>
-                        <span>{s.label}</span>
-                        <span style={{ fontSize: 8, opacity: 0.8, fontWeight: 500 }}>{s.time}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+              {/* Ali session btns */}
+              {c.id === 'sr' && (
+                <div className="flex gap-1.5" style={{ width: '66%' }}>
+                  {SESSION_BTNS.map(s => (
+                    <button key={s.key} onClick={() => toggleSession(s.key)}
+                      className="flex-1 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-1"
+                      style={{ fontSize: 11, padding: '5px 2px', border: `2px solid ${s.color}`,
+                        backgroundColor: activeSession === s.key ? `${s.color}73` : 'transparent',
+                        color: activeSession === s.key ? '#fff' : s.color }}>
+                      <span>{s.label}</span>
+                      <span style={{ fontSize: 8, opacity: 0.8, fontWeight: 500 }}>{s.time}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
 
-                {/* Jamo session btns */}
-                {c.id === 'sr_jamo' && (
-                  <div className="flex gap-1.5" style={{ width: '62%' }}>
-                    {JAMO_SESSION_BTNS.map(s => (
-                      <button key={s.key} onClick={() => toggleJamoSession(s.key)}
-                        className="flex-1 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-1"
-                        style={{ fontSize: 11, padding: '5px 2px', border: `2px solid ${s.color}`,
-                          backgroundColor: activeJamoSession === s.key ? `${s.color}73` : 'transparent',
-                          color: activeJamoSession === s.key ? '#fff' : s.color }}>
-                        <span>{s.label}</span>
-                        <span style={{ fontSize: 8, opacity: 0.8, fontWeight: 500 }}>{s.time}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              {/* Jamo session btns */}
+              {c.id === 'sr_jamo' && (
+                <div className="flex gap-1.5" style={{ width: '66%' }}>
+                  {JAMO_SESSION_BTNS.map(s => (
+                    <button key={s.key} onClick={() => toggleJamoSession(s.key)}
+                      className="flex-1 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-1"
+                      style={{ fontSize: 11, padding: '5px 2px', border: `2px solid ${s.color}`,
+                        backgroundColor: activeJamoSession === s.key ? `${s.color}73` : 'transparent',
+                        color: activeJamoSession === s.key ? '#fff' : s.color }}>
+                      <span>{s.label}</span>
+                      <span style={{ fontSize: 8, opacity: 0.8, fontWeight: 500 }}>{s.time}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
 
-              {/* Key level buttons — second row */}
+              {/* Key level btns — same line, 66% width, wrap */}
               {c.id === 'key_level' && (
-                <div className="flex flex-wrap gap-1.5 ml-9">
+                <div className="flex flex-wrap gap-1.5" style={{ width: '66%' }}>
                   {KEY_LEVEL_BTNS.map(kb => (
                     <button key={kb.key} onClick={() => toggleKeyLevel(kb.key)}
                       className="rounded-xl font-bold transition-all active:scale-95"
-                      style={{
-                        fontSize: 11,
-                        padding: '4px 10px',
-                        border: `2px solid ${kb.color}`,
+                      style={{ fontSize: 11, padding: '4px 9px', border: `2px solid ${kb.color}`,
                         backgroundColor: activeKeyLevels.includes(kb.key) ? `${kb.color}73` : 'transparent',
-                        color: activeKeyLevels.includes(kb.key) ? '#fff' : kb.color,
-                      }}>
+                        color: activeKeyLevels.includes(kb.key) ? '#fff' : kb.color }}>
                       {kb.key}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* High/Low — 4 price buttons in one line */}
+              {c.id === 'high_low' && (
+                <div className="flex gap-1.5" style={{ width: '66%' }}>
+                  {HIGH_LOW_BTNS.map(hb => (
+                    <button key={hb.id} onClick={() => openPricePopup(hb.id)}
+                      className="flex-1 rounded-xl transition-all active:scale-95 flex flex-col items-center"
+                      style={{ padding: '4px 2px', border: '2px solid #b8860b',
+                        backgroundColor: priceValues[hb.id] ? 'rgba(184,134,11,0.15)' : 'transparent' }}>
+                      <span style={{ fontSize: 9, color: '#9ca3af', fontWeight: 600 }}>{hb.label}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: priceValues[hb.id] ? '#b8860b' : '#9ca3af' }}>
+                        {priceValues[hb.id] || '--'}
+                      </span>
                     </button>
                   ))}
                 </div>
