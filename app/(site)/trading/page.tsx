@@ -332,13 +332,13 @@ function PreTradeTab() {
                 </div>
               )}
 
-              {/* Key level btns — same line, 66% width, wrap */}
+              {/* Key level btns — 4-col grid fills the full 66% */}
               {c.id === 'key_level' && (
-                <div className="flex flex-wrap gap-2" style={{ width: '66%', flexShrink: 0 }}>
+                <div style={{ width: '66%', flexShrink: 0, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
                   {KEY_LEVEL_BTNS.map(kb => (
                     <button key={kb.key} onClick={() => toggleKeyLevel(kb.key)}
                       className="rounded-xl font-bold transition-all active:scale-95"
-                      style={{ fontSize: 12, padding: '6px 12px', border: `2px solid ${kb.color}`,
+                      style={{ fontSize: 12, padding: '6px 4px', border: `2px solid ${kb.color}`,
                         backgroundColor: activeKeyLevels.includes(kb.key) ? `${kb.color}73` : 'transparent',
                         color: activeKeyLevels.includes(kb.key) ? '#fff' : kb.color }}>
                       {kb.key}
