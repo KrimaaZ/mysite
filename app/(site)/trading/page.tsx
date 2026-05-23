@@ -32,9 +32,9 @@ const BIAS_BTNS = [
 const DAY_BTNS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
 
 const SESSION_BTNS = [
-  { key: 'london', label: 'London', color: '#3b82f6' },
-  { key: 'ny',     label: 'NY',     color: '#8b5cf6' },
-  { key: 'asia',   label: 'Asia',   color: '#f59e0b' },
+  { key: 'london', label: 'London', time: '2am-7am',   color: '#3b82f6' },
+  { key: 'ny',     label: 'NY',     time: '8am-12pm',  color: '#8b5cf6' },
+  { key: 'asia',   label: 'Asia',   time: '8pm-2am',   color: '#f59e0b' },
 ]
 
 // Returns the Nth Sunday of a given month (month 0-indexed)
@@ -182,15 +182,15 @@ function PreTradeTab() {
               <div className="flex gap-1.5" style={{ width: '62%' }}>
                 {SESSION_BTNS.map(s => (
                   <button key={s.key} onClick={() => toggleSession(s.key)}
-                    className="flex-1 rounded-xl font-bold transition-all active:scale-95"
+                    className="flex-1 rounded-xl font-bold transition-all active:scale-95 flex flex-col items-center"
                     style={{
-                      fontSize: 11,
-                      padding: '5px 0',
+                      padding: '5px 2px',
                       border: `2px solid ${s.color}`,
                       backgroundColor: activeSession === s.key ? `${s.color}73` : 'transparent',
                       color: activeSession === s.key ? '#fff' : s.color,
                     }}>
-                    {s.label}
+                    <span style={{ fontSize: 10 }}>{s.label}</span>
+                    <span style={{ fontSize: 8, opacity: 0.85, fontWeight: 500 }}>{s.time}</span>
                   </button>
                 ))}
               </div>
