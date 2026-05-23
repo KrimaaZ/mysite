@@ -14,7 +14,7 @@ const emptyStrategy = { name: '', description: '', rules: '', timeframe: '', win
 const DEFAULT_CHECKS = [
   { id: 'trend',    label: 'Trend confirmed 4H TF' },
   { id: 'volume',   label: 'Day' },
-  { id: 'sr',       label: 'Support / Resistance clear' },
+  { id: 'sr',       label: 'Time' },
   { id: 'entry',    label: 'Entry price defined' },
   { id: 'sl',       label: 'Stop Loss placed' },
   { id: 'tp',       label: 'Take Profit target set' },
@@ -31,15 +31,38 @@ const BIAS_BTNS = [
 
 const DAY_BTNS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
 
+const SESSION_BTNS = [
+  { key: 'london', label: 'London', color: '#3b82f6' },
+  { key: 'ny',     label: 'NY',     color: '#8b5cf6' },
+  { key: 'asia',   label: 'Asia',   color: '#f59e0b' },
+]
+
+// Returns the Nth Sunday of a given month (month 0-indexed)
+function getNthSunday(year: number, month: number, n: number): Date {
+  const d = new Date(year, month, 1)
+  const firstSunday = d.getDay() === 0 ? 1 : 8 - d.getDay()
+  return new Date(year, month, firstSunday + (n - 1) * 7)
+}
+// EDT (UTC-4): 2nd Sunday of March → 1st Sunday of November
+// EST (UTC-5): otherwise
+function isEDT(): boolean {
+  const now = new Date()
+  const y = now.getFullYear()
+  return now >= getNthSunday(y, 2, 2) && now < getNthSunday(y, 10, 1)
+}
+
 function PreTradeTab() {
   const [checks, setChecks] = useState<Record<string, boolean>>({})
   const [bias, setBias] = useState<string | null>(null)
   const [activeDay, setActiveDay] = useState<string | null>(null)
+  const [activeSession, setActiveSession] = useState<string | null>(null)
+  const utcLabel = isEDT() ? 'Time UTC-4' : 'Time UTC-5'
 
   useEffect(() => {
     try { setChecks(JSON.parse(localStorage.getItem(PRE_CHECK_KEY) || '{}')) } catch { /**/ }
     try { setBias(localStorage.getItem(PRE_CHECK_KEY + '-bias') || null) } catch { /**/ }
     try { setActiveDay(localStorage.getItem(PRE_CHECK_KEY + '-day') || null) } catch { /**/ }
+    try { setActiveSession(localStorage.getItem(PRE_CHECK_KEY + '-session') || null) } catch { /**/ }
   }, [])
 
   const toggle = (id: string) => {
@@ -62,11 +85,19 @@ function PreTradeTab() {
     else localStorage.removeItem(PRE_CHECK_KEY + '-day')
   }
 
+  const toggleSession = (key: string) => {
+    const next = activeSession === key ? null : key
+    setActiveSession(next)
+    if (next) localStorage.setItem(PRE_CHECK_KEY + '-session', next)
+    else localStorage.removeItem(PRE_CHECK_KEY + '-session')
+  }
+
   const reset = () => {
-    setChecks({}); setBias(null); setActiveDay(null)
+    setChecks({}); setBias(null); setActiveDay(null); setActiveSession(null)
     localStorage.removeItem(PRE_CHECK_KEY)
     localStorage.removeItem(PRE_CHECK_KEY + '-bias')
     localStorage.removeItem(PRE_CHECK_KEY + '-day')
+    localStorage.removeItem(PRE_CHECK_KEY + '-session')
   }
 
   const done = DEFAULT_CHECKS.filter(c => checks[c.id]).length
@@ -108,7 +139,7 @@ function PreTradeTab() {
             {/* Label */}
             <span onClick={() => toggle(c.id)} className="text-sm font-semibold flex-1 cursor-pointer"
               style={{ color: checks[c.id] ? '#16a34a' : 'var(--t-text-main)', textDecoration: checks[c.id] ? 'line-through' : 'none' }}>
-              {c.label}
+              {c.id === 'sr' ? utcLabel : c.label}
             </span>
             {/* Day btns — only on volume row */}
             {c.id === 'volume' && (
@@ -142,6 +173,24 @@ function PreTradeTab() {
                       color: bias === b.key ? '#fff' : b.color,
                     }}>
                     {b.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {/* Session btns — only on sr row */}
+            {c.id === 'sr' && (
+              <div className="flex gap-1.5" style={{ width: '62%' }}>
+                {SESSION_BTNS.map(s => (
+                  <button key={s.key} onClick={() => toggleSession(s.key)}
+                    className="flex-1 rounded-xl font-bold transition-all active:scale-95"
+                    style={{
+                      fontSize: 11,
+                      padding: '5px 0',
+                      border: `2px solid ${s.color}`,
+                      backgroundColor: activeSession === s.key ? `${s.color}73` : 'transparent',
+                      color: activeSession === s.key ? '#fff' : s.color,
+                    }}>
+                    {s.label}
                   </button>
                 ))}
               </div>
