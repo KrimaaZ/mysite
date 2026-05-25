@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Modal from '@/components/Modal'
 import { useLang } from '@/lib/lang'
+import GamesTab from './GamesTab'
 
 type Category = { id: number; name: string; color: string; emoji: string; createdAt: string }
 type QuizQ = { q: string; opts: string[]; ans: number }
@@ -19,7 +20,7 @@ const PERSONAL_NOTES_KEY = 'personal_notes_content'
 const emptyNote = { categoryId: '', title: '', rules: '', examples: '', quiz: '' }
 const emptyCat = { name: '', emoji: '📝', color: '#2d6a4f' }
 
-type Tab = 'spanish' | 'personal' | 'practice'
+type Tab = 'spanish' | 'personal' | 'practice' | 'game'
 
 function normalize(s: string) {
   return s
@@ -272,7 +273,7 @@ export default function NotesPage() {
       <div className="flex items-start justify-between gap-3 mb-5">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: 'var(--t-text-main)' }}>
-            {activeTab === 'spanish' ? '🇪🇸 Spanish' : activeTab === 'personal' ? '📒 Notes' : '🎯 Pratique'}
+            {activeTab === 'spanish' ? '🇪🇸 Spanish' : activeTab === 'personal' ? '📒 Notes' : activeTab === 'game' ? '🎮 Games' : '🎯 Pratique'}
           </h1>
           {activeTab === 'spanish' && (
             <p className="text-xs sm:text-sm mt-0.5" style={{ color: 'var(--t-text-muted)' }}>
@@ -350,6 +351,17 @@ export default function NotesPage() {
             }}
           >
             🎯 Pratique
+          </button>
+          <button
+            onClick={() => setActiveTab('game')}
+            className="px-4 py-2 text-sm font-semibold transition-colors border-l"
+            style={{
+              backgroundColor: activeTab === 'game' ? 'var(--t-text-main)' : 'var(--t-item-bg)',
+              color: activeTab === 'game' ? '#74c69d' : 'var(--t-text-muted)',
+              borderColor: 'var(--t-border-soft)',
+            }}
+          >
+            🎮 Games
           </button>
         </div>
 
@@ -519,6 +531,9 @@ export default function NotesPage() {
           ) : null}
         </div>
       )}
+
+      {/* ── Game tab ── */}
+      {activeTab === 'game' && <GamesTab />}
 
       {/* ── Category Modal ── */}
       {catModal && (
