@@ -699,12 +699,162 @@ function MatchingGame() {
   )
 }
 
+// ── Game 4 — True / False ────────────────────────────────────────────────
+type TFQuestion = { es: string; shown: string; correct: boolean }
+
+function buildTFQuestions(): TFQuestion[] {
+  const questions: TFQuestion[] = []
+  // Each word appears twice: once true, once false — 24 questions total
+  MATCH_PAIRS.forEach(pair => {
+    // True card
+    questions.push({ es: pair.es, shown: pair.fr, correct: true })
+    // False card — pick a random different translation
+    const others = MATCH_PAIRS.filter(p => p.es !== pair.es)
+    const wrong  = others[Math.floor(Math.random() * others.length)]
+    questions.push({ es: pair.es, shown: wrong.fr, correct: false })
+  })
+  return shuffle(questions)
+}
+
+function TrueFalseGame() {
+  const [questions] = useState<TFQuestion[]>(() => buildTFQuestions())
+  const [idx,       setIdx]       = useState(0)
+  const [score,     setScore]     = useState({ correct: 0, wrong: 0 })
+  const [feedback,  setFeedback]  = useState<'correct' | 'wrong' | null>(null)
+  const [done,      setDone]      = useState(false)
+
+  const q = questions[idx]
+
+  const answer = (userSaysTrue: boolean) => {
+    if (feedback) return
+    const isRight = userSaysTrue === q.correct
+    setFeedback(isRight ? 'correct' : 'wrong')
+    setScore(s => ({ correct: s.correct + (isRight ? 1 : 0), wrong: s.wrong + (isRight ? 0 : 1) }))
+    setTimeout(() => {
+      setFeedback(null)
+      if (idx + 1 >= questions.length) setDone(true)
+      else setIdx(i => i + 1)
+    }, 900)
+  }
+
+  if (done) {
+    return (
+      <CompletionScreen
+        correct={score.correct} total={questions.length}
+        maxCombo={0} rounds={1}
+        onRestart={() => { setIdx(0); setScore({ correct: 0, wrong: 0 }); setDone(false) }}
+      />
+    )
+  }
+
+  const pct = Math.round((idx / questions.length) * 100)
+
+  const cardBg =
+    feedback === 'correct' ? 'linear-gradient(135deg,#22c55e22,#16a34a11)' :
+    feedback === 'wrong'   ? 'linear-gradient(135deg,#e8405722,#c0303e11)' :
+    'var(--t-card-bg)'
+  const cardBorder =
+    feedback === 'correct' ? '#22c55e' :
+    feedback === 'wrong'   ? '#e84057' :
+    '#1e609122'
+
+  return (
+    <div className="space-y-4">
+      {/* Progress */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-black" style={{ color: 'var(--t-text-main)' }}>
+          {idx + 1} / {questions.length}
+        </span>
+        <div className="flex gap-3 text-xs font-semibold">
+          <span style={{ color: '#16a34a' }}>✓ {score.correct}</span>
+          <span style={{ color: '#e84057' }}>✗ {score.wrong}</span>
+        </div>
+      </div>
+      <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--t-item-bg)' }}>
+        <div className="h-full rounded-full transition-all duration-400"
+          style={{ width: `${pct}%`, background: 'linear-gradient(90deg,#1e6091,#40916c)' }} />
+      </div>
+
+      {/* Card */}
+      <div className="rounded-3xl p-8 text-center transition-all duration-300 min-h-[200px] flex flex-col items-center justify-center gap-4"
+        style={{ backgroundColor: cardBg, border: `2.5px solid ${cardBorder}` }}>
+
+        {/* Feedback overlay icon */}
+        {feedback && (
+          <div className="text-5xl animate-bounce">
+            {feedback === 'correct' ? '✅' : '❌'}
+          </div>
+        )}
+
+        {!feedback && (
+          <>
+            {/* Spanish word */}
+            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--t-text-soft)' }}>
+              🇪🇸 Espagnol
+            </p>
+            <p className="text-3xl font-black" style={{ color: 'var(--t-text-main)' }}>
+              {q.es}
+            </p>
+
+            {/* Equals */}
+            <div className="flex items-center gap-3 w-full justify-center">
+              <div className="h-px flex-1" style={{ backgroundColor: 'var(--t-item-bg)' }} />
+              <span className="text-sm font-bold" style={{ color: 'var(--t-text-soft)' }}>signifie</span>
+              <div className="h-px flex-1" style={{ backgroundColor: 'var(--t-item-bg)' }} />
+            </div>
+
+            {/* Proposed French */}
+            <div className="rounded-2xl px-6 py-3" style={{ backgroundColor: 'var(--t-item-bg)' }}>
+              <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--t-text-soft)' }}>🇫🇷 Français</p>
+              <p className="text-2xl font-black" style={{ color: '#1e6091' }}>{q.shown}</p>
+            </div>
+          </>
+        )}
+
+        {/* Show correct answer when wrong */}
+        {feedback === 'wrong' && (
+          <div className="text-center">
+            <p className="text-sm font-semibold" style={{ color: '#e84057' }}>
+              ❌ &nbsp;<span style={{ color: 'var(--t-text-main)' }}>{q.es}</span> = <span style={{ color: '#e84057' }}>{q.shown}</span> est <strong>FAUX</strong>
+            </p>
+            <p className="text-sm font-semibold mt-1" style={{ color: '#16a34a' }}>
+              ✓ &nbsp;La bonne réponse : <strong>{MATCH_PAIRS.find(p => p.es === q.es)?.fr}</strong>
+            </p>
+          </div>
+        )}
+        {feedback === 'correct' && (
+          <p className="text-base font-black" style={{ color: '#16a34a' }}>Bonne réponse !</p>
+        )}
+      </div>
+
+      {/* Buttons */}
+      {!feedback && (
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => answer(true)}
+            className="py-5 rounded-2xl text-lg font-black transition-all active:scale-95"
+            style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', boxShadow: '0 4px 16px rgba(34,197,94,0.35)' }}>
+            ✅ VRAI
+          </button>
+          <button
+            onClick={() => answer(false)}
+            className="py-5 rounded-2xl text-lg font-black transition-all active:scale-95"
+            style={{ background: 'linear-gradient(135deg,#e84057,#c0303e)', color: '#fff', boxShadow: '0 4px 16px rgba(232,64,87,0.35)' }}>
+            ❌ FAUX
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── GamesTab — picker + router ────────────────────────────────────────────
 const GAMES = [
   { id: 'game1', label: 'Game 1', icon: '🃏', tag: '🇪🇸 → 🇫🇷', desc: 'Espagnol vers Français', count: `${VOCAB.length} mots`,          accent: '#dbeafe', accentText: '#1e40af' },
   { id: 'jeu1',  label: 'Jeu 1',  icon: '🔄', tag: '🇫🇷 → 🇪🇸', desc: 'Français vers Espagnol', count: `${VOCAB.length} mots`,          accent: '#dcfce7', accentText: '#166534' },
   { id: 'game2', label: 'Game 2', icon: '✍️', tag: 'Phrases',    desc: 'Complète les phrases',   count: `${GAME2_DATA.length} phrases`,  accent: '#fef9c3', accentText: '#854d0e' },
   { id: 'game3', label: 'Game 3', icon: '🔗', tag: 'Relier',     desc: 'Associe les mots',       count: `${MATCH_PAIRS.length} paires`,  accent: '#fae8ff', accentText: '#86198f' },
+  { id: 'game4', label: 'Game 4', icon: '🎯', tag: 'Vrai/Faux',  desc: 'Vrai ou Faux ?',          count: '24 questions',                 accent: '#fff1f2', accentText: '#be123c' },
 ]
 
 export default function GamesTab() {
@@ -751,10 +901,11 @@ export default function GamesTab() {
           <button onClick={() => setSelected(null)} className="flex items-center gap-2 text-sm font-semibold" style={{ color: '#1e6091' }}>
             ← Choisir un jeu
           </button>
-          {selected === 'game1' && <FlashcardGame key="game1" direction="es-fr" title="🎮 Game 1 — Español → Français" />}
-          {selected === 'jeu1'  && <FlashcardGame key="jeu1"  direction="fr-es" title="🎮 Jeu 1 — Français → Español" />}
-          {selected === 'game2' && <FillBlankGame key="game2" />}
-          {selected === 'game3' && <MatchingGame  key="game3" />}
+          {selected === 'game1' && <FlashcardGame  key="game1" direction="es-fr" title="🎮 Game 1 — Español → Français" />}
+          {selected === 'jeu1'  && <FlashcardGame  key="jeu1"  direction="fr-es" title="🎮 Jeu 1 — Français → Español" />}
+          {selected === 'game2' && <FillBlankGame  key="game2" />}
+          {selected === 'game3' && <MatchingGame   key="game3" />}
+          {selected === 'game4' && <TrueFalseGame  key="game4" />}
         </>
       )}
     </div>
