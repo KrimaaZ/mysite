@@ -510,9 +510,9 @@ function FillBlankGame() {
 
 // ── GamesTab — picker + router ────────────────────────────────────────────
 const GAMES = [
-  { id: 'game1', label: 'Game 1', sub: '🇪🇸 → 🇫🇷', desc: 'Espagnol vers Français', count: `${VOCAB.length} mots` },
-  { id: 'jeu1',  label: 'Jeu 1',  sub: '🇫🇷 → 🇪🇸', desc: 'Français vers Espagnol', count: `${VOCAB.length} mots` },
-  { id: 'game2', label: 'Game 2', sub: '✍️ Phrases', desc: 'Complète les phrases',   count: `${GAME2_DATA.length} phrases` },
+  { id: 'game1', label: 'Game 1', icon: '🃏', tag: '🇪🇸 → 🇫🇷', desc: 'Espagnol vers Français', count: `${VOCAB.length} mots`,         accent: '#dbeafe', accentText: '#1e40af' },
+  { id: 'jeu1',  label: 'Jeu 1',  icon: '🔄', tag: '🇫🇷 → 🇪🇸', desc: 'Français vers Espagnol', count: `${VOCAB.length} mots`,         accent: '#dcfce7', accentText: '#166534' },
+  { id: 'game2', label: 'Game 2', icon: '✍️', tag: 'Phrases',    desc: 'Complète les phrases',   count: `${GAME2_DATA.length} phrases`, accent: '#fef9c3', accentText: '#854d0e' },
 ]
 
 export default function GamesTab() {
@@ -534,17 +534,21 @@ export default function GamesTab() {
         <div className="flex flex-col gap-3">
           {GAMES.map(g => (
             <button key={g.id} onClick={() => setSelected(g.id)}
-              className="rounded-2xl p-4 text-left transition-all active:scale-95 hover:shadow-md flex items-center gap-4"
+              className="rounded-2xl p-4 text-left transition-all active:scale-95 hover:shadow-md flex items-center gap-3"
               style={{ backgroundColor: 'var(--t-card-bg)', border: '2px solid #1e609122' }}>
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0"
-                style={{ backgroundColor: '#dbeafe' }}>
-                {g.sub}
+              {/* Icon box — emoji only, fixed size, no overflow */}
+              <div className="shrink-0 w-14 h-14 rounded-2xl flex flex-col items-center justify-center gap-0.5 overflow-hidden"
+                style={{ backgroundColor: g.accent }}>
+                <span style={{ fontSize: 26, lineHeight: 1 }}>{g.icon}</span>
+                <span className="font-bold text-center leading-tight" style={{ fontSize: 9, color: g.accentText, maxWidth: 52, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{g.tag}</span>
               </div>
+              {/* Text */}
               <div className="flex-1 min-w-0">
                 <p className="font-black text-base" style={{ color: 'var(--t-text-main)' }}>{g.label}</p>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-muted)' }}>{g.desc}</p>
+                <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--t-text-muted)' }}>{g.desc}</p>
               </div>
-              <span className="text-xs font-bold px-2 py-1 rounded-full shrink-0" style={{ backgroundColor: '#dbeafe', color: '#1e40af' }}>
+              {/* Badge */}
+              <span className="text-xs font-bold px-2 py-1 rounded-full shrink-0" style={{ backgroundColor: g.accent, color: g.accentText }}>
                 {g.count}
               </span>
             </button>
