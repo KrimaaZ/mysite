@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 
 // ── Shared data ───────────────────────────────────────────────────────────
 type WordCard = { es: string; fr: string }
@@ -508,11 +508,203 @@ function FillBlankGame() {
   )
 }
 
+// ── Game 3 — Matching pairs ───────────────────────────────────────────────
+type MatchPair = { es: string; fr: string }
+
+const MATCH_PAIRS: MatchPair[] = [
+  { es: 'Cartera',  fr: 'Portefeuille' },
+  { es: 'Cargador', fr: 'Chargeur'     },
+  { es: 'Gorra',    fr: 'Casquette'    },
+  { es: 'Libro',    fr: 'Livre'        },
+  { es: 'Maleta',   fr: 'Valise'       },
+  { es: 'Mochila',  fr: 'Sac à dos'   },
+  { es: 'Pero',     fr: 'Mais'         },
+  { es: 'Pues',     fr: 'Donc'         },
+  { es: 'Reloj',    fr: 'Montre'       },
+  { es: 'Suéter',   fr: 'Pull'         },
+  { es: 'Tableta',  fr: 'Tablette'     },
+  { es: 'Vestido',  fr: 'Robe'         },
+]
+
+const ROUND_SIZE = 6
+
+function MatchingGame() {
+  const allPairs   = useMemo(() => shuffle([...MATCH_PAIRS]), [])
+  const rounds     = useMemo<MatchPair[][]>(
+    () => [allPairs.slice(0, ROUND_SIZE), allPairs.slice(ROUND_SIZE)],
+    [allPairs],
+  )
+
+  const [roundIdx,    setRoundIdx]    = useState(0)
+  const [done,        setDone]        = useState(false)
+  const [totalScore,  setTotalScore]  = useState({ correct: 0, errors: 0 })
+  const [leftOrder,   setLeftOrder]   = useState<number[]>([])
+  const [rightOrder,  setRightOrder]  = useState<number[]>([])
+  const [matched,     setMatched]     = useState<Set<number>>(new Set())
+  const [selected,    setSelected]    = useState<{ side: 'left' | 'right'; pairIdx: number } | null>(null)
+  const [wrong,       setWrong]       = useState<{ left: number; right: number } | null>(null)
+  const [checking,    setChecking]    = useState(false)
+
+  const initRound = useCallback((pairs: MatchPair[]) => {
+    const idx = pairs.map((_, i) => i)
+    setLeftOrder(shuffle([...idx]))
+    setRightOrder(shuffle([...idx]))
+    setMatched(new Set())
+    setSelected(null)
+    setWrong(null)
+    setChecking(false)
+  }, [])
+
+  useEffect(() => { initRound(rounds[0]) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSelect = (side: 'left' | 'right', pairIdx: number) => {
+    if (checking || matched.has(pairIdx)) return
+
+    // Nothing selected yet
+    if (!selected) { setSelected({ side, pairIdx }); return }
+
+    // Tap same item → deselect
+    if (selected.side === side && selected.pairIdx === pairIdx) { setSelected(null); return }
+
+    // Same side → switch highlight
+    if (selected.side === side) { setSelected({ side, pairIdx }); return }
+
+    // Different sides → attempt match
+    const leftIdx  = side === 'right' ? selected.pairIdx : pairIdx
+    const rightIdx = side === 'right' ? pairIdx : selected.pairIdx
+
+    if (leftIdx === rightIdx) {
+      // ✅ Correct
+      const next = new Set(matched); next.add(leftIdx)
+      setMatched(next)
+      setSelected(null)
+      setTotalScore(s => ({ ...s, correct: s.correct + 1 }))
+      if (next.size === rounds[roundIdx].length) {
+        setChecking(true)
+        setTimeout(() => {
+          if (roundIdx + 1 >= rounds.length) { setDone(true) }
+          else { const r = roundIdx + 1; setRoundIdx(r); initRound(rounds[r]) }
+        }, 600)
+      }
+    } else {
+      // ❌ Wrong — flash red then clear
+      setChecking(true)
+      setWrong({ left: leftIdx, right: rightIdx })
+      setTotalScore(s => ({ ...s, errors: s.errors + 1 }))
+      setTimeout(() => { setWrong(null); setSelected(null); setChecking(false) }, 700)
+    }
+  }
+
+  if (done) {
+    return (
+      <CompletionScreen
+        correct={totalScore.correct} total={MATCH_PAIRS.length}
+        maxCombo={0} rounds={2}
+        onRestart={() => {
+          setRoundIdx(0)
+          setTotalScore({ correct: 0, errors: 0 })
+          setDone(false)
+          initRound(rounds[0])
+        }}
+      />
+    )
+  }
+
+  if (leftOrder.length === 0) return null
+
+  const currentPairs = rounds[roundIdx]
+  const progress     = Math.round((matched.size / currentPairs.length) * 100)
+
+  const itemStyle = (pairIdx: number, side: 'left' | 'right'): React.CSSProperties => {
+    const isMatched  = matched.has(pairIdx)
+    const isSel      = selected?.side === side && selected.pairIdx === pairIdx
+    const isWrong    = side === 'left' ? wrong?.left === pairIdx : wrong?.right === pairIdx
+    return {
+      backgroundColor: isMatched ? 'rgba(34,197,94,0.14)' : isWrong ? 'rgba(232,64,87,0.14)' : isSel ? 'rgba(30,96,145,0.16)' : 'var(--t-item-bg)',
+      border:         `2px solid ${isMatched ? '#22c55e' : isWrong ? '#e84057' : isSel ? '#1e6091' : 'transparent'}`,
+      color:           isMatched ? '#16a34a' : isWrong ? '#e84057' : isSel ? '#1e6091' : 'var(--t-text-main)' as string,
+      opacity:         isMatched ? 0.55 : 1,
+      transform:       isSel ? 'scale(1.03)' : 'scale(1)',
+      transition:      'all 0.15s ease',
+      cursor:          isMatched ? 'default' : 'pointer',
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Round header */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-black" style={{ color: 'var(--t-text-main)' }}>
+          Round {roundIdx + 1} / {rounds.length}
+        </span>
+        <span className="text-xs font-semibold" style={{ color: 'var(--t-text-soft)' }}>
+          {matched.size} / {currentPairs.length} liés
+        </span>
+      </div>
+
+      {/* Progress bar */}
+      <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--t-item-bg)' }}>
+        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, background: 'linear-gradient(90deg,#1e6091,#40916c)' }} />
+      </div>
+
+      {/* Two columns */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Left — French */}
+        <div className="space-y-2">
+          <p className="text-xs font-bold uppercase tracking-widest text-center" style={{ color: 'var(--t-text-soft)' }}>🇫🇷 Français</p>
+          {leftOrder.map(pairIdx => (
+            <button
+              key={pairIdx}
+              onClick={() => handleSelect('left', pairIdx)}
+              disabled={matched.has(pairIdx)}
+              className="w-full px-2 py-3 rounded-xl text-sm font-semibold text-center"
+              style={itemStyle(pairIdx, 'left')}
+            >
+              {currentPairs[pairIdx].fr}
+            </button>
+          ))}
+        </div>
+
+        {/* Right — Spanish */}
+        <div className="space-y-2">
+          <p className="text-xs font-bold uppercase tracking-widest text-center" style={{ color: 'var(--t-text-soft)' }}>🇪🇸 Español</p>
+          {rightOrder.map(pairIdx => (
+            <button
+              key={pairIdx}
+              onClick={() => handleSelect('right', pairIdx)}
+              disabled={matched.has(pairIdx)}
+              className="w-full px-2 py-3 rounded-xl text-sm font-semibold text-center"
+              style={itemStyle(pairIdx, 'right')}
+            >
+              {currentPairs[pairIdx].es}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Score pills */}
+      {(totalScore.correct > 0 || totalScore.errors > 0) && (
+        <div className="flex gap-2">
+          <div className="flex-1 rounded-xl py-2 text-center" style={{ backgroundColor: '#d8f3dc' }}>
+            <p className="text-xs font-black tabular-nums" style={{ color: '#2d6a4f' }}>{totalScore.correct}</p>
+            <p className="text-xs mt-0.5" style={{ color: '#2d6a4f', opacity: 0.7 }}>Liés ✓</p>
+          </div>
+          <div className="flex-1 rounded-xl py-2 text-center" style={{ backgroundColor: '#fde8ec' }}>
+            <p className="text-xs font-black tabular-nums" style={{ color: '#c0303e' }}>{totalScore.errors}</p>
+            <p className="text-xs mt-0.5" style={{ color: '#c0303e', opacity: 0.7 }}>Erreurs</p>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── GamesTab — picker + router ────────────────────────────────────────────
 const GAMES = [
-  { id: 'game1', label: 'Game 1', icon: '🃏', tag: '🇪🇸 → 🇫🇷', desc: 'Espagnol vers Français', count: `${VOCAB.length} mots`,         accent: '#dbeafe', accentText: '#1e40af' },
-  { id: 'jeu1',  label: 'Jeu 1',  icon: '🔄', tag: '🇫🇷 → 🇪🇸', desc: 'Français vers Espagnol', count: `${VOCAB.length} mots`,         accent: '#dcfce7', accentText: '#166534' },
-  { id: 'game2', label: 'Game 2', icon: '✍️', tag: 'Phrases',    desc: 'Complète les phrases',   count: `${GAME2_DATA.length} phrases`, accent: '#fef9c3', accentText: '#854d0e' },
+  { id: 'game1', label: 'Game 1', icon: '🃏', tag: '🇪🇸 → 🇫🇷', desc: 'Espagnol vers Français', count: `${VOCAB.length} mots`,          accent: '#dbeafe', accentText: '#1e40af' },
+  { id: 'jeu1',  label: 'Jeu 1',  icon: '🔄', tag: '🇫🇷 → 🇪🇸', desc: 'Français vers Espagnol', count: `${VOCAB.length} mots`,          accent: '#dcfce7', accentText: '#166534' },
+  { id: 'game2', label: 'Game 2', icon: '✍️', tag: 'Phrases',    desc: 'Complète les phrases',   count: `${GAME2_DATA.length} phrases`,  accent: '#fef9c3', accentText: '#854d0e' },
+  { id: 'game3', label: 'Game 3', icon: '🔗', tag: 'Relier',     desc: 'Associe les mots',       count: `${MATCH_PAIRS.length} paires`,  accent: '#fae8ff', accentText: '#86198f' },
 ]
 
 export default function GamesTab() {
@@ -562,6 +754,7 @@ export default function GamesTab() {
           {selected === 'game1' && <FlashcardGame key="game1" direction="es-fr" title="🎮 Game 1 — Español → Français" />}
           {selected === 'jeu1'  && <FlashcardGame key="jeu1"  direction="fr-es" title="🎮 Jeu 1 — Français → Español" />}
           {selected === 'game2' && <FillBlankGame key="game2" />}
+          {selected === 'game3' && <MatchingGame  key="game3" />}
         </>
       )}
     </div>
