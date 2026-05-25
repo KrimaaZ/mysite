@@ -10,779 +10,8 @@ type Strategy = { id: number; name: string; description: string; rules: string; 
 const emptyTrade = { date: new Date().toISOString().split('T')[0], instrument: '', type: 'LONG', entry: '', exit: '', size: '', pnl: '', notes: '', status: 'OPEN' }
 const emptyStrategy = { name: '', description: '', rules: '', timeframe: '', winRate: '', riskReward: '', notes: '' }
 
-// ── Pre-Trade Checklist ────────────────────────────────────────────────────
-const DEFAULT_CHECKS = [
-  { id: 'trend',          label: 'Trend confirmed 4H TF' },
-  { id: 'volume',         label: 'Day' },
-  { id: 'sr',             label: 'Time' },         // Time UTC-x (Ali)
-  { id: 'sr_jamo',        label: 'Time (Jamo)' },  // Time UTC-x (Jamo)
-  { id: 'dop',            label: 'DOP (Daily Open Price)' },
-  { id: 'analyse_15',     label: 'Analyse 15min' },
-  { id: 'key_level',      label: 'Key level' },
-  { id: 'high_low',       label: 'High/Low' },
-  { id: 'amd',            label: 'AMD' },
-  { id: 'confirm_5',      label: 'Confirmation 5min' },
-  { id: 'sl',             label: 'Stop Loss placed' },
-  { id: 'tp',             label: 'Take Profit target set' },
-  { id: 'rr',             label: 'R:R ≥ 2' },
-  { id: 'news',           label: 'No major news incoming' },
-]
-
-const HIGH_LOW_BTNS = [
-  { id: 'prev_high_sess', label: 'H Sess', fullLabel: 'Previous High Session' },
-  { id: 'prev_low_sess',  label: 'L Sess', fullLabel: 'Previous Low Session' },
-  { id: 'prev_day_high',  label: 'D High', fullLabel: 'Previous Day High' },
-  { id: 'prev_day_low',   label: 'D Low',  fullLabel: 'Previous Day Low' },
-]
-
-const JAMO_SESSION_BTNS = [
-  { key: 'jamo_london', label: 'London', time: '1am-4am',  color: '#3b82f6' },
-  { key: 'jamo_ny',     label: 'NY',     time: '8am-12am', color: '#8b5cf6' },
-]
-
-const KEY_LEVEL_BTNS = [
-  { key: 'OB',   color: '#f97316' },
-  { key: 'BB',   color: '#e84057' },
-  { key: 'FVG',  color: '#3b82f6' },
-  { key: 'iFVG', color: '#6366f1' },
-  { key: 'CISD', color: '#8b5cf6' },
-  { key: 'PsyN', color: '#22c55e' },
-  { key: 'Lq',   color: '#f59e0b' },
-  { key: 'NC',   color: '#94a3b8' },
-]
-const AMD_BTNS = [
-  { key: 'accum',   label: 'Accumulation', color: '#22c55e' },
-  { key: 'manip',   label: 'Manipulation', color: '#e84057' },
-  { key: 'dist',    label: 'Distribution', color: '#3b82f6' },
-  { key: 'retrace', label: 'Retracement',  color: '#f59e0b' },
-]
-const AMD_STACK_BTNS = [
-  { key: 'redistrib', label: 'Redistribution', color: '#ec4899' },
-  { key: 'consol',    label: 'Consolidation',  color: '#8b5cf6' },
-]
-
-const DOP_BTNS = [
-  { key: 'gold',  label: 'Gold',  time: '18h', color: '#b8860b' },
-  { key: 'forex', label: 'Forex', time: '17h', color: '#3b82f6' },
-]
-
-const PRE_CHECK_KEY = 'pre-trade-checklist-v1'
-
-const BIAS_BTNS = [
-  { key: 'bull', label: 'Bullish Trend',   color: '#22c55e' },
-  { key: 'bear', label: 'Bearish Trend',   color: '#e84057' },
-  { key: 'cons', label: 'Consolidation',   color: '#f59e0b' },
-]
-
-const DAY_BTNS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
-
-const SESSION_BTNS = [
-  { key: 'london', label: 'London', time: '2am-7am',   color: '#3b82f6' },
-  { key: 'ny',     label: 'NY',     time: '8am-12pm',  color: '#8b5cf6' },
-  { key: 'asia',   label: 'Asia',   time: '8pm-2am',   color: '#f59e0b' },
-]
-
-// Returns the Nth Sunday of a given month (month 0-indexed)
-function getNthSunday(year: number, month: number, n: number): Date {
-  const d = new Date(year, month, 1)
-  const firstSunday = d.getDay() === 0 ? 1 : 8 - d.getDay()
-  return new Date(year, month, firstSunday + (n - 1) * 7)
-}
-// EDT (UTC-4): 2nd Sunday of March → 1st Sunday of November
-// EST (UTC-5): otherwise
-function isEDT(): boolean {
-  const now = new Date()
-  const y = now.getFullYear()
-  return now >= getNthSunday(y, 2, 2) && now < getNthSunday(y, 10, 1)
-}
-
-function PreTradeTab() {
-  const [checks, setChecks] = useState<Record<string, boolean>>({})
-  const [bias, setBias] = useState<string | null>(null)
-  const [activeDay, setActiveDay] = useState<string | null>(null)
-  const [activeSession, setActiveSession] = useState<string | null>(null)
-  const [priceValues, setPriceValues] = useState<Record<string, string>>({})
-  const [openPopup, setOpenPopup] = useState<string | null>(null)
-  const [popupInput, setPopupInput] = useState('')
-  const [activeJamoSession, setActiveJamoSession] = useState<string | null>(null)
-  const [activeKeyLevels, setActiveKeyLevels] = useState<string[]>([])
-  const [activeAMD, setActiveAMD] = useState<string[]>([])
-  const [activeDOP, setActiveDOP] = useState<string | null>(null)
-  const edt = isEDT()
-  const utcLabelAli  = edt ? 'Time UTC-4 (Ali)'  : 'Time UTC-5 (Ali)'
-  const utcLabelJamo = edt ? 'Time UTC-4 (Jamo)' : 'Time UTC-5 (Jamo)'
-  const initialLoaded = useRef(false)
-
-  // ── Load: localStorage first (instant), then API overrides ──
-  useEffect(() => {
-    // 1. Instant load from localStorage
-    try { setChecks(JSON.parse(localStorage.getItem(PRE_CHECK_KEY) || '{}')) } catch { /**/ }
-    try { setBias(localStorage.getItem(PRE_CHECK_KEY + '-bias') || null) } catch { /**/ }
-    try { setActiveDay(localStorage.getItem(PRE_CHECK_KEY + '-day') || null) } catch { /**/ }
-    try { setActiveSession(localStorage.getItem(PRE_CHECK_KEY + '-session') || null) } catch { /**/ }
-    try { setPriceValues(JSON.parse(localStorage.getItem(PRE_CHECK_KEY + '-prices') || '{}')) } catch { /**/ }
-    try { setActiveJamoSession(localStorage.getItem(PRE_CHECK_KEY + '-jamo') || null) } catch { /**/ }
-    try { setActiveKeyLevels(JSON.parse(localStorage.getItem(PRE_CHECK_KEY + '-keylevels') || '[]')) } catch { /**/ }
-    try { setActiveAMD(JSON.parse(localStorage.getItem(PRE_CHECK_KEY + '-amd') || '[]')) } catch { /**/ }
-    try { setActiveDOP(localStorage.getItem(PRE_CHECK_KEY + '-dop') || null) } catch { /**/ }
-
-    // 2. Fetch from DB (overrides local if more recent)
-    fetch('/api/pretrade')
-      .then(r => r.json())
-      .then(({ data }) => {
-        const d = JSON.parse(data || '{}')
-        if (d.checks)            setChecks(d.checks)
-        if (d.bias !== undefined)  setBias(d.bias)
-        if (d.activeDay !== undefined) setActiveDay(d.activeDay)
-        if (d.activeSession !== undefined) setActiveSession(d.activeSession)
-        if (d.activeJamoSession !== undefined) setActiveJamoSession(d.activeJamoSession)
-        if (d.priceValues)       setPriceValues(d.priceValues)
-        if (d.activeKeyLevels)   setActiveKeyLevels(d.activeKeyLevels)
-        if (d.activeAMD)         setActiveAMD(d.activeAMD)
-        if (d.activeDOP !== undefined) setActiveDOP(d.activeDOP)
-      })
-      .catch(() => { /* offline — localStorage already loaded */ })
-      .finally(() => { initialLoaded.current = true })
-  }, [])
-
-  // ── Auto-save to DB: debounced 800ms after any change ──
-  useEffect(() => {
-    if (!initialLoaded.current) return
-    const payload = JSON.stringify({ checks, bias, activeDay, activeSession, activeJamoSession, priceValues, activeKeyLevels, activeAMD, activeDOP })
-    const timer = setTimeout(() => {
-      fetch('/api/pretrade', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: payload }) })
-    }, 800)
-    return () => clearTimeout(timer)
-  }, [checks, bias, activeDay, activeSession, activeJamoSession, priceValues, activeKeyLevels, activeAMD, activeDOP])
-
-  const toggle = (id: string) => {
-    const next = { ...checks, [id]: !checks[id] }
-    setChecks(next)
-    localStorage.setItem(PRE_CHECK_KEY, JSON.stringify(next))
-  }
-
-  const toggleBias = (key: string) => {
-    const next = bias === key ? null : key
-    setBias(next)
-    if (next) localStorage.setItem(PRE_CHECK_KEY + '-bias', next)
-    else localStorage.removeItem(PRE_CHECK_KEY + '-bias')
-  }
-
-  const toggleDay = (day: string) => {
-    const next = activeDay === day ? null : day
-    setActiveDay(next)
-    if (next) localStorage.setItem(PRE_CHECK_KEY + '-day', next)
-    else localStorage.removeItem(PRE_CHECK_KEY + '-day')
-  }
-
-  const toggleSession = (key: string) => {
-    const next = activeSession === key ? null : key
-    setActiveSession(next)
-    if (next) localStorage.setItem(PRE_CHECK_KEY + '-session', next)
-    else localStorage.removeItem(PRE_CHECK_KEY + '-session')
-  }
-
-  const openPricePopup = (id: string) => {
-    setPopupInput(priceValues[id] || '')
-    setOpenPopup(id)
-  }
-
-  const confirmPrice = () => {
-    if (!openPopup) return
-    const next = { ...priceValues, [openPopup]: popupInput.trim() }
-    if (!popupInput.trim()) delete next[openPopup]
-    setPriceValues(next)
-    localStorage.setItem(PRE_CHECK_KEY + '-prices', JSON.stringify(next))
-    setOpenPopup(null)
-  }
-
-  const toggleJamoSession = (key: string) => {
-    const next = activeJamoSession === key ? null : key
-    setActiveJamoSession(next)
-    if (next) localStorage.setItem(PRE_CHECK_KEY + '-jamo', next)
-    else localStorage.removeItem(PRE_CHECK_KEY + '-jamo')
-  }
-
-  const toggleDOP = (key: string) => {
-    const next = activeDOP === key ? null : key
-    setActiveDOP(next)
-    if (next) localStorage.setItem(PRE_CHECK_KEY + '-dop', next)
-    else localStorage.removeItem(PRE_CHECK_KEY + '-dop')
-  }
-
-  const toggleAMD = (key: string) => {
-    const next = activeAMD.includes(key)
-      ? activeAMD.filter(k => k !== key)
-      : [...activeAMD, key]
-    setActiveAMD(next)
-    localStorage.setItem(PRE_CHECK_KEY + '-amd', JSON.stringify(next))
-  }
-
-  const resetPrices = () => {
-    const next = { ...priceValues }
-    HIGH_LOW_BTNS.forEach(b => delete next[b.id])
-    setPriceValues(next)
-    localStorage.setItem(PRE_CHECK_KEY + '-prices', JSON.stringify(next))
-  }
-
-  const toggleKeyLevel = (key: string) => {
-    const next = activeKeyLevels.includes(key)
-      ? activeKeyLevels.filter(k => k !== key)
-      : [...activeKeyLevels, key]
-    setActiveKeyLevels(next)
-    localStorage.setItem(PRE_CHECK_KEY + '-keylevels', JSON.stringify(next))
-  }
-
-  const reset = () => {
-    setChecks({}); setBias(null); setActiveDay(null); setActiveSession(null)
-    setPriceValues({}); setActiveJamoSession(null); setActiveKeyLevels([]); setActiveAMD([])
-    localStorage.removeItem(PRE_CHECK_KEY)
-    localStorage.removeItem(PRE_CHECK_KEY + '-bias')
-    localStorage.removeItem(PRE_CHECK_KEY + '-day')
-    localStorage.removeItem(PRE_CHECK_KEY + '-session')
-    localStorage.removeItem(PRE_CHECK_KEY + '-prices')
-    localStorage.removeItem(PRE_CHECK_KEY + '-jamo')
-    localStorage.removeItem(PRE_CHECK_KEY + '-keylevels')
-    localStorage.removeItem(PRE_CHECK_KEY + '-amd')
-    localStorage.removeItem(PRE_CHECK_KEY + '-dop')
-  }
-
-  const done = DEFAULT_CHECKS.filter(c => checks[c.id]).length
-  const allGood = done === DEFAULT_CHECKS.length
-
-  return (
-    <div className="flex flex-col gap-4">
-      {/* Header */}
-      <div className="rounded-2xl p-4 border-2" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: allGood ? '#22c55e' : 'var(--t-border-soft)' }}>
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#b8860b' }}>🎯 Pre-Trade Checklist</p>
-          <button onClick={reset} className="text-xs px-2 py-1 rounded-lg" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>Reset</button>
-        </div>
-        {/* Progress bar */}
-        <div className="h-2 rounded-full overflow-hidden mb-1" style={{ backgroundColor: 'var(--t-item-bg)' }}>
-          <div className="h-full rounded-full transition-all duration-500"
-            style={{ width: `${(done / DEFAULT_CHECKS.length) * 100}%`, background: allGood ? '#22c55e' : 'linear-gradient(90deg,#d4a017,#b8860b)' }} />
-        </div>
-        <p className="text-xs font-semibold" style={{ color: allGood ? '#16a34a' : 'var(--t-text-muted)' }}>
-          {allGood ? '✅ Ready to trade!' : `${done} / ${DEFAULT_CHECKS.length} conditions`}
-        </p>
-      </div>
-
-      {/* Price popup */}
-      {openPopup && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
-          onClick={() => setOpenPopup(null)}>
-          <div
-            className="rounded-2xl p-5 w-72 flex flex-col gap-3"
-            style={{ backgroundColor: 'var(--t-card-bg)', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}
-            onClick={e => e.stopPropagation()}>
-            <p className="text-sm font-bold" style={{ color: 'var(--t-text-main)' }}>
-              {HIGH_LOW_BTNS.find(b => b.id === openPopup)?.fullLabel ?? DEFAULT_CHECKS.find(c => c.id === openPopup)?.label}
-            </p>
-            <input
-              type="number"
-              step="any"
-              autoFocus
-              placeholder="Enter price..."
-              value={popupInput}
-              onChange={e => setPopupInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') confirmPrice(); if (e.key === 'Escape') setOpenPopup(null) }}
-              className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
-              style={{ borderColor: '#b8860b', backgroundColor: 'var(--t-input-bg)', color: 'var(--t-text-main)' }}
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={() => setOpenPopup(null)}
-                className="flex-1 py-2 rounded-xl text-sm font-medium"
-                style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>
-                Cancel
-              </button>
-              <button
-                onClick={confirmPrice}
-                className="flex-1 py-2 rounded-xl text-sm font-bold text-white"
-                style={{ background: 'linear-gradient(135deg,#d4a017,#b8860b)', boxShadow: '0 4px 12px rgba(184,134,11,0.3)' }}>
-                Confirm
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Checklist */}
-      <div className="flex flex-col gap-2">
-        {DEFAULT_CHECKS.map(c => {
-          const isChecked = !!checks[c.id]
-          const displayLabel =
-            c.id === 'sr'      ? utcLabelAli  :
-            c.id === 'sr_jamo' ? utcLabelJamo :
-            c.label
-
-          return (
-            <div key={c.id}
-              className="flex items-center gap-3 px-4 py-3 rounded-2xl border-2 transition-all"
-              style={{
-                backgroundColor: isChecked ? 'rgba(34,197,94,0.08)' : 'var(--t-card-bg)',
-                borderColor: isChecked ? '#22c55e' : 'var(--t-border-soft)',
-              }}>
-              {/* Checkbox */}
-              <button onClick={() => toggle(c.id)}
-                className="w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all"
-                style={{ borderColor: isChecked ? '#22c55e' : '#d1d5db', backgroundColor: isChecked ? '#22c55e' : 'transparent' }}>
-                {isChecked && <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><polyline points="2,6 5,9 10,3"/></svg>}
-              </button>
-
-              {/* Label */}
-              <span onClick={() => toggle(c.id)} className="text-sm font-semibold cursor-pointer"
-                style={{
-                  color: isChecked ? '#16a34a' : 'var(--t-text-main)',
-                  textDecoration: isChecked ? 'line-through' : 'none',
-                  flex: ['volume','trend','sr','sr_jamo','dop','key_level','high_low','amd'].includes(c.id) ? '1' : '0 0 auto',
-                }}>
-                {displayLabel}
-              </span>
-
-              {/* flex-1 spacer for plain rows */}
-              {!['volume','trend','sr','sr_jamo','dop','key_level','high_low','amd'].includes(c.id) && <span className="flex-1" />}
-
-
-              {/* Day btns */}
-              {c.id === 'volume' && (
-                <div className="flex gap-1.5" style={{ width: '66%' }}>
-                  {DAY_BTNS.map(d => (
-                    <button key={d} onClick={() => toggleDay(d)}
-                      className="flex-1 rounded-xl font-bold transition-all active:scale-95"
-                      style={{ fontSize: 11, padding: '5px 0', border: '2px solid #b8860b',
-                        backgroundColor: activeDay === d ? 'rgba(184,134,11,0.45)' : 'transparent',
-                        color: activeDay === d ? '#fff' : '#b8860b' }}>
-                      {d}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Bias btns */}
-              {c.id === 'trend' && (
-                <div className="flex gap-1.5" style={{ width: '66%' }}>
-                  {BIAS_BTNS.map(b => (
-                    <button key={b.key} onClick={() => toggleBias(b.key)}
-                      className="flex-1 rounded-xl font-bold transition-all active:scale-95"
-                      style={{ fontSize: 11, padding: '5px 0', border: `2px solid ${b.color}`,
-                        backgroundColor: bias === b.key ? `${b.color}73` : 'transparent',
-                        color: bias === b.key ? '#fff' : b.color }}>
-                      {b.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Ali session btns */}
-              {c.id === 'sr' && (
-                <div className="flex gap-1.5" style={{ width: '66%' }}>
-                  {SESSION_BTNS.map(s => (
-                    <button key={s.key} onClick={() => toggleSession(s.key)}
-                      className="flex-1 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-1"
-                      style={{ fontSize: 11, padding: '5px 2px', border: `2px solid ${s.color}`,
-                        backgroundColor: activeSession === s.key ? `${s.color}73` : 'transparent',
-                        color: activeSession === s.key ? '#fff' : s.color }}>
-                      <span>{s.label}</span>
-                      <span style={{ fontSize: 8, opacity: 0.8, fontWeight: 500 }}>{s.time}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Jamo session btns */}
-              {c.id === 'sr_jamo' && (
-                <div className="flex gap-1.5" style={{ width: '66%' }}>
-                  {JAMO_SESSION_BTNS.map(s => (
-                    <button key={s.key} onClick={() => toggleJamoSession(s.key)}
-                      className="flex-1 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-1"
-                      style={{ fontSize: 11, padding: '5px 2px', border: `2px solid ${s.color}`,
-                        backgroundColor: activeJamoSession === s.key ? `${s.color}73` : 'transparent',
-                        color: activeJamoSession === s.key ? '#fff' : s.color }}>
-                      <span>{s.label}</span>
-                      <span style={{ fontSize: 8, opacity: 0.8, fontWeight: 500 }}>{s.time}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Key level btns — 4-col grid fills the full 66% */}
-              {c.id === 'key_level' && (
-                <div style={{ width: '66%', flexShrink: 0, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
-                  {KEY_LEVEL_BTNS.map(kb => (
-                    <button key={kb.key} onClick={() => toggleKeyLevel(kb.key)}
-                      className="rounded-xl font-bold transition-all active:scale-95"
-                      style={{ fontSize: 12, padding: '6px 4px', border: `2px solid ${kb.color}`,
-                        backgroundColor: activeKeyLevels.includes(kb.key) ? `${kb.color}73` : 'transparent',
-                        color: activeKeyLevels.includes(kb.key) ? '#fff' : kb.color }}>
-                      {kb.key}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* DOP — 2 toggle btns */}
-              {c.id === 'dop' && (
-                <div className="flex gap-1.5" style={{ width: '66%', flexShrink: 0 }}>
-                  {DOP_BTNS.map(b => (
-                    <button key={b.key} onClick={() => toggleDOP(b.key)}
-                      className="flex-1 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-1"
-                      style={{ fontSize: 11, padding: '5px 2px', border: `2px solid ${b.color}`,
-                        backgroundColor: activeDOP === b.key ? `${b.color}73` : 'transparent',
-                        color: activeDOP === b.key ? '#fff' : b.color }}>
-                      <span>{b.label}</span>
-                      <span style={{ fontSize: 9, opacity: 0.85, fontWeight: 500 }}>{b.time}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* AMD — mobile: swipe / desktop: fixed 66% */}
-              {c.id === 'amd' && (
-                <div className="no-scrollbar amd-container">
-                  <div className="amd-inner">
-                    {AMD_BTNS.map(b => (
-                      <button key={b.key} onClick={() => toggleAMD(b.key)}
-                        className="amd-btn-main rounded-xl font-bold transition-all active:scale-95"
-                        style={{ fontSize: 10, padding: '5px 10px',
-                          border: `2px solid ${b.color}`,
-                          backgroundColor: activeAMD.includes(b.key) ? `${b.color}73` : 'transparent',
-                          color: activeAMD.includes(b.key) ? '#fff' : b.color }}>
-                        {b.label}
-                      </button>
-                    ))}
-                    <div className="amd-stack">
-                      {AMD_STACK_BTNS.map(b => (
-                        <button key={b.key} onClick={() => toggleAMD(b.key)}
-                          className="rounded-xl font-bold transition-all active:scale-95"
-                          style={{ fontSize: 10, padding: '3px 10px',
-                            border: `2px solid ${b.color}`,
-                            backgroundColor: activeAMD.includes(b.key) ? `${b.color}73` : 'transparent',
-                            color: activeAMD.includes(b.key) ? '#fff' : b.color }}>
-                          {b.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* High/Low reset btn */}
-              {c.id === 'high_low' && (
-                <button onClick={resetPrices}
-                  className="shrink-0 rounded-lg transition-all active:scale-90"
-                  style={{ fontSize: 11, padding: '3px 7px', border: '1.5px solid #d1d5db', color: '#9ca3af', backgroundColor: 'transparent' }}
-                  title="Reset prices">↺</button>
-              )}
-
-              {/* High/Low — 4 price buttons in one line */}
-              {c.id === 'high_low' && (
-                <div className="flex gap-1.5" style={{ width: '66%' }}>
-                  {HIGH_LOW_BTNS.map(hb => (
-                    <button key={hb.id} onClick={() => openPricePopup(hb.id)}
-                      className="flex-1 rounded-xl transition-all active:scale-95 flex flex-col items-center"
-                      style={{ padding: '4px 2px', border: '2px solid #b8860b',
-                        backgroundColor: priceValues[hb.id] ? 'rgba(184,134,11,0.15)' : 'transparent' }}>
-                      <span style={{ fontSize: 9, color: '#9ca3af', fontWeight: 600 }}>{hb.label}</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: priceValues[hb.id] ? '#b8860b' : '#9ca3af' }}>
-                        {priceValues[hb.id] || '--'}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Reset All — standalone below checklist */}
-      <button onClick={reset}
-        className="w-full rounded-xl text-sm font-bold transition-all active:scale-95"
-        style={{ padding: '10px', border: '2px solid #e84057', color: '#e84057', backgroundColor: 'transparent' }}>
-        🔄 Reset All
-      </button>
-    </div>
-  )
-}
-
-// ── Checker types ─────────────────────────────────────────────────────────
-type CheckerItem = { id: string; title: string; plus: number; minus: number }
-const CHECKER_KEY = 'trading-checker-v1'
-function loadChecker(): CheckerItem[] {
-  try { return JSON.parse(localStorage.getItem(CHECKER_KEY) || '[]') } catch { return [] }
-}
-function saveChecker(items: CheckerItem[]) {
-  localStorage.setItem(CHECKER_KEY, JSON.stringify(items))
-}
-
-// ── Checker tab component ──────────────────────────────────────────────────
-function CheckerTab() {
-  const [items, setItems] = useState<CheckerItem[]>([])
-  const [input, setInput] = useState('')
-
-  useEffect(() => { setItems(loadChecker()) }, [])
-
-  const add = () => {
-    if (!input.trim()) return
-    const next = [...items, { id: Date.now().toString(), title: input.trim(), plus: 0, minus: 0 }]
-    setItems(next); saveChecker(next); setInput('')
-  }
-
-  const update = (id: string, field: 'plus' | 'minus', delta: number) => {
-    const next = items.map(i => i.id === id ? { ...i, [field]: Math.max(0, i[field] + delta) } : i)
-    setItems(next); saveChecker(next)
-  }
-
-  const remove = (id: string) => {
-    const next = items.filter(i => i.id !== id)
-    setItems(next); saveChecker(next)
-  }
-
-  return (
-    <div className="flex flex-col gap-4">
-      {/* ── Add form ── */}
-      <div className="rounded-2xl p-4 border-2" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
-        <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: '#b8860b' }}>✚ New Checker</p>
-        <div className="flex gap-2">
-          <input
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') add() }}
-            placeholder="Checker title..."
-            className="flex-1 px-3 py-2.5 rounded-xl border text-sm outline-none"
-            style={{ borderColor: 'var(--t-border-soft)', backgroundColor: 'var(--t-input-bg)', color: 'var(--t-text-main)' }}
-          />
-          <button
-            onClick={add}
-            className="px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all active:scale-95"
-            style={{ background: 'linear-gradient(135deg,#d4a017,#b8860b)', boxShadow: '0 4px 12px rgba(184,134,11,0.3)' }}
-          >
-            Confirm
-          </button>
-        </div>
-      </div>
-
-      {/* ── Checker cards ── */}
-      {items.length === 0 ? (
-        <div className="text-center py-14 rounded-2xl" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-soft)' }}>
-          <p className="text-4xl mb-2">📋</p>
-          <p className="text-sm font-medium">Add your first checker above</p>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {items.map(item => (
-            <div key={item.id} className="rounded-2xl border-2 p-4" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
-              {/* Title + delete */}
-              <div className="flex items-center justify-between mb-4">
-                <p className="font-bold text-base" style={{ color: 'var(--t-text-main)' }}>{item.title}</p>
-                <button onClick={() => remove(item.id)} className="text-xs px-2 py-1 rounded-lg" style={{ color: '#c0303e', backgroundColor: '#fde8ec' }}>✕</button>
-              </div>
-              {/* Counter buttons */}
-              <div className="flex gap-3">
-                {/* Plus */}
-                <div className="flex-1 flex flex-col items-center gap-2">
-                  <button
-                    onClick={() => update(item.id, 'plus', 1)}
-                    className="w-full py-3 rounded-xl text-xl font-black transition-all active:scale-95"
-                    style={{ background: 'linear-gradient(135deg,#22c55e,#15803d)', color: '#fff', boxShadow: '0 4px 12px rgba(34,197,94,0.3)' }}
-                  >＋</button>
-                  <span className="text-2xl font-black tabular-nums" style={{ color: '#16a34a' }}>{item.plus}</span>
-                </div>
-                {/* Divider */}
-                <div className="w-px my-1" style={{ backgroundColor: 'var(--t-border-soft)' }} />
-                {/* Minus */}
-                <div className="flex-1 flex flex-col items-center gap-2">
-                  <button
-                    onClick={() => update(item.id, 'minus', 1)}
-                    className="w-full py-3 rounded-xl text-xl font-black transition-all active:scale-95"
-                    style={{ background: 'linear-gradient(135deg,#e84057,#c0303e)', color: '#fff', boxShadow: '0 4px 12px rgba(232,64,87,0.3)' }}
-                  >－</button>
-                  <span className="text-2xl font-black tabular-nums" style={{ color: '#c0303e' }}>{item.minus}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Strategy Guide ────────────────────────────────────────────────────────
-const STEPS = [
-  {
-    letter: 'A', icon: '📅', title: 'Day & News filter',
-    ref: 'Day · No major news incoming',
-    lines: [
-      'Select the current day on the checklist.',
-      'Prefer Tuesday → Wednesday → Thursday (highest probability).',
-      'Avoid Mondays (Asian manipulation carry-over) and Fridays (low liquidity, early close).',
-      'Check economic calendar — skip the session if NFP, FOMC or CPI drops within the next 2h.',
-    ],
-  },
-  {
-    letter: 'B', icon: '🕯️', title: 'Mark the Daily Open Price (DOP)',
-    ref: 'DOP (Daily Open Price)',
-    lines: [
-      'Gold: DOP is fixed at 18h00 (prior day NY close).',
-      'Forex: DOP is fixed at 17h00.',
-      'Draw a horizontal line at the DOP on your chart.',
-      'Price will often gravitate back to this level — it is a magnet and a bias reference.',
-    ],
-  },
-  {
-    letter: 'C', icon: '📍', title: 'Mark Previous Levels (H/L)',
-    ref: 'High/Low (PDH · PDL · PSH · PSL)',
-    lines: [
-      'Input Previous Day High (PDH) and Previous Day Low (PDL) in the High/Low inputs.',
-      'Input Previous Session High (PSH) and Previous Session Low (PSL).',
-      'These are the key liquidity pools — Smart Money will target them first.',
-      'Draw these levels on every TF you will trade.',
-    ],
-  },
-  {
-    letter: 'D', icon: '📊', title: 'Determine bias on 4H TF',
-    ref: 'Trend confirmed 4H TF → Bullish / Bearish / Consolidation',
-    lines: [
-      'Open the 4H chart.',
-      'Ask: is price making Higher Highs + Higher Lows (Bullish), Lower Highs + Lower Lows (Bearish), or ranging (Consolidation)?',
-      'Bullish bias → look ONLY for long setups in the session.',
-      'Bearish bias → look ONLY for short setups.',
-      'Consolidation → wait for a break or skip the session.',
-      'Mark bias button on checklist.',
-    ],
-  },
-  {
-    letter: 'E', icon: '⏰', title: 'Select your session & confirm time',
-    ref: 'Time UTC-4 (Ali) · Time UTC-4 (Jamo)',
-    lines: [
-      'Ali method — London: 2am–7am | NY: 8am–12pm.',
-      'Jamo method — London: 1am–4am | NY: 8am–12am.',
-      'The highest-probability window is 2–3h after the session open.',
-      'Select the active session on the checklist.',
-      'Do NOT trade outside your selected session window.',
-    ],
-  },
-  {
-    letter: 'F', icon: '🔄', title: 'Read the AMD phase',
-    ref: 'AMD → Accumulation · Manipulation · Distribution · Retracement · Redistribution · Consolidation',
-    lines: [
-      'Accumulation: price ranging tightly — Smart Money loading positions.',
-      'Manipulation (Stop Hunt): price spikes above/below the range to grab liquidity, then reverses.',
-      'Distribution: the real directional move begins — this is your entry zone.',
-      'Retracement: price pulls back into a discount/premium before continuing.',
-      'Redistribution: second push in the same direction after a retracement.',
-      'Wait for the Manipulation phase to complete before entering — entering in Accumulation is too early.',
-    ],
-  },
-  {
-    letter: 'G', icon: '🔎', title: 'Identify Key Levels on 15min TF',
-    ref: 'Key level: OB · BB · FVG · iFVG · CISD · PsyN · Lq · NC',
-    lines: [
-      'Open 15min chart. Mark all relevant structures in the direction of your 4H bias.',
-      'OB (Order Block): last opposing candle before a strong impulse move.',
-      'BB (Breaker Block): an OB that was broken through — now acts as resistance/support.',
-      'FVG (Fair Value Gap): 3-candle imbalance — price often returns to fill it.',
-      'iFVG (Inverse FVG): a filled FVG that flips into support/resistance.',
-      'CISD (Change In State of Delivery): structural shift confirming the new direction.',
-      'PsyN (Psychological Number): round price levels (.00, .50) — strong magnets.',
-      'Lq (Liquidity): equal highs/lows, old session highs/lows — where stops are sitting.',
-    ],
-  },
-  {
-    letter: 'H', icon: '📈', title: 'Analyse 15min — wait for the setup',
-    ref: 'Analyse 15min',
-    lines: [
-      'Stay on the 15min chart.',
-      'Wait for price to reach one of your key levels (OB, FVG, PsyN, PDH/PDL…).',
-      'Confirm AMD context: the Manipulation spike should be visible and over.',
-      'Look for a Market Structure Shift (MSS) — a break of a short-term swing point in your bias direction.',
-      'DO NOT enter until MSS is confirmed on this timeframe.',
-    ],
-  },
-  {
-    letter: 'I', icon: '✅', title: 'Confirm entry on 5min TF',
-    ref: 'Confirmation 5min',
-    lines: [
-      'Drop to 5min chart only after 15min MSS is confirmed.',
-      'Look for: a displacement candle, a 5min FVG or OB forming at the key level.',
-      'Enter on the reaction to the 5min key level (limit order into OB/FVG) or on the close of the confirmation candle.',
-      'This is your entry — no earlier.',
-    ],
-  },
-  {
-    letter: 'J', icon: '🎯', title: 'Execute — SL, TP, R:R',
-    ref: 'Stop Loss · Take Profit · R:R ≥ 2',
-    lines: [
-      'Stop Loss: place it 2–5 pips beyond the key level that triggered entry (below OB low / above OB high).',
-      'Take Profit: target the nearest significant liquidity pool in your bias direction (PDH, PDL, PSH, PSL, PsyN).',
-      'Calculate R:R — if R:R < 2, skip the trade. Move TP further or wait for a better entry.',
-      'Confirm R:R ≥ 2 on checklist before submitting the order.',
-      'Once in trade: do not move SL against the position. Let the trade breathe.',
-    ],
-  },
-]
-
-function StrategyGuideTab() {
-  const [open, setOpen] = useState<string | null>(null)
-
-  return (
-    <div className="flex flex-col gap-3">
-      {/* Header */}
-      <div className="rounded-2xl p-4 border-2" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
-        <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#b8860b' }}>📚 ICT / SMC Strategy — A to J</p>
-        <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Every step maps to an item in your Pre-Trade checklist. Follow in order.</p>
-      </div>
-
-      {STEPS.map(s => {
-        const isOpen = open === s.letter
-        return (
-          <div key={s.letter}
-            className="rounded-2xl border-2 overflow-hidden transition-all"
-            style={{ backgroundColor: 'var(--t-card-bg)', borderColor: isOpen ? '#b8860b' : 'var(--t-border-soft)' }}>
-            {/* Header row */}
-            <button
-              className="w-full flex items-center gap-3 px-4 py-3 text-left"
-              onClick={() => setOpen(isOpen ? null : s.letter)}>
-              {/* Letter badge */}
-              <span className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black shrink-0"
-                style={{ backgroundColor: isOpen ? '#b8860b' : 'var(--t-item-bg)', color: isOpen ? '#fff' : 'var(--t-text-muted)' }}>
-                {s.letter}
-              </span>
-              <span className="text-base mr-1">{s.icon}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold" style={{ color: 'var(--t-text-main)' }}>{s.title}</p>
-                <p className="text-xs truncate" style={{ color: 'var(--t-text-soft)' }}>✅ {s.ref}</p>
-              </div>
-              <span className="text-xs shrink-0" style={{ color: 'var(--t-text-soft)' }}>{isOpen ? '▲' : '▼'}</span>
-            </button>
-
-            {/* Content */}
-            {isOpen && (
-              <div className="px-4 pb-4 border-t" style={{ borderColor: 'var(--t-border-soft)' }}>
-                <ol className="mt-3 flex flex-col gap-2">
-                  {s.lines.map((line, i) => (
-                    <li key={i} className="flex gap-2 text-sm" style={{ color: 'var(--t-text-muted)' }}>
-                      <span className="shrink-0 font-bold" style={{ color: '#b8860b' }}>{i + 1}.</span>
-                      <span>{line}</span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            )}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
 export default function TradingPage() {
-  const [tab, setTab] = useState<'log' | 'backtest' | 'checker'>('checker')
+  const [tab, setTab] = useState<'strategy' | 'log' | 'backtest' | 'checker'>('strategy')
   const [subTab, setSubTab] = useState<'pre' | 'counter' | 'guide'>('pre')
   const [trades, setTrades] = useState<Trade[]>([])
   const [strategies, setStrategies] = useState<Strategy[]>([])
@@ -876,14 +105,15 @@ export default function TradingPage() {
           <p className="text-xs sm:text-sm mt-0.5" style={{ color: 'var(--t-text-muted)' }}>{t.tradesStrategies}</p>
         </div>
         {tab !== 'checker' && (
-          <button onClick={() => tab === 'log' ? openTradeModal() : openStratModal()}
+          <button
+            onClick={() => tab === 'log' ? openTradeModal() : openStratModal()}
             className="btn-glass btn-glass-gold px-4 py-2.5 rounded-xl text-sm font-medium">
             {tab === 'log' ? t.addTrade : t.addStrategy}
           </button>
         )}
       </div>
 
-      {/* Stats */}
+      {/* Stats — only on Log tab */}
       {tab === 'log' && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-5">
           {[
@@ -902,14 +132,68 @@ export default function TradingPage() {
 
       {/* Tabs */}
       <div className="flex gap-2 mb-5">
-        {[{ key: 'log', label: t.tradeLog }, { key: 'backtest', label: t.backtestTab }, { key: 'checker', label: '✅ Checker' }].map(tb => (
-          <button key={tb.key} onClick={() => setTab(tb.key as 'log' | 'backtest' | 'checker')}
+        {([
+          { key: 'strategy', label: '📋 Strategy' },
+          { key: 'log',      label: t.tradeLog },
+          { key: 'backtest', label: t.backtestTab },
+          { key: 'checker',  label: '✅ Checker' },
+        ] as { key: 'strategy' | 'log' | 'backtest' | 'checker'; label: string }[]).map(tb => (
+          <button key={tb.key} onClick={() => setTab(tb.key)}
             className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
             style={{ backgroundColor: tab === tb.key ? '#b8860b' : 'var(--t-item-bg)', color: tab === tb.key ? '#fff' : 'var(--t-text-muted)' }}>
             {tb.label}
           </button>
         ))}
       </div>
+
+      {/* Strategy */}
+      {tab === 'strategy' && (
+        <div className="space-y-5">
+          {/* Pre-trade checklist — always first */}
+          <PreTradeChecklist />
+
+          {/* Strategy cards */}
+          {strategies.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs font-bold uppercase tracking-widest px-1" style={{ color: 'var(--t-text-soft)' }}>📋 Mes stratégies</p>
+              {strategies.map(s => {
+                const rules: string[] = JSON.parse(s.rules)
+                return (
+                  <div key={s.id} className="rounded-2xl border-2 overflow-hidden shadow-sm" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
+                    <div className="p-4 flex items-start justify-between cursor-pointer" onClick={() => setExpandedStrat(expandedStrat === s.id ? null : s.id)}>
+                      <div>
+                        <h3 className="font-semibold" style={{ color: 'var(--t-text-main)' }}>{s.name}</h3>
+                        <div className="flex gap-3 mt-1 text-xs flex-wrap" style={{ color: 'var(--t-text-soft)' }}>
+                          <span>⏱ {s.timeframe}</span>
+                          {s.winRate && <span>WR: {s.winRate}%</span>}
+                          {s.riskReward && <span>R:R {s.riskReward}</span>}
+                        </div>
+                      </div>
+                      <div className="flex gap-1 shrink-0">
+                        <button onClick={e => { e.stopPropagation(); openStratModal(s) }} className="text-xs px-2 py-1 rounded-lg" style={{ color: 'var(--t-text-muted)', backgroundColor: 'var(--t-item-bg)' }}>{t.edit}</button>
+                        <button onClick={e => { e.stopPropagation(); delStrat(s.id) }} className="text-xs px-2 py-1 rounded-lg" style={{ color: '#c0303e', backgroundColor: '#fde8ec' }}>{t.del}</button>
+                        <span className="text-xs px-1" style={{ color: 'var(--t-text-soft)' }}>{expandedStrat === s.id ? '▲' : '▼'}</span>
+                      </div>
+                    </div>
+                    {expandedStrat === s.id && (
+                      <div className="px-4 pb-4 border-t" style={{ borderColor: 'var(--t-border-soft)' }}>
+                        <p className="text-sm mt-3 mb-3" style={{ color: 'var(--t-text-muted)' }}>{s.description}</p>
+                        <p className="text-xs font-semibold mb-2" style={{ color: '#2d6a4f' }}>{t.rulesLabel}</p>
+                        <ul className="space-y-1">
+                          {rules.map((r, i) => (
+                            <li key={i} className="text-sm flex gap-2" style={{ color: 'var(--t-text-muted)' }}><span style={{ color: '#52b788' }}>{i + 1}.</span>{r}</li>
+                          ))}
+                        </ul>
+                        {s.notes && <p className="text-sm mt-3 italic" style={{ color: 'var(--t-text-soft)' }}>{s.notes}</p>}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Trade Log */}
       {tab === 'log' && (
@@ -998,10 +282,13 @@ export default function TradingPage() {
       {/* Checker */}
       {tab === 'checker' && (
         <div className="flex flex-col gap-4">
-          {/* Sub-tabs */}
           <div className="flex gap-2">
-            {[{ key: 'pre', label: '🎯 Pre-Trade' }, { key: 'counter', label: '📊 Counter' }, { key: 'guide', label: '📚 Guide' }].map(st => (
-              <button key={st.key} onClick={() => setSubTab(st.key as 'pre' | 'counter' | 'guide')}
+            {([
+              { key: 'pre',     label: '🎯 Pre-Trade' },
+              { key: 'counter', label: '📊 Counter' },
+              { key: 'guide',   label: '📚 Guide' },
+            ] as { key: 'pre' | 'counter' | 'guide'; label: string }[]).map(st => (
+              <button key={st.key} onClick={() => setSubTab(st.key)}
                 className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
                 style={{ backgroundColor: subTab === st.key ? '#b8860b' : 'var(--t-item-bg)', color: subTab === st.key ? '#fff' : 'var(--t-text-muted)' }}>
                 {st.label}
@@ -1104,6 +391,697 @@ export default function TradingPage() {
           </div>
         </Modal>
       )}
+    </div>
+  )
+}
+
+// ── Pre-Trade Checklist ──────────────────────────────────────────
+type CheckState = Record<string, string | string[]>
+
+function getStr(v: string | string[] | undefined): string {
+  return Array.isArray(v) ? '' : (v ?? '')
+}
+function getArr(v: string | string[] | undefined): string[] {
+  return Array.isArray(v) ? v : []
+}
+
+const CHECKS: {
+  id: string
+  label: string
+  desc: string
+  options: string[]
+  multi?: boolean
+  valid: (v: string | string[]) => boolean
+  warning?: (v: string | string[]) => boolean
+}[] = [
+  {
+    id: 'pair',
+    label: 'Paire',
+    desc: 'Quelle paire tu trades ?',
+    options: ['XAUUSD', 'EURUSD', 'NZDUSD', 'GBPUSD'],
+    valid: (v) => (Array.isArray(v) ? v.length > 0 : v !== ''),
+  },
+  {
+    id: 'session',
+    label: 'Session',
+    desc: 'Tu es dans quelle session ?',
+    options: ['London', 'NY'],
+    valid: (v) => (Array.isArray(v) ? v.length > 0 : v !== ''),
+  },
+  {
+    id: 'session_open',
+    label: '15 min écoulées ?',
+    desc: 'Les 15 premières minutes de la session sont passées ?',
+    options: ['Oui', 'Non'],
+    valid: (v) => v === 'Oui',
+  },
+  {
+    id: 'losses',
+    label: 'Pertes du jour',
+    desc: 'Combien de pertes aujourd\'hui ?',
+    options: ['0', '1', '2 — STOP'],
+    valid: (v) => v === '0' || v === '1',
+  },
+  {
+    id: 'bias_4h',
+    label: 'Bias 4H',
+    desc: 'Direction hebdomadaire sur 4H ?',
+    options: ['Haussier', 'Baissier', 'Pas clair'],
+    valid: (v) => v === 'Haussier' || v === 'Baissier',
+  },
+  {
+    id: 'key_level_4h',
+    label: 'Niveau clé 4H',
+    desc: 'Quel(s) niveau(x) respecté(s)/cassé(s) sur 4H ?',
+    options: ['FVG', 'IFVG', 'OB', 'BB', 'CISD', 'Liquidité', 'Psycho'],
+    multi: true,
+    valid: (v) => Array.isArray(v) ? v.length > 0 : v !== '',
+  },
+  {
+    id: 'bias_1h',
+    label: 'Bias 1H aligné',
+    desc: 'Le bias 1H est aligné avec le bias 4H ?',
+    options: ['Oui', 'Non — Reversal PO3 (Mer+)', 'Non'],
+    valid: (v) => v === 'Oui' || v === 'Non — Reversal PO3 (Mer+)',
+    warning: (v) => v === 'Non — Reversal PO3 (Mer+)',
+  },
+  {
+    id: 'choch',
+    label: 'CHOCH 15M confirmé',
+    desc: 'Change of Character visible sur 15M ?',
+    options: ['Oui', 'Non'],
+    valid: (v) => v === 'Oui',
+  },
+  {
+    id: 'ote',
+    label: 'Zone OTE atteinte',
+    desc: 'Prix dans la zone 61.8–79% Fibonacci ?',
+    options: ['Oui', 'Non'],
+    valid: (v) => v === 'Oui',
+  },
+  {
+    id: 'confluence',
+    label: 'Confluence OTE + niveau',
+    desc: 'La zone OTE coïncide avec un niveau clé ?',
+    options: ['Oui', 'Non'],
+    valid: (v) => v === 'Oui',
+  },
+  {
+    id: 'rejection',
+    label: 'Signal de rejet 3M/5M',
+    desc: 'Chandelle de rejet dans la zone (wick / engulfing) ?',
+    options: ['Oui', 'Non'],
+    valid: (v) => v === 'Oui',
+  },
+  {
+    id: 'news',
+    label: 'News',
+    desc: 'Actualité économique imminente ?',
+    options: ['Aucune', 'News — réduire taille'],
+    valid: (v) => (Array.isArray(v) ? v.length > 0 : v !== ''),
+    warning: (v) => v === 'News — réduire taille',
+  },
+]
+
+function MultiGroup({ options, value, onChange }: { options: string[]; value: string[]; onChange: (v: string[]) => void }) {
+  const toggle = (opt: string) =>
+    onChange(value.includes(opt) ? value.filter(x => x !== opt) : [...value, opt])
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-2">
+      {options.map(opt => {
+        const selected = value.includes(opt)
+        return (
+          <button
+            key={opt}
+            onClick={() => toggle(opt)}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95"
+            style={{
+              backgroundColor: selected ? '#d8f3dc' : 'var(--t-item-bg)',
+              color: selected ? '#2d6a4f' : 'var(--t-text-muted)',
+              borderColor: selected ? '#52b788' : 'var(--t-border-soft)',
+            }}
+          >
+            {selected ? '✓ ' : ''}{opt}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function RadioGroup({ options, value, onChange }: { options: string[]; value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-2">
+      {options.map(opt => {
+        const selected = value === opt
+        const isDanger = opt === '2 — STOP' || opt === 'Non' || opt === 'Pas clair'
+        const isWarning = opt === 'News — réduire taille' || opt === 'Non — Reversal PO3 (Mer+)'
+        let bg = 'var(--t-item-bg)', color = 'var(--t-text-muted)', border = 'var(--t-border-soft)'
+        if (selected) {
+          if (isDanger) { bg = '#fde8ec'; color = '#c0303e'; border = '#e57373' }
+          else if (isWarning) { bg = '#fef9e7'; color = '#b8860b'; border = '#fde68a' }
+          else { bg = '#d8f3dc'; color = '#2d6a4f'; border = '#52b788' }
+        }
+        return (
+          <button
+            key={opt}
+            onClick={() => onChange(selected ? '' : opt)}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95"
+            style={{ backgroundColor: bg, color, borderColor: border }}
+          >
+            {selected ? (isDanger ? '✗ ' : isWarning ? '⚠ ' : '✓ ') : ''}{opt}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function PreTradeChecklist() {
+  const [state, setState] = useState<CheckState>({})
+  const [open, setOpen] = useState(true)
+
+  const setStr = (id: string, v: string) => setState(s => ({ ...s, [id]: v }))
+  const setArr = (id: string, v: string[]) => setState(s => ({ ...s, [id]: v }))
+
+  const isAnswered = (c: typeof CHECKS[0]) => {
+    const v = state[c.id]
+    return c.multi ? getArr(v).length > 0 : getStr(v) !== ''
+  }
+  const answered = CHECKS.filter(isAnswered).length
+  const passed = CHECKS.filter(c => c.valid(state[c.id] ?? (c.multi ? [] : ''))).length
+  const hasWarning = CHECKS.some(c => c.warning?.(state[c.id] ?? ''))
+  const isBlocked = state['losses'] === '2 — STOP'
+  const allAnswered = answered === CHECKS.length
+  const allValid = passed === CHECKS.length
+  const verdict = isBlocked ? 'blocked' : !allAnswered ? 'incomplete' : allValid ? 'valid' : 'invalid'
+
+  const verdictStyle = {
+    blocked:    { bg: '#fde8ec', color: '#c0303e', border: '#e57373', icon: '🚫', label: 'STOP — 2 pertes atteintes, ne trade pas aujourd\'hui' },
+    incomplete: { bg: 'var(--t-item-bg)', color: 'var(--t-text-muted)', border: 'var(--t-border-soft)', icon: '⏳', label: `${answered}/${CHECKS.length} points complétés` },
+    invalid:    { bg: '#fde8ec', color: '#c0303e', border: '#e57373', icon: '❌', label: 'Setup invalide — ne pas entrer' },
+    valid:      { bg: '#d8f3dc', color: '#2d6a4f', border: '#52b788', icon: '✅', label: hasWarning ? 'Setup valide — réduire la taille (news)' : 'Setup valide — tu peux entrer' },
+  }[verdict]
+
+  return (
+    <div className="rounded-2xl border-2 overflow-hidden" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
+      {/* Header */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full p-4 flex items-center justify-between"
+        style={{ backgroundColor: 'var(--t-item-bg)' }}
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-lg">🎯</span>
+          <div className="text-left">
+            <p className="font-bold text-sm" style={{ color: 'var(--t-text-main)' }}>Checklist pré-trade</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-muted)' }}>{answered}/{CHECKS.length} points · {passed} validés</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Progress ring */}
+          <div className="relative w-8 h-8">
+            <svg className="w-8 h-8 -rotate-90" viewBox="0 0 32 32">
+              <circle cx="16" cy="16" r="12" fill="none" stroke="var(--t-border-soft)" strokeWidth="3" />
+              <circle cx="16" cy="16" r="12" fill="none"
+                stroke={verdict === 'valid' ? '#52b788' : verdict === 'blocked' || verdict === 'invalid' ? '#e57373' : '#b8860b'}
+                strokeWidth="3"
+                strokeDasharray={`${(passed / CHECKS.length) * 75.4} 75.4`}
+              />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold" style={{ color: 'var(--t-text-muted)' }}>
+              {passed}
+            </span>
+          </div>
+          <span className="text-xs" style={{ color: 'var(--t-text-soft)' }}>{open ? '▲' : '▼'}</span>
+        </div>
+      </button>
+
+      {open && (
+        <>
+          <div className="divide-y" style={{ borderColor: 'var(--t-border-soft)' }}>
+            {CHECKS.map((check, i) => {
+              const rawVal = state[check.id]
+              const strVal = getStr(rawVal)
+              const arrVal = getArr(rawVal)
+              const answered_ = check.multi ? arrVal.length > 0 : strVal !== ''
+              const isValid = check.valid(check.multi ? arrVal : strVal)
+              const isWarn = check.warning?.(strVal)
+              return (
+                <div key={check.id} className="px-4 py-3">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-xs font-bold w-4 shrink-0" style={{ color: 'var(--t-text-soft)' }}>{i + 1}</span>
+                    <p className="text-sm font-semibold flex-1" style={{ color: 'var(--t-text-main)' }}>{check.label}</p>
+                    {answered_ && (
+                      <span className="text-sm shrink-0">
+                        {isWarn ? '⚠️' : isValid ? '✅' : '❌'}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs mb-1 ml-6" style={{ color: 'var(--t-text-muted)' }}>{check.desc}</p>
+                  <div className="ml-6">
+                    {check.multi
+                      ? <MultiGroup options={check.options} value={arrVal} onChange={v => setArr(check.id, v)} />
+                      : <RadioGroup options={check.options} value={strVal} onChange={v => setStr(check.id, v)} />
+                    }
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Verdict */}
+          <div className="p-4 border-t" style={{ borderColor: 'var(--t-border-soft)' }}>
+            <div
+              className="rounded-2xl px-4 py-3 flex items-center gap-3"
+              style={{ backgroundColor: verdictStyle.bg, border: `2px solid ${verdictStyle.border}` }}
+            >
+              <span className="text-2xl shrink-0">{verdictStyle.icon}</span>
+              <p className="font-bold text-sm" style={{ color: verdictStyle.color }}>{verdictStyle.label}</p>
+            </div>
+            <button
+              onClick={() => setState({})}
+              className="w-full mt-3 py-2 rounded-xl text-xs font-semibold transition-all active:scale-95"
+              style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}
+            >
+              🔄 Réinitialiser
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ── Pre-Trade Tab (Checker sub-tab) ─────────────────────────────────────────
+const DEFAULT_CHECKS = [
+  { id: 'trend',      label: 'Trend confirmed 4H TF' },
+  { id: 'volume',     label: 'Day' },
+  { id: 'sr',         label: 'Time' },
+  { id: 'sr_jamo',    label: 'Time (Jamo)' },
+  { id: 'dop',        label: 'DOP (Daily Open Price)' },
+  { id: 'analyse_15', label: 'Analyse 15min' },
+  { id: 'key_level',  label: 'Key level' },
+  { id: 'high_low',   label: 'High/Low' },
+  { id: 'amd',        label: 'AMD' },
+  { id: 'confirm_5',  label: 'Confirmation 5min' },
+  { id: 'sl',         label: 'Stop Loss placed' },
+  { id: 'tp',         label: 'Take Profit target set' },
+  { id: 'rr',         label: 'R:R ≥ 2' },
+  { id: 'news',       label: 'No major news incoming' },
+]
+const HIGH_LOW_BTNS = [
+  { id: 'prev_high_sess', label: 'H Sess', fullLabel: 'Previous High Session' },
+  { id: 'prev_low_sess',  label: 'L Sess', fullLabel: 'Previous Low Session' },
+  { id: 'prev_day_high',  label: 'D High', fullLabel: 'Previous Day High' },
+  { id: 'prev_day_low',   label: 'D Low',  fullLabel: 'Previous Day Low' },
+]
+const JAMO_SESSION_BTNS = [
+  { key: 'jamo_london', label: 'London', time: '1am-4am',  color: '#3b82f6' },
+  { key: 'jamo_ny',     label: 'NY',     time: '8am-12am', color: '#8b5cf6' },
+]
+const KEY_LEVEL_BTNS = [
+  { key: 'OB',   color: '#f97316' },
+  { key: 'BB',   color: '#e84057' },
+  { key: 'FVG',  color: '#3b82f6' },
+  { key: 'iFVG', color: '#6366f1' },
+  { key: 'CISD', color: '#8b5cf6' },
+  { key: 'PsyN', color: '#22c55e' },
+  { key: 'Lq',   color: '#f59e0b' },
+  { key: 'NC',   color: '#94a3b8' },
+]
+const AMD_BTNS = [
+  { key: 'accum',   label: 'Accumulation', color: '#22c55e' },
+  { key: 'manip',   label: 'Manipulation', color: '#e84057' },
+  { key: 'dist',    label: 'Distribution', color: '#3b82f6' },
+  { key: 'retrace', label: 'Retracement',  color: '#f59e0b' },
+]
+const AMD_STACK_BTNS = [
+  { key: 'redistrib', label: 'Redistribution', color: '#ec4899' },
+  { key: 'consol',    label: 'Consolidation',  color: '#8b5cf6' },
+]
+const DOP_BTNS = [
+  { key: 'gold',  label: 'Gold',  time: '18h', color: '#b8860b' },
+  { key: 'forex', label: 'Forex', time: '17h', color: '#3b82f6' },
+]
+const PRE_CHECK_KEY = 'pre-trade-checklist-v1'
+const BIAS_BTNS = [
+  { key: 'bull', label: 'Bullish Trend', color: '#22c55e' },
+  { key: 'bear', label: 'Bearish Trend', color: '#e84057' },
+  { key: 'cons', label: 'Consolidation', color: '#f59e0b' },
+]
+const DAY_BTNS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+const SESSION_BTNS = [
+  { key: 'london', label: 'London', time: '2am-7am',  color: '#3b82f6' },
+  { key: 'ny',     label: 'NY',     time: '8am-12pm', color: '#8b5cf6' },
+  { key: 'asia',   label: 'Asia',   time: '8pm-2am',  color: '#f59e0b' },
+]
+function getNthSunday(year: number, month: number, n: number): Date {
+  const d = new Date(year, month, 1)
+  const firstSunday = d.getDay() === 0 ? 1 : 8 - d.getDay()
+  return new Date(year, month, firstSunday + (n - 1) * 7)
+}
+function isEDT(): boolean {
+  const now = new Date()
+  const y = now.getFullYear()
+  return now >= getNthSunday(y, 2, 2) && now < getNthSunday(y, 10, 1)
+}
+
+function PreTradeTab() {
+  const [checks, setChecks] = useState<Record<string, boolean>>({})
+  const [bias, setBias] = useState<string | null>(null)
+  const [activeDay, setActiveDay] = useState<string | null>(null)
+  const [activeSession, setActiveSession] = useState<string | null>(null)
+  const [priceValues, setPriceValues] = useState<Record<string, string>>({})
+  const [openPopup, setOpenPopup] = useState<string | null>(null)
+  const [popupInput, setPopupInput] = useState('')
+  const [activeJamoSession, setActiveJamoSession] = useState<string | null>(null)
+  const [activeKeyLevels, setActiveKeyLevels] = useState<string[]>([])
+  const [activeAMD, setActiveAMD] = useState<string[]>([])
+  const [activeDOP, setActiveDOP] = useState<string | null>(null)
+  const edt = isEDT()
+  const utcLabelAli  = edt ? 'Time UTC-4 (Ali)'  : 'Time UTC-5 (Ali)'
+  const utcLabelJamo = edt ? 'Time UTC-4 (Jamo)' : 'Time UTC-5 (Jamo)'
+  const initialLoaded = useRef(false)
+
+  useEffect(() => {
+    try { setChecks(JSON.parse(localStorage.getItem(PRE_CHECK_KEY) || '{}')) } catch { /**/ }
+    try { setBias(localStorage.getItem(PRE_CHECK_KEY + '-bias') || null) } catch { /**/ }
+    try { setActiveDay(localStorage.getItem(PRE_CHECK_KEY + '-day') || null) } catch { /**/ }
+    try { setActiveSession(localStorage.getItem(PRE_CHECK_KEY + '-session') || null) } catch { /**/ }
+    try { setPriceValues(JSON.parse(localStorage.getItem(PRE_CHECK_KEY + '-prices') || '{}')) } catch { /**/ }
+    try { setActiveJamoSession(localStorage.getItem(PRE_CHECK_KEY + '-jamo') || null) } catch { /**/ }
+    try { setActiveKeyLevels(JSON.parse(localStorage.getItem(PRE_CHECK_KEY + '-keylevels') || '[]')) } catch { /**/ }
+    try { setActiveAMD(JSON.parse(localStorage.getItem(PRE_CHECK_KEY + '-amd') || '[]')) } catch { /**/ }
+    try { setActiveDOP(localStorage.getItem(PRE_CHECK_KEY + '-dop') || null) } catch { /**/ }
+    fetch('/api/pretrade')
+      .then(r => r.json())
+      .then(({ data }) => {
+        const d = JSON.parse(data || '{}')
+        if (d.checks)                       setChecks(d.checks)
+        if (d.bias !== undefined)           setBias(d.bias)
+        if (d.activeDay !== undefined)      setActiveDay(d.activeDay)
+        if (d.activeSession !== undefined)  setActiveSession(d.activeSession)
+        if (d.activeJamoSession !== undefined) setActiveJamoSession(d.activeJamoSession)
+        if (d.priceValues)                  setPriceValues(d.priceValues)
+        if (d.activeKeyLevels)              setActiveKeyLevels(d.activeKeyLevels)
+        if (d.activeAMD)                    setActiveAMD(d.activeAMD)
+        if (d.activeDOP !== undefined)      setActiveDOP(d.activeDOP)
+      })
+      .catch(() => {})
+      .finally(() => { initialLoaded.current = true })
+  }, [])
+
+  useEffect(() => {
+    if (!initialLoaded.current) return
+    const payload = JSON.stringify({ checks, bias, activeDay, activeSession, activeJamoSession, priceValues, activeKeyLevels, activeAMD, activeDOP })
+    const timer = setTimeout(() => {
+      fetch('/api/pretrade', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: payload }) })
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [checks, bias, activeDay, activeSession, activeJamoSession, priceValues, activeKeyLevels, activeAMD, activeDOP])
+
+  const toggle = (id: string) => { const next = { ...checks, [id]: !checks[id] }; setChecks(next); localStorage.setItem(PRE_CHECK_KEY, JSON.stringify(next)) }
+  const toggleBias = (key: string) => { const next = bias === key ? null : key; setBias(next); next ? localStorage.setItem(PRE_CHECK_KEY + '-bias', next) : localStorage.removeItem(PRE_CHECK_KEY + '-bias') }
+  const toggleDay = (day: string) => { const next = activeDay === day ? null : day; setActiveDay(next); next ? localStorage.setItem(PRE_CHECK_KEY + '-day', next) : localStorage.removeItem(PRE_CHECK_KEY + '-day') }
+  const toggleSession = (key: string) => { const next = activeSession === key ? null : key; setActiveSession(next); next ? localStorage.setItem(PRE_CHECK_KEY + '-session', next) : localStorage.removeItem(PRE_CHECK_KEY + '-session') }
+  const openPricePopup = (id: string) => { setPopupInput(priceValues[id] || ''); setOpenPopup(id) }
+  const confirmPrice = () => {
+    if (!openPopup) return
+    const next = { ...priceValues, [openPopup]: popupInput.trim() }
+    if (!popupInput.trim()) delete next[openPopup]
+    setPriceValues(next); localStorage.setItem(PRE_CHECK_KEY + '-prices', JSON.stringify(next)); setOpenPopup(null)
+  }
+  const toggleJamoSession = (key: string) => { const next = activeJamoSession === key ? null : key; setActiveJamoSession(next); next ? localStorage.setItem(PRE_CHECK_KEY + '-jamo', next) : localStorage.removeItem(PRE_CHECK_KEY + '-jamo') }
+  const toggleDOP = (key: string) => { const next = activeDOP === key ? null : key; setActiveDOP(next); next ? localStorage.setItem(PRE_CHECK_KEY + '-dop', next) : localStorage.removeItem(PRE_CHECK_KEY + '-dop') }
+  const toggleAMD = (key: string) => { const next = activeAMD.includes(key) ? activeAMD.filter(k => k !== key) : [...activeAMD, key]; setActiveAMD(next); localStorage.setItem(PRE_CHECK_KEY + '-amd', JSON.stringify(next)) }
+  const resetPrices = () => { const next = { ...priceValues }; HIGH_LOW_BTNS.forEach(b => delete next[b.id]); setPriceValues(next); localStorage.setItem(PRE_CHECK_KEY + '-prices', JSON.stringify(next)) }
+  const toggleKeyLevel = (key: string) => { const next = activeKeyLevels.includes(key) ? activeKeyLevels.filter(k => k !== key) : [...activeKeyLevels, key]; setActiveKeyLevels(next); localStorage.setItem(PRE_CHECK_KEY + '-keylevels', JSON.stringify(next)) }
+  const reset = () => {
+    setChecks({}); setBias(null); setActiveDay(null); setActiveSession(null); setPriceValues({}); setActiveJamoSession(null); setActiveKeyLevels([]); setActiveAMD([])
+    ;[PRE_CHECK_KEY, PRE_CHECK_KEY+'-bias', PRE_CHECK_KEY+'-day', PRE_CHECK_KEY+'-session', PRE_CHECK_KEY+'-prices', PRE_CHECK_KEY+'-jamo', PRE_CHECK_KEY+'-keylevels', PRE_CHECK_KEY+'-amd', PRE_CHECK_KEY+'-dop'].forEach(k => localStorage.removeItem(k))
+  }
+  const done = DEFAULT_CHECKS.filter(c => checks[c.id]).length
+  const allGood = done === DEFAULT_CHECKS.length
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="rounded-2xl p-4 border-2" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: allGood ? '#22c55e' : 'var(--t-border-soft)' }}>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#b8860b' }}>🎯 Pre-Trade Checklist</p>
+          <button onClick={reset} className="text-xs px-2 py-1 rounded-lg" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>Reset</button>
+        </div>
+        <div className="h-2 rounded-full overflow-hidden mb-1" style={{ backgroundColor: 'var(--t-item-bg)' }}>
+          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${(done / DEFAULT_CHECKS.length) * 100}%`, background: allGood ? '#22c55e' : 'linear-gradient(90deg,#d4a017,#b8860b)' }} />
+        </div>
+        <p className="text-xs font-semibold" style={{ color: allGood ? '#16a34a' : 'var(--t-text-muted)' }}>
+          {allGood ? '✅ Ready to trade!' : `${done} / ${DEFAULT_CHECKS.length} conditions`}
+        </p>
+      </div>
+
+      {openPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }} onClick={() => setOpenPopup(null)}>
+          <div className="rounded-2xl p-5 w-72 flex flex-col gap-3" style={{ backgroundColor: 'var(--t-card-bg)', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }} onClick={e => e.stopPropagation()}>
+            <p className="text-sm font-bold" style={{ color: 'var(--t-text-main)' }}>
+              {HIGH_LOW_BTNS.find(b => b.id === openPopup)?.fullLabel ?? DEFAULT_CHECKS.find(c => c.id === openPopup)?.label}
+            </p>
+            <input type="number" step="any" autoFocus placeholder="Enter price..." value={popupInput} onChange={e => setPopupInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') confirmPrice(); if (e.key === 'Escape') setOpenPopup(null) }} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: '#b8860b' }} />
+            <div className="flex gap-2">
+              <button onClick={() => setOpenPopup(null)} className="flex-1 py-2 rounded-xl text-sm font-medium" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>Cancel</button>
+              <button onClick={confirmPrice} className="flex-1 py-2 rounded-xl text-sm font-bold text-white" style={{ background: 'linear-gradient(135deg,#d4a017,#b8860b)' }}>Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-2">
+        {DEFAULT_CHECKS.map(c => {
+          const isChecked = !!checks[c.id]
+          const displayLabel = c.id === 'sr' ? utcLabelAli : c.id === 'sr_jamo' ? utcLabelJamo : c.label
+          return (
+            <div key={c.id} className="flex items-center gap-3 px-4 py-3 rounded-2xl border-2 transition-all"
+              style={{ backgroundColor: isChecked ? 'rgba(34,197,94,0.08)' : 'var(--t-card-bg)', borderColor: isChecked ? '#22c55e' : 'var(--t-border-soft)' }}>
+              <button onClick={() => toggle(c.id)} className="w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all"
+                style={{ borderColor: isChecked ? '#22c55e' : '#d1d5db', backgroundColor: isChecked ? '#22c55e' : 'transparent' }}>
+                {isChecked && <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><polyline points="2,6 5,9 10,3"/></svg>}
+              </button>
+              <span onClick={() => toggle(c.id)} className="text-sm font-semibold cursor-pointer"
+                style={{ color: isChecked ? '#16a34a' : 'var(--t-text-main)', textDecoration: isChecked ? 'line-through' : 'none',
+                  flex: ['volume','trend','sr','sr_jamo','dop','key_level','high_low','amd'].includes(c.id) ? '1' : '0 0 auto' }}>
+                {displayLabel}
+              </span>
+              {!['volume','trend','sr','sr_jamo','dop','key_level','high_low','amd'].includes(c.id) && <span className="flex-1" />}
+              {c.id === 'volume' && (
+                <div className="flex gap-1.5" style={{ width: '66%' }}>
+                  {DAY_BTNS.map(d => (
+                    <button key={d} onClick={() => toggleDay(d)} className="flex-1 rounded-xl font-bold transition-all active:scale-95"
+                      style={{ fontSize: 11, padding: '5px 0', border: '2px solid #b8860b', backgroundColor: activeDay === d ? 'rgba(184,134,11,0.45)' : 'transparent', color: activeDay === d ? '#fff' : '#b8860b' }}>{d}</button>
+                  ))}
+                </div>
+              )}
+              {c.id === 'trend' && (
+                <div className="flex gap-1.5" style={{ width: '66%' }}>
+                  {BIAS_BTNS.map(b => (
+                    <button key={b.key} onClick={() => toggleBias(b.key)} className="flex-1 rounded-xl font-bold transition-all active:scale-95"
+                      style={{ fontSize: 11, padding: '5px 0', border: `2px solid ${b.color}`, backgroundColor: bias === b.key ? `${b.color}73` : 'transparent', color: bias === b.key ? '#fff' : b.color }}>{b.label}</button>
+                  ))}
+                </div>
+              )}
+              {c.id === 'sr' && (
+                <div className="flex gap-1.5" style={{ width: '66%' }}>
+                  {SESSION_BTNS.map(s => (
+                    <button key={s.key} onClick={() => toggleSession(s.key)} className="flex-1 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-1"
+                      style={{ fontSize: 11, padding: '5px 2px', border: `2px solid ${s.color}`, backgroundColor: activeSession === s.key ? `${s.color}73` : 'transparent', color: activeSession === s.key ? '#fff' : s.color }}>
+                      <span>{s.label}</span><span style={{ fontSize: 8, opacity: 0.8 }}>{s.time}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {c.id === 'sr_jamo' && (
+                <div className="flex gap-1.5" style={{ width: '66%' }}>
+                  {JAMO_SESSION_BTNS.map(s => (
+                    <button key={s.key} onClick={() => toggleJamoSession(s.key)} className="flex-1 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-1"
+                      style={{ fontSize: 11, padding: '5px 2px', border: `2px solid ${s.color}`, backgroundColor: activeJamoSession === s.key ? `${s.color}73` : 'transparent', color: activeJamoSession === s.key ? '#fff' : s.color }}>
+                      <span>{s.label}</span><span style={{ fontSize: 8, opacity: 0.8 }}>{s.time}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {c.id === 'key_level' && (
+                <div style={{ width: '66%', flexShrink: 0, display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6 }}>
+                  {KEY_LEVEL_BTNS.map(kb => (
+                    <button key={kb.key} onClick={() => toggleKeyLevel(kb.key)} className="rounded-xl font-bold transition-all active:scale-95"
+                      style={{ fontSize: 12, padding: '6px 4px', border: `2px solid ${kb.color}`, backgroundColor: activeKeyLevels.includes(kb.key) ? `${kb.color}73` : 'transparent', color: activeKeyLevels.includes(kb.key) ? '#fff' : kb.color }}>{kb.key}</button>
+                  ))}
+                </div>
+              )}
+              {c.id === 'dop' && (
+                <div className="flex gap-1.5" style={{ width: '66%', flexShrink: 0 }}>
+                  {DOP_BTNS.map(b => (
+                    <button key={b.key} onClick={() => toggleDOP(b.key)} className="flex-1 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-1"
+                      style={{ fontSize: 11, padding: '5px 2px', border: `2px solid ${b.color}`, backgroundColor: activeDOP === b.key ? `${b.color}73` : 'transparent', color: activeDOP === b.key ? '#fff' : b.color }}>
+                      <span>{b.label}</span><span style={{ fontSize: 9, opacity: 0.85 }}>{b.time}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {c.id === 'amd' && (
+                <div className="no-scrollbar amd-container">
+                  <div className="amd-inner">
+                    {AMD_BTNS.map(b => (
+                      <button key={b.key} onClick={() => toggleAMD(b.key)} className="amd-btn-main rounded-xl font-bold transition-all active:scale-95"
+                        style={{ fontSize: 10, padding: '5px 10px', border: `2px solid ${b.color}`, backgroundColor: activeAMD.includes(b.key) ? `${b.color}73` : 'transparent', color: activeAMD.includes(b.key) ? '#fff' : b.color }}>{b.label}</button>
+                    ))}
+                    <div className="amd-stack">
+                      {AMD_STACK_BTNS.map(b => (
+                        <button key={b.key} onClick={() => toggleAMD(b.key)} className="rounded-xl font-bold transition-all active:scale-95"
+                          style={{ fontSize: 10, padding: '3px 10px', border: `2px solid ${b.color}`, backgroundColor: activeAMD.includes(b.key) ? `${b.color}73` : 'transparent', color: activeAMD.includes(b.key) ? '#fff' : b.color }}>{b.label}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {c.id === 'high_low' && (
+                <button onClick={resetPrices} className="shrink-0 rounded-lg transition-all active:scale-90"
+                  style={{ fontSize: 11, padding: '3px 7px', border: '1.5px solid #d1d5db', color: '#9ca3af', backgroundColor: 'transparent' }} title="Reset prices">↺</button>
+              )}
+              {c.id === 'high_low' && (
+                <div className="flex gap-1.5" style={{ width: '66%' }}>
+                  {HIGH_LOW_BTNS.map(hb => (
+                    <button key={hb.id} onClick={() => openPricePopup(hb.id)} className="flex-1 rounded-xl transition-all active:scale-95 flex flex-col items-center"
+                      style={{ padding: '4px 2px', border: '2px solid #b8860b', backgroundColor: priceValues[hb.id] ? 'rgba(184,134,11,0.15)' : 'transparent' }}>
+                      <span style={{ fontSize: 9, color: '#9ca3af', fontWeight: 600 }}>{hb.label}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: priceValues[hb.id] ? '#b8860b' : '#9ca3af' }}>{priceValues[hb.id] || '--'}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      <button onClick={reset} className="w-full rounded-xl text-sm font-bold transition-all active:scale-95"
+        style={{ padding: '10px', border: '2px solid #e84057', color: '#e84057', backgroundColor: 'transparent' }}>
+        🔄 Reset All
+      </button>
+    </div>
+  )
+}
+
+// ── Counter Tab ──────────────────────────────────────────────────────────────
+type CheckerItem = { id: string; title: string; plus: number; minus: number }
+const CHECKER_KEY = 'trading-checker-v1'
+function loadChecker(): CheckerItem[] { try { return JSON.parse(localStorage.getItem(CHECKER_KEY) || '[]') } catch { return [] } }
+function saveChecker(items: CheckerItem[]) { localStorage.setItem(CHECKER_KEY, JSON.stringify(items)) }
+
+function CheckerTab() {
+  const [items, setItems] = useState<CheckerItem[]>([])
+  const [input, setInput] = useState('')
+  useEffect(() => { setItems(loadChecker()) }, [])
+  const add = () => {
+    if (!input.trim()) return
+    const next = [...items, { id: Date.now().toString(), title: input.trim(), plus: 0, minus: 0 }]
+    setItems(next); saveChecker(next); setInput('')
+  }
+  const update = (id: string, field: 'plus' | 'minus', delta: number) => {
+    const next = items.map(i => i.id === id ? { ...i, [field]: Math.max(0, i[field] + delta) } : i)
+    setItems(next); saveChecker(next)
+  }
+  const remove = (id: string) => { const next = items.filter(i => i.id !== id); setItems(next); saveChecker(next) }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="rounded-2xl p-4 border-2" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
+        <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: '#b8860b' }}>✚ New Checker</p>
+        <div className="flex gap-2">
+          <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') add() }} placeholder="Checker title..."
+            className="flex-1 px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }} />
+          <button onClick={add} className="px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all active:scale-95"
+            style={{ background: 'linear-gradient(135deg,#d4a017,#b8860b)' }}>Confirm</button>
+        </div>
+      </div>
+      {items.length === 0 ? (
+        <div className="text-center py-14 rounded-2xl" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-soft)' }}>
+          <p className="text-4xl mb-2">📋</p><p className="text-sm font-medium">Add your first checker above</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {items.map(item => (
+            <div key={item.id} className="rounded-2xl border-2 p-4" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
+              <div className="flex items-center justify-between mb-4">
+                <p className="font-bold text-base" style={{ color: 'var(--t-text-main)' }}>{item.title}</p>
+                <button onClick={() => remove(item.id)} className="text-xs px-2 py-1 rounded-lg" style={{ color: '#c0303e', backgroundColor: '#fde8ec' }}>✕</button>
+              </div>
+              <div className="flex gap-3">
+                <div className="flex-1 flex flex-col items-center gap-2">
+                  <button onClick={() => update(item.id, 'plus', 1)} className="w-full py-3 rounded-xl text-xl font-black transition-all active:scale-95"
+                    style={{ background: 'linear-gradient(135deg,#22c55e,#15803d)', color: '#fff' }}>＋</button>
+                  <span className="text-2xl font-black tabular-nums" style={{ color: '#16a34a' }}>{item.plus}</span>
+                </div>
+                <div className="w-px my-1" style={{ backgroundColor: 'var(--t-border-soft)' }} />
+                <div className="flex-1 flex flex-col items-center gap-2">
+                  <button onClick={() => update(item.id, 'minus', 1)} className="w-full py-3 rounded-xl text-xl font-black transition-all active:scale-95"
+                    style={{ background: 'linear-gradient(135deg,#e84057,#c0303e)', color: '#fff' }}>－</button>
+                  <span className="text-2xl font-black tabular-nums" style={{ color: '#c0303e' }}>{item.minus}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Strategy Guide Tab ───────────────────────────────────────────────────────
+const STEPS = [
+  { letter: 'A', icon: '📅', title: 'Day & News filter', ref: 'Day · No major news incoming', lines: ['Select the current day on the checklist.','Prefer Tuesday → Wednesday → Thursday (highest probability).','Avoid Mondays (Asian manipulation carry-over) and Fridays (low liquidity, early close).','Check economic calendar — skip the session if NFP, FOMC or CPI drops within the next 2h.'] },
+  { letter: 'B', icon: '🕯️', title: 'Mark the Daily Open Price (DOP)', ref: 'DOP (Daily Open Price)', lines: ['Gold: DOP is fixed at 18h00 (prior day NY close).','Forex: DOP is fixed at 17h00.','Draw a horizontal line at the DOP on your chart.','Price will often gravitate back to this level — it is a magnet and a bias reference.'] },
+  { letter: 'C', icon: '📍', title: 'Mark Previous Levels (H/L)', ref: 'High/Low (PDH · PDL · PSH · PSL)', lines: ['Input Previous Day High (PDH) and Previous Day Low (PDL) in the High/Low inputs.','Input Previous Session High (PSH) and Previous Session Low (PSL).','These are the key liquidity pools — Smart Money will target them first.','Draw these levels on every TF you will trade.'] },
+  { letter: 'D', icon: '📊', title: 'Determine bias on 4H TF', ref: 'Trend confirmed 4H TF → Bullish / Bearish / Consolidation', lines: ['Open the 4H chart.','Ask: is price making Higher Highs + Higher Lows (Bullish), Lower Highs + Lower Lows (Bearish), or ranging (Consolidation)?','Bullish bias → look ONLY for long setups in the session.','Bearish bias → look ONLY for short setups.','Consolidation → wait for a break or skip the session.','Mark bias button on checklist.'] },
+  { letter: 'E', icon: '⏰', title: 'Select your session & confirm time', ref: 'Time UTC-4 (Ali) · Time UTC-4 (Jamo)', lines: ['Ali method — London: 2am–7am | NY: 8am–12pm.','Jamo method — London: 1am–4am | NY: 8am–12am.','The highest-probability window is 2–3h after the session open.','Select the active session on the checklist.','Do NOT trade outside your selected session window.'] },
+  { letter: 'F', icon: '🔄', title: 'Read the AMD phase', ref: 'AMD → Accumulation · Manipulation · Distribution · Retracement · Redistribution · Consolidation', lines: ['Accumulation: price ranging tightly — Smart Money loading positions.','Manipulation (Stop Hunt): price spikes above/below the range to grab liquidity, then reverses.','Distribution: the real directional move begins — this is your entry zone.','Retracement: price pulls back into a discount/premium before continuing.','Redistribution: second push in the same direction after a retracement.','Wait for the Manipulation phase to complete before entering — entering in Accumulation is too early.'] },
+  { letter: 'G', icon: '🔎', title: 'Identify Key Levels on 15min TF', ref: 'Key level: OB · BB · FVG · iFVG · CISD · PsyN · Lq · NC', lines: ['Open 15min chart. Mark all relevant structures in the direction of your 4H bias.','OB (Order Block): last opposing candle before a strong impulse move.','BB (Breaker Block): an OB that was broken through — now acts as resistance/support.','FVG (Fair Value Gap): 3-candle imbalance — price often returns to fill it.','iFVG (Inverse FVG): a filled FVG that flips into support/resistance.','CISD (Change In State of Delivery): structural shift confirming the new direction.','PsyN (Psychological Number): round price levels (.00, .50) — strong magnets.','Lq (Liquidity): equal highs/lows, old session highs/lows — where stops are sitting.'] },
+  { letter: 'H', icon: '📈', title: 'Analyse 15min — wait for the setup', ref: 'Analyse 15min', lines: ['Stay on the 15min chart.','Wait for price to reach one of your key levels (OB, FVG, PsyN, PDH/PDL…).','Confirm AMD context: the Manipulation spike should be visible and over.','Look for a Market Structure Shift (MSS) — a break of a short-term swing point in your bias direction.','DO NOT enter until MSS is confirmed on this timeframe.'] },
+  { letter: 'I', icon: '✅', title: 'Confirm entry on 5min TF', ref: 'Confirmation 5min', lines: ['Drop to 5min chart only after 15min MSS is confirmed.','Look for: a displacement candle, a 5min FVG or OB forming at the key level.','Enter on the reaction to the 5min key level (limit order into OB/FVG) or on the close of the confirmation candle.','This is your entry — no earlier.'] },
+  { letter: 'J', icon: '🎯', title: 'Execute — SL, TP, R:R', ref: 'Stop Loss · Take Profit · R:R ≥ 2', lines: ['Stop Loss: place it 2–5 pips beyond the key level that triggered entry (below OB low / above OB high).','Take Profit: target the nearest significant liquidity pool in your bias direction (PDH, PDL, PSH, PSL, PsyN).','Calculate R:R — if R:R < 2, skip the trade. Move TP further or wait for a better entry.','Confirm R:R ≥ 2 on checklist before submitting the order.','Once in trade: do not move SL against the position. Let the trade breathe.'] },
+]
+
+function StrategyGuideTab() {
+  const [open, setOpen] = useState<string | null>(null)
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="rounded-2xl p-4 border-2" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
+        <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#b8860b' }}>📚 ICT / SMC Strategy — A to J</p>
+        <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Every step maps to an item in your Pre-Trade checklist. Follow in order.</p>
+      </div>
+      {STEPS.map(s => {
+        const isOpen = open === s.letter
+        return (
+          <div key={s.letter} className="rounded-2xl border-2 overflow-hidden transition-all" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: isOpen ? '#b8860b' : 'var(--t-border-soft)' }}>
+            <button className="w-full flex items-center gap-3 px-4 py-3 text-left" onClick={() => setOpen(isOpen ? null : s.letter)}>
+              <span className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black shrink-0" style={{ backgroundColor: isOpen ? '#b8860b' : 'var(--t-item-bg)', color: isOpen ? '#fff' : 'var(--t-text-muted)' }}>{s.letter}</span>
+              <span className="text-base mr-1">{s.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold" style={{ color: 'var(--t-text-main)' }}>{s.title}</p>
+                <p className="text-xs truncate" style={{ color: 'var(--t-text-soft)' }}>✅ {s.ref}</p>
+              </div>
+              <span className="text-xs shrink-0" style={{ color: 'var(--t-text-soft)' }}>{isOpen ? '▲' : '▼'}</span>
+            </button>
+            {isOpen && (
+              <div className="px-4 pb-4 border-t" style={{ borderColor: 'var(--t-border-soft)' }}>
+                <ol className="mt-3 flex flex-col gap-2">
+                  {s.lines.map((line, i) => (
+                    <li key={i} className="flex gap-2 text-sm" style={{ color: 'var(--t-text-muted)' }}>
+                      <span className="shrink-0 font-bold" style={{ color: '#b8860b' }}>{i + 1}.</span><span>{line}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

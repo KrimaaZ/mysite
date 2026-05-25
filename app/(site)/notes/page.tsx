@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Modal from '@/components/Modal'
 import { useLang } from '@/lib/lang'
 
 type Category = { id: number; name: string; color: string; emoji: string; createdAt: string }
 type QuizQ = { q: string; opts: string[]; ans: number }
 type Note = { id: number; categoryId: number; title: string; rules: string; examples: string; quiz?: string | null; createdAt: string }
+type WordPair = { prompt: string; answer: string; noteTitle: string }
 
 const PRESET_COLORS = [
   '#2d6a4f', '#40916c', '#1e6091', '#6a2d6a', '#6a2d2d',
@@ -18,7 +19,24 @@ const PERSONAL_NOTES_KEY = 'personal_notes_content'
 const emptyNote = { categoryId: '', title: '', rules: '', examples: '', quiz: '' }
 const emptyCat = { name: '', emoji: '📝', color: '#2d6a4f' }
 
-type Tab = 'spanish' | 'personal'
+type Tab = 'spanish' | 'personal' | 'practice'
+
+function normalize(s: string) {
+  return s
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+// Returns true if the user's input matches any slash-separated alternative
+function isCorrectAnswer(input: string, expected: string): boolean {
+  const normInput = normalize(input)
+  return expected.split('/').some(alt => normalize(alt) === normInput)
+}
 
 export default function NotesPage() {
   const { t } = useLang()
@@ -49,6 +67,15 @@ export default function NotesPage() {
   const [titleDraft, setTitleDraft] = useState('')
   const titleInputRef = useRef<HTMLInputElement>(null)
 
+  // ── Practice state ──
+  const [practiceCatId, setPracticeCatId] = useState<number | null>(null)
+  const [wordPairs, setWordPairs] = useState<WordPair[]>([])
+  const [currentPair, setCurrentPair] = useState<{ pair: WordPair; idx: number } | null>(null)
+  const [practiceInput, setPracticeInput] = useState('')
+  const [practiceResult, setPracticeResult] = useState<'idle' | 'correct' | 'wrong'>('idle')
+  const [recentIndices, setRecentIndices] = useState<number[]>([])
+  const practiceInputRef = useRef<HTMLInputElement>(null)
+
   const loadCategories = () =>
     fetch('/api/notes/categories').then(r => r.json()).then(setCategories)
 
@@ -60,8 +87,18 @@ export default function NotesPage() {
   useEffect(() => {
     loadCategories()
     loadNotes(null)
-    const saved = localStorage.getItem(PERSONAL_NOTES_KEY)
-    if (saved) setPersonalText(saved)
+    // Load personal notes: localStorage instant, then DB overrides
+    const cached = localStorage.getItem(PERSONAL_NOTES_KEY)
+    if (cached) setPersonalText(cached)
+    fetch('/api/personal-notes')
+      .then(r => r.json())
+      .then(({ content }) => {
+        if (content) {
+          setPersonalText(content)
+          localStorage.setItem(PERSONAL_NOTES_KEY, content)
+        }
+      })
+      .catch(() => { /* offline — cached already loaded */ })
   }, [])
 
   const handleSelectCat = (id: number | null) => {
@@ -69,8 +106,15 @@ export default function NotesPage() {
     loadNotes(id)
   }
 
-  const savePersonalNotes = () => {
+  const savePersonalNotes = async () => {
+    // Save to localStorage immediately
     localStorage.setItem(PERSONAL_NOTES_KEY, personalText)
+    // Save to DB
+    await fetch('/api/personal-notes', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: personalText }),
+    })
     setPersonalSaved(true)
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     saveTimeoutRef.current = setTimeout(() => setPersonalSaved(false), 2000)
@@ -156,12 +200,57 @@ export default function NotesPage() {
     setEditingTitle(null)
   }
 
+  // ── Practice logic ──
+  const doPick = useCallback((pairs: WordPair[], recent: number[]) => {
+    if (pairs.length === 0) return
+    const allIdx = pairs.map((_, i) => i)
+    const available = pairs.length <= 5 ? allIdx : allIdx.filter(i => !recent.includes(i))
+    const idx = available[Math.floor(Math.random() * available.length)]
+    setCurrentPair({ pair: pairs[idx], idx })
+    setPracticeInput('')
+    setPracticeResult('idle')
+    setRecentIndices(prev => [...prev, idx].slice(-5))
+    setTimeout(() => practiceInputRef.current?.focus(), 80)
+  }, [])
+
+  const startPractice = async (catId: number) => {
+    setPracticeCatId(catId)
+    setCurrentPair(null)
+    setRecentIndices([])
+    const fetchedNotes: Note[] = await fetch(`/api/notes?categoryId=${catId}`).then(r => r.json())
+    const pairs: WordPair[] = []
+    for (const note of fetchedNotes) {
+      if (!note.quiz) continue
+      try {
+        const items: QuizQ[] = JSON.parse(note.quiz)
+        for (const item of items) {
+          if (!item.q || !Array.isArray(item.opts) || item.ans === undefined || !item.opts[item.ans]) continue
+          const answerParts = item.opts[item.ans].split('/').map((s: string) => s.trim()).filter(Boolean)
+          for (const ans of answerParts) {
+            pairs.push({ prompt: item.q.trim(), answer: ans, noteTitle: note.title })
+          }
+        }
+      } catch {}
+    }
+    setWordPairs(pairs)
+    doPick(pairs, [])
+  }
+
+  const confirmAnswer = () => {
+    if (!currentPair || practiceResult !== 'idle') return
+    const correct = isCorrectAnswer(practiceInput, currentPair.pair.answer)
+    setPracticeResult(correct ? 'correct' : 'wrong')
+  }
+
+  const nextWord = () => doPick(wordPairs, recentIndices)
+
   const getCatById = (id: number) => categories.find(c => c.id === id)
   const activeCatObj = activeCat != null ? categories.find(c => c.id === activeCat) : null
+  const practiceCatObj = practiceCatId != null ? categories.find(c => c.id === practiceCatId) : null
 
   return (
     <div>
-      {/* ── Hero last category ── */}
+      {/* ── Hero ── */}
       {categories.length > 0 && (
         <div className="rounded-2xl p-5 mb-5 relative overflow-hidden"
           style={{ background: 'linear-gradient(135deg, var(--t-hero-from), var(--t-hero-mid), var(--t-hero-to))' }}>
@@ -183,14 +272,17 @@ export default function NotesPage() {
       <div className="flex items-start justify-between gap-3 mb-5">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: 'var(--t-text-main)' }}>
-            {activeTab === 'spanish' ? '🇪🇸 Spanish' : '📒 Notes'}
+            {activeTab === 'spanish' ? '🇪🇸 Spanish' : activeTab === 'personal' ? '📒 Notes' : '🎯 Pratique'}
           </h1>
           {activeTab === 'spanish' && (
             <p className="text-xs sm:text-sm mt-0.5" style={{ color: 'var(--t-text-muted)' }}>
               {t.notesCount(notes.length)}
-              {activeCatObj && (
-                <span> · {activeCatObj.emoji} {activeCatObj.name}</span>
-              )}
+              {activeCatObj && <span> · {activeCatObj.emoji} {activeCatObj.name}</span>}
+            </p>
+          )}
+          {activeTab === 'practice' && practiceCatObj && (
+            <p className="text-xs sm:text-sm mt-0.5" style={{ color: 'var(--t-text-muted)' }}>
+              {practiceCatObj.emoji} {practiceCatObj.name} · {wordPairs.length} mots
             </p>
           )}
         </div>
@@ -202,7 +294,7 @@ export default function NotesPage() {
           >
             {t.addNote}
           </button>
-        ) : (
+        ) : activeTab === 'personal' ? (
           <button
             onClick={savePersonalNotes}
             className="px-4 py-2.5 rounded-xl text-sm font-semibold shrink-0 transition-all"
@@ -213,12 +305,19 @@ export default function NotesPage() {
           >
             {personalSaved ? '✓ Saved' : 'Save'}
           </button>
-        )}
+        ) : practiceCatId ? (
+          <button
+            onClick={() => { setPracticeCatId(null); setCurrentPair(null); setWordPairs([]) }}
+            className="px-4 py-2.5 rounded-xl text-sm font-semibold shrink-0 transition-all"
+            style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)', border: '1.5px solid var(--t-border-soft)' }}
+          >
+            ← Catégories
+          </button>
+        ) : null}
       </div>
 
-      {/* ── Tab bar + controls ── */}
+      {/* ── Tab bar ── */}
       <div className="flex items-center gap-3 mb-5 flex-wrap">
-        {/* Tab buttons */}
         <div className="flex rounded-xl overflow-hidden border" style={{ borderColor: 'var(--t-border-soft)' }}>
           <button
             onClick={() => setActiveTab('spanish')}
@@ -240,6 +339,17 @@ export default function NotesPage() {
             }}
           >
             📒 Notes
+          </button>
+          <button
+            onClick={() => { setActiveTab('practice'); if (practiceCatId) setPracticeCatId(null) }}
+            className="px-4 py-2 text-sm font-semibold transition-colors border-l"
+            style={{
+              backgroundColor: activeTab === 'practice' ? 'var(--t-text-main)' : 'var(--t-item-bg)',
+              color: activeTab === 'practice' ? '#74c69d' : 'var(--t-text-muted)',
+              borderColor: 'var(--t-border-soft)',
+            }}
+          >
+            🎯 Pratique
           </button>
         </div>
 
@@ -264,7 +374,6 @@ export default function NotesPage() {
                   </option>
                 ))}
               </select>
-              {/* Custom chevron */}
               <span
                 className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs"
                 style={{ color: activeCatObj ? activeCatObj.color : 'var(--t-text-muted)' }}
@@ -273,7 +382,6 @@ export default function NotesPage() {
               </span>
             </div>
 
-            {/* Edit/delete active category */}
             {activeCatObj && (
               <div className="flex gap-1 shrink-0">
                 <button
@@ -290,17 +398,6 @@ export default function NotesPage() {
                 >🗑</button>
               </div>
             )}
-
-            {/* + Category button */}
-            <button
-              onClick={openAddCat}
-              className="shrink-0 px-3 py-2 rounded-xl text-sm font-semibold transition-all"
-              style={{ backgroundColor: 'var(--t-item-bg)', color: '#2d6a4f', border: '2px dashed #a0c4a9' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#e8f5ec' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--t-item-bg)' }}
-            >
-              + {t.addCategory}
-            </button>
           </div>
         )}
       </div>
@@ -344,39 +441,82 @@ export default function NotesPage() {
             className="rounded-2xl border overflow-hidden"
             style={{ borderColor: 'var(--t-border-soft)', backgroundColor: 'var(--t-card-bg)' }}
           >
-            {/* Toolbar bar */}
             <div
               className="px-4 py-2.5 flex items-center justify-between border-b"
               style={{ backgroundColor: 'var(--t-item-bg)', borderColor: 'var(--t-border-soft)' }}
             >
-              <span className="text-xs font-semibold" style={{ color: 'var(--t-text-muted)' }}>
-                📒 My Notes
-              </span>
-              <span className="text-xs" style={{ color: 'var(--t-text-soft)' }}>
-                {personalText.length} chars
-              </span>
+              <span className="text-xs font-semibold" style={{ color: 'var(--t-text-muted)' }}>📒 My Notes</span>
+              <span className="text-xs" style={{ color: 'var(--t-text-soft)' }}>{personalText.length} chars</span>
             </div>
             <textarea
               value={personalText}
               onChange={e => { setPersonalText(e.target.value); setPersonalSaved(false) }}
               placeholder="Write your personal notes here… ideas, vocabulary you want to remember, observations, anything."
               className="w-full px-5 py-4 text-sm outline-none resize-none leading-relaxed"
-              style={{
-                minHeight: '60vh',
-                color: 'var(--t-text-main)',
-                backgroundColor: 'var(--t-card-bg)',
-              }}
+              style={{ minHeight: '60vh', color: 'var(--t-text-main)', backgroundColor: 'var(--t-card-bg)' }}
               onKeyDown={e => {
-                if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-                  e.preventDefault()
-                  savePersonalNotes()
-                }
+                if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); savePersonalNotes() }
               }}
             />
           </div>
           <p className="text-xs text-center" style={{ color: 'var(--t-text-soft)' }}>
             Saved locally in your browser · Cmd/Ctrl+S to save
           </p>
+        </div>
+      )}
+
+      {/* ── Practice tab ── */}
+      {activeTab === 'practice' && (
+        <div>
+          {!practiceCatId ? (
+            /* Category picker */
+            <div>
+              <p className="text-sm mb-4" style={{ color: 'var(--t-text-muted)' }}>
+                Choisis une catégorie pour commencer l'entraînement illimité.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                {categories.map(cat => (
+                  <button
+                    key={cat.id}
+                    onClick={() => startPractice(cat.id)}
+                    className="flex items-center gap-3 p-4 rounded-2xl text-left transition-all active:scale-95 hover:scale-[1.02]"
+                    style={{
+                      backgroundColor: cat.color + '15',
+                      border: `2px solid ${cat.color}40`,
+                    }}
+                  >
+                    <span className="text-2xl">{cat.emoji}</span>
+                    <div className="min-w-0">
+                      <p className="font-bold text-sm truncate" style={{ color: cat.color }}>{cat.name}</p>
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-soft)' }}>Pratiquer →</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : wordPairs.length === 0 ? (
+            /* No vocab */
+            <div className="text-center py-20 rounded-2xl" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-soft)' }}>
+              <p className="text-5xl mb-3">📭</p>
+              <p className="font-medium text-sm">Aucun vocabulaire trouvé dans cette catégorie.</p>
+              <button
+                onClick={() => { setPracticeCatId(null); setCurrentPair(null); setWordPairs([]) }}
+                className="mt-4 text-sm underline"
+                style={{ color: 'var(--t-primary)' }}
+              >← Retour</button>
+            </div>
+          ) : currentPair ? (
+            /* Exercise card */
+            <PracticeCard
+              pair={currentPair.pair}
+              input={practiceInput}
+              result={practiceResult}
+              inputRef={practiceInputRef}
+              onInput={setPracticeInput}
+              onConfirm={confirmAnswer}
+              onNext={nextWord}
+            />
+          ) : null}
         </div>
       )}
 
@@ -388,9 +528,7 @@ export default function NotesPage() {
         >
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--t-text-muted)' }}>
-                {t.catName}
-              </label>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--t-text-muted)' }}>{t.catName}</label>
               <input
                 value={catForm.name}
                 onChange={e => setCatForm(f => ({ ...f, name: e.target.value }))}
@@ -400,11 +538,8 @@ export default function NotesPage() {
                 autoFocus
               />
             </div>
-
             <div>
-              <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--t-text-muted)' }}>
-                {t.catEmoji}
-              </label>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--t-text-muted)' }}>{t.catEmoji}</label>
               <input
                 value={catForm.emoji}
                 onChange={e => setCatForm(f => ({ ...f, emoji: e.target.value }))}
@@ -414,11 +549,8 @@ export default function NotesPage() {
                 maxLength={4}
               />
             </div>
-
             <div>
-              <label className="block text-xs font-semibold mb-2" style={{ color: 'var(--t-text-muted)' }}>
-                {t.catColor}
-              </label>
+              <label className="block text-xs font-semibold mb-2" style={{ color: 'var(--t-text-muted)' }}>{t.catColor}</label>
               <div className="flex gap-2 flex-wrap">
                 {PRESET_COLORS.map(color => (
                   <button
@@ -434,8 +566,6 @@ export default function NotesPage() {
                 ))}
               </div>
             </div>
-
-            {/* Preview */}
             <div className="flex items-center gap-2 pt-1">
               <span className="text-xs font-medium" style={{ color: 'var(--t-text-soft)' }}>Preview:</span>
               <span
@@ -446,28 +576,12 @@ export default function NotesPage() {
               </span>
             </div>
           </div>
-
           <div className="flex gap-2 mt-5">
-            <button
-              onClick={() => setCatModal(false)}
-              className="btn-glass btn-glass-neutral flex-1 py-2.5 rounded-xl text-sm font-medium"
-            >
-              {t.cancel}
-            </button>
+            <button onClick={() => setCatModal(false)} className="btn-glass btn-glass-neutral flex-1 py-2.5 rounded-xl text-sm font-medium">{t.cancel}</button>
             {editingCatId && (
-              <button
-                onClick={() => deleteCat(editingCatId)}
-                className="px-4 py-2.5 rounded-xl text-sm font-medium"
-                style={{ backgroundColor: '#fde8ec', color: '#c0303e' }}
-              >
-                {t.deleteCategory}
-              </button>
+              <button onClick={() => deleteCat(editingCatId)} className="px-4 py-2.5 rounded-xl text-sm font-medium" style={{ backgroundColor: '#fde8ec', color: '#c0303e' }}>{t.deleteCategory}</button>
             )}
-            <button
-              onClick={saveCat}
-              disabled={catSaving || !catForm.name.trim()}
-              className="btn-glass btn-glass-green flex-1 py-2.5 rounded-xl text-sm font-medium disabled:opacity-60"
-            >
+            <button onClick={saveCat} disabled={catSaving || !catForm.name.trim()} className="btn-glass btn-glass-green flex-1 py-2.5 rounded-xl text-sm font-medium disabled:opacity-60">
               {catSaving ? t.saving : t.saveCategory}
             </button>
           </div>
@@ -476,17 +590,11 @@ export default function NotesPage() {
 
       {/* ── Note Modal ── */}
       {noteModal && (
-        <Modal
-          title={editingNoteId ? t.editNote : t.addNote}
-          onClose={() => setNoteModal(false)}
-          wide
-        >
+        <Modal title={editingNoteId ? t.editNote : t.addNote} onClose={() => setNoteModal(false)} wide>
           <div className="space-y-4">
             {!editingNoteId && (
               <div>
-                <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--t-text-muted)' }}>
-                  {t.category}
-                </label>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--t-text-muted)' }}>{t.category}</label>
                 <select
                   value={noteForm.categoryId}
                   onChange={e => setNoteForm(f => ({ ...f, categoryId: e.target.value }))}
@@ -495,18 +603,13 @@ export default function NotesPage() {
                 >
                   <option value="">— Select category —</option>
                   {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.emoji} {cat.name}
-                    </option>
+                    <option key={cat.id} value={cat.id}>{cat.emoji} {cat.name}</option>
                   ))}
                 </select>
               </div>
             )}
-
             <div>
-              <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--t-text-muted)' }}>
-                {t.title}
-              </label>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--t-text-muted)' }}>{t.title}</label>
               <input
                 value={noteForm.title}
                 onChange={e => setNoteForm(f => ({ ...f, title: e.target.value }))}
@@ -516,11 +619,8 @@ export default function NotesPage() {
                 autoFocus={!!editingNoteId}
               />
             </div>
-
             <div>
-              <label className="block text-xs font-semibold mb-1.5" style={{ color: '#2d6a4f' }}>
-                {t.noteRules}
-              </label>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: '#2d6a4f' }}>{t.noteRules}</label>
               <textarea
                 value={noteForm.rules}
                 onChange={e => setNoteForm(f => ({ ...f, rules: e.target.value }))}
@@ -530,11 +630,8 @@ export default function NotesPage() {
                 style={{ borderColor: 'var(--t-border-soft)' }}
               />
             </div>
-
             <div>
-              <label className="block text-xs font-semibold mb-1.5" style={{ color: '#b8860b' }}>
-                {t.noteExamples}
-              </label>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: '#b8860b' }}>{t.noteExamples}</label>
               <textarea
                 value={noteForm.examples}
                 onChange={e => setNoteForm(f => ({ ...f, examples: e.target.value }))}
@@ -545,14 +642,8 @@ export default function NotesPage() {
               />
             </div>
           </div>
-
           <div className="flex gap-2 mt-5">
-            <button
-              onClick={() => setNoteModal(false)}
-              className="btn-glass btn-glass-neutral flex-1 py-2.5 rounded-xl text-sm font-medium"
-            >
-              {t.cancel}
-            </button>
+            <button onClick={() => setNoteModal(false)} className="btn-glass btn-glass-neutral flex-1 py-2.5 rounded-xl text-sm font-medium">{t.cancel}</button>
             <button
               onClick={saveNote}
               disabled={noteSaving || !noteForm.title.trim() || !noteForm.categoryId}
@@ -563,6 +654,117 @@ export default function NotesPage() {
           </div>
         </Modal>
       )}
+    </div>
+  )
+}
+
+// ── PracticeCard component ──
+function PracticeCard({
+  pair, input, result, inputRef, onInput, onConfirm, onNext,
+}: {
+  pair: WordPair
+  input: string
+  result: 'idle' | 'correct' | 'wrong'
+  inputRef: React.RefObject<HTMLInputElement | null>
+  onInput: (v: string) => void
+  onConfirm: () => void
+  onNext: () => void
+}) {
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Prompt card */}
+      <div
+        className="rounded-2xl p-6 text-center relative overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, var(--t-hero-from), var(--t-hero-mid), var(--t-hero-to))' }}
+      >
+        <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.07)' }} />
+        <span
+          className="inline-block text-xs font-bold uppercase tracking-widest px-2.5 py-1 rounded-full mb-4"
+          style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'var(--t-hero-text)' }}
+        >
+          🇪🇸 Traduis
+        </span>
+        <p className="text-white font-black text-3xl leading-tight mb-2">{pair.prompt}</p>
+        <p className="text-xs mt-3" style={{ color: 'rgba(255,255,255,0.55)' }}>{pair.noteTitle}</p>
+      </div>
+
+      {/* Answer area */}
+      <div
+        className="rounded-2xl p-5"
+        style={{ backgroundColor: 'var(--t-card-bg)', border: '1.5px solid var(--t-border-soft)' }}
+      >
+        <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--t-text-muted)' }}>
+          Ta réponse
+        </p>
+
+        <input
+          ref={inputRef}
+          value={input}
+          onChange={e => onInput(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              if (result === 'idle') onConfirm()
+              else onNext()
+            }
+          }}
+          disabled={result !== 'idle'}
+          placeholder="Ta réponse…"
+          className="w-full px-4 py-3 rounded-xl text-base font-medium outline-none mb-4"
+          style={{
+            backgroundColor: result === 'correct' ? '#d8f3dc' : result === 'wrong' ? '#fde8ec' : 'var(--t-item-bg)',
+            color: result === 'correct' ? '#2d6a4f' : result === 'wrong' ? '#c0303e' : 'var(--t-text-main)',
+            border: result === 'correct' ? '2px solid #52b788' : result === 'wrong' ? '2px solid #e57373' : '2px solid var(--t-border-soft)',
+          }}
+        />
+
+        {/* Result feedback */}
+        {result !== 'idle' && (
+          <div
+            className="rounded-xl px-4 py-3 mb-4 flex items-start gap-3"
+            style={{
+              backgroundColor: result === 'correct' ? '#d8f3dc' : '#fde8ec',
+              border: `1.5px solid ${result === 'correct' ? '#52b788' : '#e57373'}`,
+            }}
+          >
+            <span className="text-xl shrink-0">{result === 'correct' ? '✅' : '❌'}</span>
+            <div>
+              {result === 'correct' ? (
+                <p className="font-bold text-sm" style={{ color: '#2d6a4f' }}>Correct ! Bien joué 🎉</p>
+              ) : (
+                <>
+                  <p className="font-bold text-sm" style={{ color: '#c0303e' }}>Pas tout à fait…</p>
+                  <p className="text-sm mt-0.5" style={{ color: '#c0303e' }}>
+                    La bonne réponse : <span className="font-black">{pair.answer}</span>
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {result === 'idle' ? (
+          <button
+            onClick={onConfirm}
+            disabled={!input.trim()}
+            className="w-full py-3 rounded-xl text-sm font-bold transition-all active:scale-95 disabled:opacity-40"
+            style={{ backgroundColor: '#2d6a4f', color: '#fff' }}
+          >
+            Vérifier ✓
+          </button>
+        ) : (
+          <button
+            onClick={onNext}
+            className="w-full py-3 rounded-xl text-sm font-bold transition-all active:scale-95"
+            style={{ background: 'linear-gradient(135deg, var(--t-hero-from), var(--t-hero-mid))', color: '#fff' }}
+          >
+            Mot suivant →
+          </button>
+        )}
+
+        <p className="text-xs text-center mt-3" style={{ color: 'var(--t-text-soft)' }}>
+          Appuie sur Entrée pour confirmer / suivant
+        </p>
+      </div>
     </div>
   )
 }

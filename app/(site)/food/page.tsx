@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Modal from '@/components/Modal'
 import { useLang } from '@/lib/lang'
+import AlimentsTab from './AlimentsTab'
 
 type Recipe = {
   id: number; title: string; description: string; ingredients: string
@@ -237,7 +238,7 @@ export default function FoodPage() {
     smoothie:  { label: t.typeSmoothie,  emoji: '🥤', color: '#40916c', bg: '#d8f3dc' },
   }
 
-  const [tab, setTab] = useState<'rotation' | 'recipes' | 'week' | 'videos' | 'list'>('rotation')
+  const [tab, setTab] = useState<'rotation' | 'recipes' | 'week' | 'videos' | 'list' | 'aliments'>('rotation')
 
   // ── Week schedule state ──────────────────────────────────────────────────
   const [weekSchedule, setWeekSchedule] = useState<WeekSchedule>(emptySchedule)
@@ -686,8 +687,8 @@ export default function FoodPage() {
 
       {/* Main tabs */}
       <div className="flex gap-2 mb-5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-        {[{ key: 'rotation', label: t.mealRotation }, { key: 'week', label: t.weekTab }, { key: 'recipes', label: t.myRecipes }, { key: 'videos', label: '🎬 Vidéos' }, { key: 'list', label: '🛒 Liste' }].map(tb => (
-          <button key={tb.key} onClick={() => setTab(tb.key as 'rotation' | 'recipes' | 'week' | 'videos' | 'list')}
+        {[{ key: 'rotation', label: t.mealRotation }, { key: 'week', label: t.weekTab }, { key: 'recipes', label: t.myRecipes }, { key: 'videos', label: '🎬 Vidéos' }, { key: 'list', label: '🛒 Liste' }, { key: 'aliments', label: '🥦 Aliments' }].map(tb => (
+          <button key={tb.key} onClick={() => setTab(tb.key as 'rotation' | 'recipes' | 'week' | 'videos' | 'list' | 'aliments')}
             className="px-4 py-2 rounded-xl text-sm font-medium transition-all relative whitespace-nowrap"
             style={tab === tb.key
               ? { backgroundColor: '#2d6a4f', color: '#fff', border: '2px solid #2d6a4f' }
@@ -1733,6 +1734,9 @@ export default function FoodPage() {
           )}
         </div>
       )}
+
+      {/* ── ALIMENTS TAB ── */}
+      {tab === 'aliments' && <AlimentsTab />}
     </div>
   )
 }
