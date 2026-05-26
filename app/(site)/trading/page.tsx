@@ -249,9 +249,8 @@ export default function TradingPage() {
                     <span className="text-xs" style={{ color: 'var(--t-text-soft)' }}>{tr.date}</span>
                   </div>
                   <div className="flex gap-1 shrink-0">
-                    <button onClick={() => analyzeAI(tr)} disabled={aiLoading} className="text-xs px-2 py-1 rounded-lg disabled:opacity-50" style={{ color: '#b8860b', backgroundColor: '#fef9e7' }}>{aiLoading ? '…' : 'AI'}</button>
                     <button onClick={() => openTradeModal(tr)} className="text-xs px-2 py-1 rounded-lg" style={{ color: 'var(--t-text-muted)', backgroundColor: 'var(--t-item-bg)' }}>{t.edit}</button>
-                    <button onClick={() => delTrade(tr.id)} className="text-xs px-2 py-1 rounded-lg" style={{ color: '#c0303e', backgroundColor: '#fde8ec' }}>{t.del}</button>
+                    <button onClick={() => delTrade(tr.id)} className="text-xs px-2 py-1 rounded-lg" style={{ color: '#c0303e', backgroundColor: '#fde8ec' }}>Delete</button>
                   </div>
                 </div>
 
