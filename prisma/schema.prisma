@@ -57,10 +57,16 @@ model Trade {
   type       String
   entry      Float
   exit       Float?
-  size       Float
+  size       Float    @default(0)
   pnl        Float?
   notes      String?
   status     String   @default("OPEN")
+  tp         Float?
+  sl         Float?
+  riskPct    Float?
+  resultPct  Float?
+  rr         Float?
+  tvLinks    String?
   createdAt  DateTime @default(now())
 }
 

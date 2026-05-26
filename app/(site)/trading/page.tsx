@@ -4,10 +4,12 @@ import { useEffect, useRef, useState } from 'react'
 import Modal from '@/components/Modal'
 import { useLang } from '@/lib/lang'
 
-type Trade = { id: number; date: string; instrument: string; type: string; entry: number; exit: number | null; size: number; pnl: number | null; notes: string | null; status: string }
+type Trade = { id: number; date: string; instrument: string; type: string; entry: number; exit: number | null; size: number; pnl: number | null; notes: string | null; status: string; tp: number | null; sl: number | null; riskPct: number | null; resultPct: number | null; rr: number | null; tvLinks: string | null }
 type Strategy = { id: number; name: string; description: string; rules: string; timeframe: string; winRate: number | null; riskReward: number | null; notes: string | null }
 
-const emptyTrade = { date: new Date().toISOString().split('T')[0], instrument: '', type: 'LONG', entry: '', exit: '', size: '', pnl: '', notes: '', status: 'OPEN' }
+const emptyTrade  = { date: new Date().toISOString().split('T')[0], instrument: '', type: 'LONG', entry: '', tp: '', sl: '', riskPct: '', resultPct: '', notes: '' }
+const emptyTvLinks = { tf5m: '', tf1h: '', tf4h: '', tfd: '', tfw: '' }
+const parseTvLinks = (s: string | null) => { try { return { ...emptyTvLinks, ...JSON.parse(s || '{}') } } catch { return { ...emptyTvLinks } } }
 const emptyStrategy = { name: '', description: '', rules: '', timeframe: '', winRate: '', riskReward: '', notes: '' }
 
 export default function TradingPage() {
@@ -18,6 +20,8 @@ export default function TradingPage() {
   const [tradeModal, setTradeModal] = useState(false)
   const [stratModal, setStratModal] = useState(false)
   const [tradeForm, setTradeForm] = useState(emptyTrade)
+  const [tvLinks,   setTvLinks]   = useState({ ...emptyTvLinks })
+  const [tvOpen,    setTvOpen]    = useState(false)
   const [stratForm, setStratForm] = useState(emptyStrategy)
   const [editTrade, setEditTrade] = useState<number | null>(null)
   const [editStrat, setEditStrat] = useState<number | null>(null)
@@ -35,12 +39,33 @@ export default function TradingPage() {
   const winRate = closedTrades.length > 0 ? Math.round((closedTrades.filter(tr => (tr.pnl || 0) > 0).length / closedTrades.length) * 100) : 0
 
   const openTradeModal = (tr?: Trade) => {
-    setTradeForm(tr ? { date: tr.date, instrument: tr.instrument, type: tr.type, entry: String(tr.entry), exit: tr.exit ? String(tr.exit) : '', size: String(tr.size), pnl: tr.pnl ? String(tr.pnl) : '', notes: tr.notes || '', status: tr.status } : emptyTrade)
-    setEditTrade(tr?.id ?? null); setTradeModal(true)
+    if (tr) {
+      setTradeForm({ date: tr.date, instrument: tr.instrument, type: tr.type, entry: String(tr.entry), tp: tr.tp ? String(tr.tp) : '', sl: tr.sl ? String(tr.sl) : '', riskPct: tr.riskPct ? String(tr.riskPct) : '', resultPct: tr.resultPct ? String(tr.resultPct) : '', notes: tr.notes || '' })
+      setTvLinks(parseTvLinks(tr.tvLinks))
+    } else {
+      setTradeForm(emptyTrade)
+      setTvLinks({ ...emptyTvLinks })
+    }
+    setTvOpen(false)
+    setEditTrade(tr?.id ?? null)
+    setTradeModal(true)
   }
   const saveTrade = async () => {
     setSaving(true)
-    await fetch(editTrade ? `/api/trading/${editTrade}` : '/api/trading', { method: editTrade ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(tradeForm) })
+    const entry = parseFloat(tradeForm.entry) || 0
+    const tp    = parseFloat(tradeForm.tp) || 0
+    const sl    = parseFloat(tradeForm.sl) || 0
+    const rrVal = entry && tp && sl && sl !== entry
+      ? tradeForm.type === 'LONG'
+        ? Number(((tp - entry) / (entry - sl)).toFixed(2))
+        : Number(((entry - tp) / (sl - entry)).toFixed(2))
+      : null
+    const hasLinks = Object.values(tvLinks).some(v => v.trim())
+    await fetch(editTrade ? `/api/trading/${editTrade}` : '/api/trading', {
+      method: editTrade ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...tradeForm, rr: rrVal, tvLinks: hasLinks ? JSON.stringify(tvLinks) : null, status: tradeForm.resultPct ? 'CLOSED' : 'OPEN' }),
+    })
     await loadTrades(); setTradeModal(false); setSaving(false)
   }
   const delTrade = async (id: number) => {
@@ -204,14 +229,24 @@ export default function TradingPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {trades.map(tr => (
+            {trades.map((tr, idx) => {
+              const tradeNum = trades.length - idx
+              const tvParsed = parseTvLinks(tr.tvLinks)
+              const hasTv    = Object.values(tvParsed).some((v: unknown) => (v as string).trim())
+              const tfLabels: { key: keyof typeof emptyTvLinks; label: string }[] = [
+                { key: 'tf5m', label: '5m' }, { key: 'tf1h', label: '1H' },
+                { key: 'tf4h', label: '4H' }, { key: 'tfd',  label: 'D'  },
+                { key: 'tfw',  label: 'W'  },
+              ]
+              return (
               <div key={tr.id} className="rounded-2xl border-2 p-4 shadow-sm" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
-                <div className="flex items-start justify-between gap-2 flex-wrap mb-2">
+                {/* Row 1 — number + direction + instrument + date + actions */}
+                <div className="flex items-start justify-between gap-2 flex-wrap mb-3">
                   <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-black px-2 py-0.5 rounded-lg" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-soft)' }}>#{tradeNum}</span>
                     <span className="text-xs font-bold px-2.5 py-1 rounded-full text-white" style={{ backgroundColor: tr.type === 'LONG' ? '#2d6a4f' : '#c0303e' }}>{tr.type}</span>
-                    <span className="font-semibold text-sm" style={{ color: 'var(--t-text-main)' }}>{tr.instrument}</span>
+                    <span className="font-bold text-sm" style={{ color: 'var(--t-text-main)' }}>{tr.instrument}</span>
                     <span className="text-xs" style={{ color: 'var(--t-text-soft)' }}>{tr.date}</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: tr.status === 'OPEN' ? '#fef9e7' : 'var(--t-item-bg)', color: tr.status === 'OPEN' ? '#b8860b' : 'var(--t-text-muted)' }}>{tr.status}</span>
                   </div>
                   <div className="flex gap-1 shrink-0">
                     <button onClick={() => analyzeAI(tr)} disabled={aiLoading} className="text-xs px-2 py-1 rounded-lg disabled:opacity-50" style={{ color: '#b8860b', backgroundColor: '#fef9e7' }}>{aiLoading ? '…' : 'AI'}</button>
@@ -219,15 +254,64 @@ export default function TradingPage() {
                     <button onClick={() => delTrade(tr.id)} className="text-xs px-2 py-1 rounded-lg" style={{ color: '#c0303e', backgroundColor: '#fde8ec' }}>{t.del}</button>
                   </div>
                 </div>
-                <div className="flex gap-3 text-sm flex-wrap">
-                  <span style={{ color: 'var(--t-text-muted)' }}>In: <strong>{tr.entry}</strong></span>
-                  {tr.exit && <span style={{ color: 'var(--t-text-muted)' }}>Out: <strong>{tr.exit}</strong></span>}
-                  <span style={{ color: 'var(--t-text-muted)' }}>{t.size}: <strong>{tr.size}</strong></span>
-                  {tr.pnl != null && <span className="font-bold" style={{ color: tr.pnl >= 0 ? '#2d6a4f' : '#c0303e' }}>{tr.pnl >= 0 ? '+' : ''}{tr.pnl}</span>}
+
+                {/* Row 2 — Entry / TP / SL / RR */}
+                <div className="grid grid-cols-4 gap-2 mb-2">
+                  {[
+                    { label: 'Entry', val: tr.entry },
+                    { label: 'TP',    val: tr.tp },
+                    { label: 'SL',    val: tr.sl },
+                  ].map(({ label, val }) => (
+                    <div key={label} className="rounded-xl px-2 py-2 text-center" style={{ backgroundColor: 'var(--t-item-bg)' }}>
+                      <p className="text-xs" style={{ color: 'var(--t-text-soft)' }}>{label}</p>
+                      <p className="text-sm font-bold" style={{ color: 'var(--t-text-main)' }}>{val ?? '—'}</p>
+                    </div>
+                  ))}
+                  <div className="rounded-xl px-2 py-2 text-center" style={{ backgroundColor: tr.rr ? (tr.rr >= 1 ? '#d8f3dc' : '#fde8ec') : 'var(--t-item-bg)' }}>
+                    <p className="text-xs" style={{ color: 'var(--t-text-soft)' }}>R:R</p>
+                    <p className="text-sm font-bold" style={{ color: tr.rr ? (tr.rr >= 1 ? '#2d6a4f' : '#c0303e') : 'var(--t-text-main)' }}>
+                      {tr.rr != null ? `${tr.rr}` : '—'}
+                    </p>
+                  </div>
                 </div>
-                {tr.notes && <p className="text-xs mt-2 italic" style={{ color: 'var(--t-text-soft)' }}>{tr.notes}</p>}
+
+                {/* Row 3 — Risk % + Result % */}
+                {(tr.riskPct != null || tr.resultPct != null) && (
+                  <div className="flex gap-2 mb-2">
+                    {tr.riskPct != null && (
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ backgroundColor: '#fef9e7', color: '#b8860b' }}>
+                        ⚠️ Risk {tr.riskPct}%
+                      </span>
+                    )}
+                    {tr.resultPct != null && (
+                      <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ backgroundColor: tr.resultPct >= 0 ? '#d8f3dc' : '#fde8ec', color: tr.resultPct >= 0 ? '#2d6a4f' : '#c0303e' }}>
+                        {tr.resultPct >= 0 ? '+' : ''}{tr.resultPct}%
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Notes */}
+                {tr.notes && <p className="text-xs mb-2 italic" style={{ color: 'var(--t-text-soft)' }}>{tr.notes}</p>}
+
+                {/* TradingView Charts */}
+                {hasTv && (
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    <span className="text-xs font-semibold" style={{ color: 'var(--t-text-soft)' }}>📺</span>
+                    {tfLabels.map(({ key, label }) =>
+                      tvParsed[key] ? (
+                        <a key={key} href={tvParsed[key]} target="_blank" rel="noopener noreferrer"
+                          className="text-xs font-bold px-2.5 py-1 rounded-full transition-all active:scale-95"
+                          style={{ backgroundColor: '#1e609122', color: '#1e6091', border: '1px solid #1e609144' }}>
+                          {label}
+                        </a>
+                      ) : null
+                    )}
+                  </div>
+                )}
               </div>
-            ))}
+              )
+            })}
           </div>
         )
       )}
@@ -300,41 +384,127 @@ export default function TradingPage() {
       )}
 
       {/* Trade Modal */}
-      {tradeModal && (
-        <Modal title={editTrade ? t.editTrade : t.logTrade} onClose={() => setTradeModal(false)}>
+      {tradeModal && (() => {
+        const entry    = parseFloat(tradeForm.entry) || 0
+        const tp       = parseFloat((tradeForm as Record<string,string>).tp) || 0
+        const sl       = parseFloat((tradeForm as Record<string,string>).sl) || 0
+        const rrCalc   = entry && tp && sl && sl !== entry
+          ? tradeForm.type === 'LONG'
+            ? ((tp - entry) / (entry - sl)).toFixed(2)
+            : ((entry - tp) / (sl - entry)).toFixed(2)
+          : null
+        const tfLabels: { key: keyof typeof emptyTvLinks; label: string }[] = [
+          { key: 'tf5m', label: '5m' }, { key: 'tf1h', label: '1H' },
+          { key: 'tf4h', label: '4H' }, { key: 'tfd',  label: 'D'  },
+          { key: 'tfw',  label: 'W'  },
+        ]
+        const tradeNum = editTrade ? (trades.length - trades.findIndex(t => t.id === editTrade)) : trades.length + 1
+        return (
+        <Modal title={`${editTrade ? '✏️ Edit' : '📝 Log'} Trade #${tradeNum}`} onClose={() => setTradeModal(false)}>
           <div className="space-y-3">
+
+            {/* Date + Instrument */}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.date}</label>
-                <input type="date" value={tradeForm.date} onChange={e => setTradeForm(f => ({ ...f, date: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }} />
+                <input type="date" value={tradeForm.date} onChange={e => setTradeForm(f => ({ ...f, date: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }} />
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.instrument}</label>
-                <input value={tradeForm.instrument} onChange={e => setTradeForm(f => ({ ...f, instrument: e.target.value }))} placeholder="BTC/USD…" className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }} />
+                <input value={tradeForm.instrument} onChange={e => setTradeForm(f => ({ ...f, instrument: e.target.value }))}
+                  placeholder="BTC/USD…" className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }} />
               </div>
-              <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.direction}</label>
-                <select value={tradeForm.type} onChange={e => setTradeForm(f => ({ ...f, type: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }}>
-                  <option value="LONG">LONG</option><option value="SHORT">SHORT</option>
-                </select>
+            </div>
+
+            {/* Direction */}
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.direction}</label>
+              <div className="grid grid-cols-2 gap-2">
+                {['LONG', 'SHORT'].map(d => (
+                  <button key={d} onClick={() => setTradeForm(f => ({ ...f, type: d }))}
+                    className="py-2.5 rounded-xl text-sm font-bold transition-all"
+                    style={{ backgroundColor: tradeForm.type === d ? (d === 'LONG' ? '#2d6a4f' : '#c0303e') : 'var(--t-item-bg)', color: tradeForm.type === d ? '#fff' : 'var(--t-text-muted)' }}>
+                    {d === 'LONG' ? '📈 LONG' : '📉 SHORT'}
+                  </button>
+                ))}
               </div>
-              <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.status}</label>
-                <select value={tradeForm.status} onChange={e => setTradeForm(f => ({ ...f, status: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }}>
-                  <option value="OPEN">OPEN</option><option value="CLOSED">CLOSED</option>
-                </select>
-              </div>
-              {[{ label: t.entry, key: 'entry' }, { label: t.exit, key: 'exit' }, { label: t.size, key: 'size' }, { label: 'P&L', key: 'pnl' }].map(({ label, key }) => (
+            </div>
+
+            {/* Entry / TP / SL / RR */}
+            <div className="grid grid-cols-2 gap-2">
+              {[{ label: 'Entry', key: 'entry' }, { label: 'TP', key: 'tp' }, { label: 'SL', key: 'sl' }].map(({ label, key }) => (
                 <div key={key}>
                   <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{label}</label>
-                  <input type="number" step="any" value={(tradeForm as Record<string, string>)[key]} onChange={e => setTradeForm(f => ({ ...f, [key]: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }} />
+                  <input type="number" step="any" value={(tradeForm as Record<string,string>)[key]}
+                    onChange={e => setTradeForm(f => ({ ...f, [key]: e.target.value }))}
+                    className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }} />
                 </div>
               ))}
+              {/* RR auto */}
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>R:R (auto)</label>
+                <div className="w-full px-3 py-2.5 rounded-xl border text-sm font-bold"
+                  style={{ borderColor: 'var(--t-border-soft)', backgroundColor: 'var(--t-item-bg)', color: rrCalc ? (parseFloat(rrCalc) >= 1 ? '#2d6a4f' : '#c0303e') : 'var(--t-text-soft)' }}>
+                  {rrCalc ? `${rrCalc} : 1` : '—'}
+                </div>
+              </div>
             </div>
+
+            {/* Risk % + Result % */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>⚠️ Risk %</label>
+                <input type="number" step="0.01" placeholder="1.5" value={(tradeForm as Record<string,string>).riskPct}
+                  onChange={e => setTradeForm(f => ({ ...f, riskPct: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>📊 Result %</label>
+                <input type="number" step="0.01" placeholder="+3.2 or -1.5" value={(tradeForm as Record<string,string>).resultPct}
+                  onChange={e => setTradeForm(f => ({ ...f, resultPct: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }} />
+              </div>
+            </div>
+
+            {/* Notes */}
             <div>
               <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.notes}</label>
-              <textarea value={tradeForm.notes} onChange={e => setTradeForm(f => ({ ...f, notes: e.target.value }))} rows={3} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none" style={{ borderColor: 'var(--t-border-soft)' }} />
+              <textarea value={tradeForm.notes} onChange={e => setTradeForm(f => ({ ...f, notes: e.target.value }))}
+                rows={2} placeholder="Setup, confluence, context…"
+                className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none" style={{ borderColor: 'var(--t-border-soft)' }} />
             </div>
+
+            {/* TradingView Links */}
+            <div>
+              <button onClick={() => setTvOpen(o => !o)}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                style={{ backgroundColor: tvOpen ? '#1e609115' : 'var(--t-item-bg)', color: tvOpen ? '#1e6091' : 'var(--t-text-muted)', border: `1.5px solid ${tvOpen ? '#1e609144' : 'transparent'}` }}>
+                <span>📺 TradingView Links</span>
+                <span className="text-xs">{tvOpen ? '▲' : '▼'}</span>
+              </button>
+              {tvOpen && (
+                <div className="mt-2 space-y-2">
+                  {tfLabels.map(({ key, label }) => (
+                    <div key={key} className="flex items-center gap-2">
+                      <span className="text-xs font-bold w-8 shrink-0 text-center px-1.5 py-1 rounded-lg"
+                        style={{ backgroundColor: '#1e609122', color: '#1e6091' }}>{label}</span>
+                      <input value={tvLinks[key]}
+                        onChange={e => setTvLinks(l => ({ ...l, [key]: e.target.value }))}
+                        placeholder={`https://www.tradingview.com/chart/...`}
+                        className="flex-1 px-3 py-2 rounded-xl border text-xs outline-none"
+                        style={{ borderColor: 'var(--t-border-soft)' }} />
+                      {tvLinks[key] && (
+                        <a href={tvLinks[key]} target="_blank" rel="noopener noreferrer"
+                          className="text-xs px-2 py-1.5 rounded-lg shrink-0 font-semibold"
+                          style={{ backgroundColor: '#1e609122', color: '#1e6091' }}>↗</a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
           </div>
           <div className="flex gap-2 mt-5">
             <button onClick={() => setTradeModal(false)} className="btn-glass btn-glass-neutral flex-1 py-2.5 rounded-xl text-sm font-medium">{t.cancel}</button>
@@ -343,7 +513,8 @@ export default function TradingPage() {
             </button>
           </div>
         </Modal>
-      )}
+        )
+      })()}
 
       {/* Strategy Modal */}
       {stratModal && (
