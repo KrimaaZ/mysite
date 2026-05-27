@@ -890,7 +890,7 @@ const SERSTAR_RAW: SerEstarRaw[] = [
 
 function SerEstarGame() {
   const questions = useMemo(() =>
-    shuffle([...SERSTAR_RAW]).map(q => ({ ...q, options: shuffle([q.correct, ...q.distractors]) })),
+    shuffle([...SERSTAR_RAW, ...SERSTAR_RAW]).map(q => ({ ...q, options: shuffle([q.correct, ...q.distractors]) })),
   [])
 
   const [idx,     setIdx]     = useState(0)
@@ -1033,7 +1033,7 @@ const GAMES = [
   { id: 'game2', label: 'Game 2', icon: '✍️', tag: 'Phrases',    desc: 'Complète les phrases',   count: `${GAME2_DATA.length} phrases`,  accent: '#fef9c3', accentText: '#854d0e' },
   { id: 'game3', label: 'Game 3', icon: '🔗', tag: 'Relier',     desc: 'Associe les mots',       count: `${MATCH_PAIRS.length} paires`,  accent: '#fae8ff', accentText: '#86198f' },
   { id: 'game4', label: 'Game 4', icon: '🎯', tag: 'Vrai/Faux',  desc: 'Vrai ou Faux ?',          count: '24 questions',                 accent: '#fff1f2', accentText: '#be123c' },
-  { id: 'game5', label: 'Game 5', icon: '🔀', tag: 'Ser/Estar',  desc: 'Ser vs Estar — 2 parties', count: `${SERSTAR_RAW.length} questions`, accent: '#ede9fe', accentText: '#5b21b6' },
+  { id: 'game5', label: 'Game 5', icon: '🔀', tag: 'Ser/Estar',  desc: 'Ser vs Estar — 2 parties', count: `${SERSTAR_RAW.length * 2} questions`, accent: '#ede9fe', accentText: '#5b21b6' },
 ]
 
 export default function GamesTab() {
