@@ -848,6 +848,184 @@ function TrueFalseGame() {
   )
 }
 
+// ── Game 5 — Ser vs Estar ─────────────────────────────────────────────────
+type SerEstarRaw = { type: 'conjugation' | 'context'; display: string; hint: string; correct: string; distractors: string[] }
+
+const SERSTAR_RAW: SerEstarRaw[] = [
+  // ── Partie 1 : Conjugaisons ──
+  { type:'conjugation', display:'yo + SER',            hint:'Je → SER (être permanent)',        correct:'soy',    distractors:['estoy','eres','somos']   },
+  { type:'conjugation', display:'tú + SER',            hint:'Tu → SER (être permanent)',        correct:'eres',   distractors:['estás','soy','son']       },
+  { type:'conjugation', display:'él / ella + SER',     hint:'Il/Elle → SER (être permanent)',   correct:'es',     distractors:['está','eres','somos']     },
+  { type:'conjugation', display:'nosotros + SER',      hint:'Nous → SER (être permanent)',      correct:'somos',  distractors:['estamos','sois','son']    },
+  { type:'conjugation', display:'vosotros + SER',      hint:'Vous → SER (être permanent)',      correct:'sois',   distractors:['estáis','somos','son']    },
+  { type:'conjugation', display:'ellos / ellas + SER', hint:'Ils/Elles → SER (être permanent)', correct:'son',    distractors:['están','somos','sois']    },
+  { type:'conjugation', display:'yo + ESTAR',          hint:'Je → ESTAR (état temporaire)',     correct:'estoy',  distractors:['soy','estás','estamos']   },
+  { type:'conjugation', display:'tú + ESTAR',          hint:'Tu → ESTAR (état temporaire)',     correct:'estás',  distractors:['eres','estoy','están']    },
+  { type:'conjugation', display:'él / ella + ESTAR',   hint:'Il/Elle → ESTAR (état temporaire)',correct:'está',   distractors:['es','estás','estamos']    },
+  { type:'conjugation', display:'nosotros + ESTAR',    hint:'Nous → ESTAR (état temporaire)',   correct:'estamos',distractors:['somos','estáis','están']  },
+  { type:'conjugation', display:'vosotros + ESTAR',    hint:'Vous → ESTAR (état temporaire)',   correct:'estáis', distractors:['sois','estamos','están']  },
+  { type:'conjugation', display:'ellos / ellas + ESTAR',hint:'Ils → ESTAR (état temporaire)',   correct:'están',  distractors:['son','estamos','estáis']  },
+  // ── Partie 2 : Contexte ──
+  { type:'context', display:'Ella ___ doctora.',            hint:'Elle est médecin. → profession (SER)',          correct:'es',     distractors:['está','eres','están']    },
+  { type:'context', display:'Yo ___ de Marruecos.',         hint:'Je suis du Maroc. → origine (SER)',             correct:'soy',    distractors:['estoy','eres','somos']   },
+  { type:'context', display:'La casa ___ muy grande.',      hint:'La maison est grande. → caractère (SER)',       correct:'es',     distractors:['está','son','somos']     },
+  { type:'context', display:'Ellos ___ estudiantes.',       hint:'Ils sont étudiants. → identité (SER)',          correct:'son',    distractors:['están','es','somos']     },
+  { type:'context', display:'Tú ___ muy inteligente.',      hint:'Tu es intelligent(e). → qualité (SER)',         correct:'eres',   distractors:['estás','soy','es']       },
+  { type:'context', display:'Nosotros ___ amigos.',         hint:'Nous sommes amis. → relation (SER)',            correct:'somos',  distractors:['estamos','son','sois']   },
+  { type:'context', display:'El libro ___ de papel.',       hint:'Le livre est en papier. → matière (SER)',       correct:'es',     distractors:['está','son','estamos']   },
+  { type:'context', display:'¿De dónde ___ tú?',           hint:'Tu viens d\'où ? → origine (SER)',              correct:'eres',   distractors:['estás','soy','es']       },
+  { type:'context', display:'La fiesta ___ el viernes.',    hint:'La fête c\'est vendredi. → événement (SER)',    correct:'es',     distractors:['está','son','están']     },
+  { type:'context', display:'Mi hermano ___ médico.',       hint:'Mon frère est médecin. → profession (SER)',     correct:'es',     distractors:['está','eres','somos']    },
+  { type:'context', display:'Yo ___ en casa.',              hint:'Je suis à la maison. → lieu (ESTAR)',           correct:'estoy',  distractors:['soy','estás','estamos']  },
+  { type:'context', display:'Ella ___ cansada hoy.',        hint:'Elle est fatiguée. → état temporaire (ESTAR)',  correct:'está',   distractors:['es','estás','estamos']   },
+  { type:'context', display:'¿Dónde ___ el gato?',          hint:'Où est le chat ? → lieu (ESTAR)',               correct:'está',   distractors:['es','estoy','están']     },
+  { type:'context', display:'Nosotros ___ muy contentos.',  hint:'Nous sommes contents. → émotion (ESTAR)',       correct:'estamos',distractors:['somos','estáis','están'] },
+  { type:'context', display:'El café ___ frío.',            hint:'Le café est froid. → état temp. (ESTAR)',       correct:'está',   distractors:['es','estoy','están']     },
+  { type:'context', display:'¿Cómo ___ tú?',               hint:'Comment vas-tu ? → état (ESTAR)',               correct:'estás',  distractors:['eres','estoy','está']    },
+  { type:'context', display:'Los niños ___ en el parque.',  hint:'Les enfants sont au parc. → lieu (ESTAR)',      correct:'están',  distractors:['son','estamos','estáis'] },
+  { type:'context', display:'Mi madre ___ enferma.',        hint:'Ma mère est malade. → état temp. (ESTAR)',      correct:'está',   distractors:['es','estás','estamos']   },
+  { type:'context', display:'Vosotros ___ muy ocupados.',   hint:'Vous êtes très occupés. → état (ESTAR)',        correct:'estáis', distractors:['sois','estamos','están'] },
+  { type:'context', display:'Yo ___ listo para salir.',     hint:'Je suis prêt à partir. → état (ESTAR)',         correct:'estoy',  distractors:['soy','estás','estamos']  },
+]
+
+function SerEstarGame() {
+  const questions = useMemo(() =>
+    shuffle([...SERSTAR_RAW]).map(q => ({ ...q, options: shuffle([q.correct, ...q.distractors]) })),
+  [])
+
+  const [idx,     setIdx]     = useState(0)
+  const [chosen,  setChosen]  = useState<string | null>(null)
+  const [score,   setScore]   = useState({ correct: 0, wrong: 0 })
+  const [done,    setDone]    = useState(false)
+
+  const q          = questions[idx]
+  const isAnswered = chosen !== null
+  const pct        = Math.round((idx / questions.length) * 100)
+
+  const pick = (opt: string) => {
+    if (isAnswered) return
+    setChosen(opt)
+    setScore(s => ({ correct: s.correct + (opt === q.correct ? 1 : 0), wrong: s.wrong + (opt === q.correct ? 0 : 1) }))
+  }
+  const next = () => {
+    if (idx + 1 >= questions.length) setDone(true)
+    else { setIdx(i => i + 1); setChosen(null) }
+  }
+
+  if (done) return (
+    <CompletionScreen correct={score.correct} total={questions.length} maxCombo={0} rounds={1}
+      onRestart={() => { setIdx(0); setScore({ correct: 0, wrong: 0 }); setDone(false); setChosen(null) }} />
+  )
+
+  const isSer = q.type === 'conjugation' ? q.display.includes('+ SER') : q.correct === 'soy' || q.correct === 'eres' || q.correct === 'es' || q.correct === 'somos' || q.correct === 'sois' || q.correct === 'son'
+
+  return (
+    <div className="space-y-4">
+      {/* Progress */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-black" style={{ color: 'var(--t-text-main)' }}>{idx + 1} / {questions.length}</span>
+        <div className="flex gap-3 text-xs font-semibold">
+          <span style={{ color: '#16a34a' }}>✓ {score.correct}</span>
+          <span style={{ color: '#e84057' }}>✗ {score.wrong}</span>
+        </div>
+      </div>
+      <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--t-item-bg)' }}>
+        <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, background: 'linear-gradient(90deg,#7c3aed,#1e6091)' }} />
+      </div>
+
+      {/* Question card */}
+      <div className="rounded-3xl p-6 text-center" style={{ backgroundColor: 'var(--t-card-bg)', border: '2px solid var(--t-border-soft)' }}>
+        {/* Type badge */}
+        <span className="text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full"
+          style={{ backgroundColor: q.type === 'conjugation' ? '#dbeafe' : '#fae8ff', color: q.type === 'conjugation' ? '#1e40af' : '#86198f' }}>
+          {q.type === 'conjugation' ? '🔤 Conjugaison' : '💬 Contexte'}
+        </span>
+
+        {q.type === 'conjugation' ? (
+          /* Conjugation: show pronoun + SER/ESTAR badge */
+          <div className="mt-5">
+            <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--t-text-soft)' }}>Quelle forme ?</p>
+            <div className="flex items-center justify-center gap-3 flex-wrap">
+              <span className="text-3xl font-black" style={{ color: 'var(--t-text-main)' }}>
+                {q.display.split(' + ')[0].trim()}
+              </span>
+              <span className="text-lg font-black px-4 py-2 rounded-2xl"
+                style={{ backgroundColor: isSer ? '#dbeafe' : '#dcfce7', color: isSer ? '#1e40af' : '#166534' }}>
+                {q.display.split(' + ')[1]}
+              </span>
+            </div>
+          </div>
+        ) : (
+          /* Context: sentence with blank */
+          <div className="mt-5">
+            <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--t-text-soft)' }}>
+              SER ou ESTAR ?
+            </p>
+            <p className="text-xl font-bold leading-relaxed" style={{ color: 'var(--t-text-main)' }}>
+              {q.display.split('___').map((part, i, arr) => (
+                <span key={i}>
+                  {part}
+                  {i < arr.length - 1 && (
+                    <span className="inline-block px-3 py-0.5 mx-1 rounded-xl font-black text-base align-middle"
+                      style={{
+                        minWidth: 70, textAlign: 'center',
+                        backgroundColor: isAnswered
+                          ? (chosen === q.correct ? 'rgba(34,197,94,0.18)' : 'rgba(232,64,87,0.18)')
+                          : '#7c3aed18',
+                        color: isAnswered
+                          ? (chosen === q.correct ? '#16a34a' : '#e84057')
+                          : '#7c3aed',
+                        border: `1.5px dashed ${isAnswered ? (chosen === q.correct ? '#22c55e' : '#e84057') : '#7c3aed66'}`,
+                      }}>
+                      {isAnswered ? chosen : '?'}
+                    </span>
+                  )}
+                </span>
+              ))}
+            </p>
+            {/* Show correct if wrong */}
+            {isAnswered && chosen !== q.correct && (
+              <p className="text-sm mt-3 font-semibold" style={{ color: '#16a34a' }}>
+                ✓ Correct : <strong>{q.correct}</strong>
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Hint */}
+        <p className="text-xs mt-4 italic" style={{ color: 'var(--t-text-soft)' }}>💬 {q.hint}</p>
+      </div>
+
+      {/* 2×2 options */}
+      <div className="grid grid-cols-2 gap-2">
+        {q.options.map(opt => {
+          const isChosen  = chosen === opt
+          const isCorrect = opt === q.correct
+          const bg     = !isAnswered ? 'var(--t-item-bg)' : isCorrect ? 'rgba(34,197,94,0.15)' : isChosen ? 'rgba(232,64,87,0.15)' : 'var(--t-item-bg)'
+          const border = !isAnswered ? 'transparent'      : isCorrect ? '#22c55e'               : isChosen ? '#e84057'               : 'transparent'
+          const color  = !isAnswered ? 'var(--t-text-main)': isCorrect ? '#16a34a'              : isChosen ? '#e84057'               : 'var(--t-text-muted)'
+          return (
+            <button key={opt} onClick={() => pick(opt)}
+              className="py-4 rounded-2xl text-lg font-black transition-all active:scale-95"
+              style={{ backgroundColor: bg, border: `2px solid ${border}`, color }}>
+              {isAnswered && isCorrect ? '✓ ' : isAnswered && isChosen ? '✗ ' : ''}{opt}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Next */}
+      {isAnswered && (
+        <button onClick={next}
+          className="w-full py-4 rounded-2xl text-base font-black transition-all active:scale-95"
+          style={{ background: 'linear-gradient(135deg,#7c3aed,#1e6091)', color: '#fff' }}>
+          {idx + 1 >= questions.length ? '🎉 Terminer' : 'Suivant →'}
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ── GamesTab — picker + router ────────────────────────────────────────────
 const GAMES = [
   { id: 'game1', label: 'Game 1', icon: '🃏', tag: '🇪🇸 → 🇫🇷', desc: 'Espagnol vers Français', count: `${VOCAB.length} mots`,          accent: '#dbeafe', accentText: '#1e40af' },
@@ -855,6 +1033,7 @@ const GAMES = [
   { id: 'game2', label: 'Game 2', icon: '✍️', tag: 'Phrases',    desc: 'Complète les phrases',   count: `${GAME2_DATA.length} phrases`,  accent: '#fef9c3', accentText: '#854d0e' },
   { id: 'game3', label: 'Game 3', icon: '🔗', tag: 'Relier',     desc: 'Associe les mots',       count: `${MATCH_PAIRS.length} paires`,  accent: '#fae8ff', accentText: '#86198f' },
   { id: 'game4', label: 'Game 4', icon: '🎯', tag: 'Vrai/Faux',  desc: 'Vrai ou Faux ?',          count: '24 questions',                 accent: '#fff1f2', accentText: '#be123c' },
+  { id: 'game5', label: 'Game 5', icon: '🔀', tag: 'Ser/Estar',  desc: 'Ser vs Estar — 2 parties', count: `${SERSTAR_RAW.length} questions`, accent: '#ede9fe', accentText: '#5b21b6' },
 ]
 
 export default function GamesTab() {
@@ -906,6 +1085,7 @@ export default function GamesTab() {
           {selected === 'game2' && <FillBlankGame  key="game2" />}
           {selected === 'game3' && <MatchingGame   key="game3" />}
           {selected === 'game4' && <TrueFalseGame  key="game4" />}
+          {selected === 'game5' && <SerEstarGame   key="game5" />}
         </>
       )}
     </div>
