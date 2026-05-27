@@ -13,8 +13,11 @@ const parseTvLinks = (s: string | null) => { try { return { ...emptyTvLinks, ...
 const emptyStrategy = { name: '', description: '', rules: '', timeframe: '', winRate: '', riskReward: '', notes: '' }
 
 export default function TradingPage() {
+  type ChecklistMode = 'amine' | 'my' | 'new'
   const [tab, setTab] = useState<'strategy' | 'log' | 'backtest' | 'checker'>('strategy')
-  const [subTab, setSubTab] = useState<'pre' | 'counter' | 'guide'>('pre')
+  const [subTab,         setSubTab]        = useState<'counter' | 'guide'>('counter')
+  const [checklistMode,  setChecklistMode] = useState<ChecklistMode>('amine')
+  const [defaultSaved,   setDefaultSaved]  = useState(false)
   const [trades, setTrades] = useState<Trade[]>([])
   const [strategies, setStrategies] = useState<Strategy[]>([])
   const [tradeModal, setTradeModal] = useState(false)
@@ -33,6 +36,7 @@ export default function TradingPage() {
   const loadTrades = () => fetch('/api/trading').then(r => r.json()).then(setTrades)
   const loadStrats = () => fetch('/api/backtest').then(r => r.json()).then(setStrategies)
   useEffect(() => { loadTrades(); loadStrats() }, [])
+  useEffect(() => { const s = localStorage.getItem('trading-default-checklist') as ChecklistMode; if (s) setChecklistMode(s) }, [])
 
   const closedTrades = trades.filter(tr => tr.status === 'CLOSED' && tr.pnl != null)
   const totalPnl = closedTrades.reduce((s, tr) => s + (tr.pnl || 0), 0)
@@ -174,8 +178,30 @@ export default function TradingPage() {
       {/* Strategy */}
       {tab === 'strategy' && (
         <div className="space-y-5">
-          {/* Pre-trade checklist — always first */}
-          <PreTradeChecklist />
+          {/* Checklist selector */}
+          <div className="rounded-2xl border-2 p-3 flex items-center justify-between gap-3"
+            style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
+            <p className="text-xs font-bold uppercase tracking-widest shrink-0" style={{ color: 'var(--t-text-soft)' }}>🎯 Checklist</p>
+            <div className="flex gap-2 items-center flex-1 justify-end">
+              <select value={checklistMode} onChange={e => setChecklistMode(e.target.value as ChecklistMode)}
+                className="flex-1 max-w-[180px] px-3 py-2 rounded-xl text-sm font-semibold border outline-none"
+                style={{ borderColor: 'var(--t-border-soft)', backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-main)' }}>
+                <option value="amine">Amine Checklist</option>
+                <option value="my">My Checklist</option>
+                <option value="new">New Strategy</option>
+              </select>
+              <button
+                onClick={() => { localStorage.setItem('trading-default-checklist', checklistMode); setDefaultSaved(true); setTimeout(() => setDefaultSaved(false), 1800) }}
+                className="text-xs px-3 py-2 rounded-xl font-semibold transition-all shrink-0"
+                style={{ backgroundColor: defaultSaved ? '#d8f3dc' : 'var(--t-item-bg)', color: defaultSaved ? '#2d6a4f' : 'var(--t-text-muted)' }}>
+                {defaultSaved ? '✓ Défaut' : 'Set Défaut'}
+              </button>
+            </div>
+          </div>
+
+          {checklistMode === 'amine' && <AmineChecklist />}
+          {checklistMode === 'my'    && <PreTradeChecklist />}
+          {checklistMode === 'new'   && <PreTradeTab />}
 
           {/* Strategy cards */}
           {strategies.length > 0 && (
@@ -367,10 +393,9 @@ export default function TradingPage() {
         <div className="flex flex-col gap-4">
           <div className="flex gap-2">
             {([
-              { key: 'pre',     label: '🎯 Pre-Trade' },
               { key: 'counter', label: '📊 Counter' },
               { key: 'guide',   label: '📚 Guide' },
-            ] as { key: 'pre' | 'counter' | 'guide'; label: string }[]).map(st => (
+            ] as { key: 'counter' | 'guide'; label: string }[]).map(st => (
               <button key={st.key} onClick={() => setSubTab(st.key)}
                 className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
                 style={{ backgroundColor: subTab === st.key ? '#b8860b' : 'var(--t-item-bg)', color: subTab === st.key ? '#fff' : 'var(--t-text-muted)' }}>
@@ -378,7 +403,7 @@ export default function TradingPage() {
               </button>
             ))}
           </div>
-          {subTab === 'pre' ? <PreTradeTab /> : subTab === 'counter' ? <CheckerTab /> : <StrategyGuideTab />}
+          {subTab === 'counter' ? <CheckerTab /> : <StrategyGuideTab />}
         </div>
       )}
 
@@ -560,6 +585,222 @@ export default function TradingPage() {
             </button>
           </div>
         </Modal>
+      )}
+    </div>
+  )
+}
+
+// ── Amine Checklist ──────────────────────────────────────────────
+const AMINE_KEY = 'amine-checklist-v1'
+
+function AmineChecklist() {
+  const [pair,    setPair]    = useState('')
+  const [session, setSession] = useState('')
+  const [bias4h,  setBias4h]  = useState('')
+  const [drawLiq, setDrawLiq] = useState<string[]>([])
+  const [pdArray, setPdArray] = useState<string[]>([])
+  const [tf5m,    setTf5m]    = useState<string[]>([])
+  const [open,    setOpen]    = useState(true)
+
+  useEffect(() => {
+    try {
+      const d = JSON.parse(localStorage.getItem(AMINE_KEY) || '{}')
+      if (d.pair)    setPair(d.pair)
+      if (d.session) setSession(d.session)
+      if (d.bias4h)  setBias4h(d.bias4h)
+      if (d.drawLiq) setDrawLiq(d.drawLiq)
+      if (d.pdArray) setPdArray(d.pdArray)
+      if (d.tf5m)    setTf5m(d.tf5m)
+    } catch {}
+  }, [])
+
+  const persist = (patch: object) => localStorage.setItem(AMINE_KEY, JSON.stringify({ pair, session, bias4h, drawLiq, pdArray, tf5m, ...patch }))
+
+  const updPair    = (v: string) => { const n = pair === v ? '' : v;       setPair(n);    persist({ pair: n }) }
+  const updSession = (v: string) => { const n = session === v ? '' : v;    setSession(n); persist({ session: n }) }
+  const updBias    = (v: string) => { const n = bias4h === v ? '' : v;     setBias4h(n);  persist({ bias4h: n }) }
+  const updDrawLiq = (v: string) => { const n = drawLiq.includes(v) ? drawLiq.filter(x => x !== v) : [...drawLiq, v]; setDrawLiq(n); persist({ drawLiq: n }) }
+  const updPdArray = (v: string) => { const n = pdArray.includes(v) ? pdArray.filter(x => x !== v) : [...pdArray, v]; setPdArray(n); persist({ pdArray: n }) }
+  const updTf5m    = (v: string) => { const n = tf5m.includes(v)    ? tf5m.filter(x => x !== v)    : [...tf5m, v];    setTf5m(n);    persist({ tf5m: n }) }
+
+  const DRAW_BTNS = ['HPS','LPS','HPD','LPD']
+  const PD_NORMAL  = ['Supply Zone','Demand Zone','BISI','SIBI','iFVG']
+  const PD_SPECIAL = ['4H','1H']
+  const TF_BTNS   = ['CHOCH','MSS','iFVG','SMT']
+
+  // Validity
+  const v1 = pair !== ''
+  const v2 = session !== ''
+  const v3 = bias4h === 'Haussier' || bias4h === 'Baissier'
+  const v4 = drawLiq.length === 4
+  const v5 = pdArray.length > 0
+  const v6 = tf5m.length === 4
+  const items = [v1,v2,v3,v4,v5,v6]
+  const passed   = items.filter(Boolean).length
+  const answered = [pair, session, bias4h, drawLiq.length > 0 ? 'x' : '', pdArray.length > 0 ? 'x' : '', tf5m.length > 0 ? 'x' : ''].filter(Boolean).length
+  const allValid = passed === 6
+
+  const verdict: 'incomplete'|'invalid'|'valid' = !allValid ? (answered < 6 ? 'incomplete' : 'invalid') : 'valid'
+  const vStyle = {
+    incomplete: { bg: 'var(--t-item-bg)', color: 'var(--t-text-muted)', border: 'var(--t-border-soft)', icon: '⏳', label: `${answered}/6 points complétés` },
+    invalid:    { bg: '#fde8ec',          color: '#c0303e',              border: '#e57373',              icon: '❌', label: 'Setup invalide — ne pas entrer' },
+    valid:      { bg: '#d8f3dc',          color: '#2d6a4f',              border: '#52b788',              icon: '✅', label: 'Setup valide — tu peux entrer' },
+  }[verdict]
+
+  const reset = () => { setPair(''); setSession(''); setBias4h(''); setDrawLiq([]); setPdArray([]); setTf5m([]); localStorage.removeItem(AMINE_KEY) }
+
+  // Reusable button styles
+  const radioBtnStyle = (opt: string, val: string, danger = false) => ({
+    backgroundColor: val === opt ? (danger ? '#fde8ec' : '#d8f3dc') : 'var(--t-item-bg)',
+    color:           val === opt ? (danger ? '#c0303e' : '#2d6a4f') : 'var(--t-text-muted)' as string,
+    borderColor:     val === opt ? (danger ? '#e57373' : '#52b788') : 'var(--t-border-soft)',
+  })
+  const multiBtnStyle = (opt: string, arr: string[], selColor: string, selBg: string) => ({
+    backgroundColor: arr.includes(opt) ? selBg         : 'var(--t-item-bg)',
+    color:           arr.includes(opt) ? selColor       : 'var(--t-text-muted)' as string,
+    borderColor:     arr.includes(opt) ? selColor       : 'var(--t-border-soft)',
+  })
+
+  const itemRow = (num: number, label: string, valid: boolean, touched: boolean, extra?: React.ReactNode) => (
+    <div className="flex items-center gap-2 mb-1">
+      <span className="text-xs font-bold w-4 shrink-0" style={{ color: 'var(--t-text-soft)' }}>{num}</span>
+      <p className="text-sm font-semibold flex-1" style={{ color: 'var(--t-text-main)' }}>{label}</p>
+      {extra}
+      {touched && <span className="text-sm shrink-0">{valid ? '✅' : '❌'}</span>}
+    </div>
+  )
+
+  return (
+    <div className="rounded-2xl border-2 overflow-hidden" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
+      {/* Header */}
+      <button onClick={() => setOpen(o => !o)} className="w-full p-4 flex items-center justify-between" style={{ backgroundColor: 'var(--t-item-bg)' }}>
+        <div className="flex items-center gap-3">
+          <span className="text-lg">🎯</span>
+          <div className="text-left">
+            <p className="font-bold text-sm" style={{ color: 'var(--t-text-main)' }}>Amine Checklist</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-muted)' }}>{answered}/6 points · {passed} validés</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative w-8 h-8">
+            <svg className="w-8 h-8 -rotate-90" viewBox="0 0 32 32">
+              <circle cx="16" cy="16" r="12" fill="none" stroke="var(--t-border-soft)" strokeWidth="3"/>
+              <circle cx="16" cy="16" r="12" fill="none" stroke={allValid ? '#52b788' : '#b8860b'} strokeWidth="3"
+                strokeDasharray={`${(passed/6)*75.4} 75.4`}/>
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold" style={{ color: 'var(--t-text-muted)' }}>{passed}</span>
+          </div>
+          <span className="text-xs" style={{ color: 'var(--t-text-soft)' }}>{open ? '▲' : '▼'}</span>
+        </div>
+      </button>
+
+      {open && (
+        <>
+          <div className="divide-y" style={{ borderColor: 'var(--t-border-soft)' }}>
+
+            {/* 1. Paire */}
+            <div className="px-4 py-3">
+              {itemRow(1, 'Paire', v1, !!pair)}
+              <div className="flex flex-wrap gap-1.5 mt-2 ml-6">
+                {['EURUSD','NZDUSD','GBPUSD'].map(o => (
+                  <button key={o} onClick={() => updPair(o)} className="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95" style={radioBtnStyle(o, pair)}>
+                    {pair === o ? '✓ ' : ''}{o}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 2. Session */}
+            <div className="px-4 py-3">
+              {itemRow(2, 'Session', v2, !!session)}
+              <div className="ml-6 mt-2">
+                <button onClick={() => updSession('lkz')} className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border text-left transition-all active:scale-95"
+                  style={{ backgroundColor: session === 'lkz' ? 'rgba(59,130,246,0.12)' : 'var(--t-item-bg)', color: session === 'lkz' ? '#3b82f6' : 'var(--t-text-muted)', borderColor: session === 'lkz' ? '#3b82f6' : 'var(--t-border-soft)' }}>
+                  {session === 'lkz' ? '✓ ' : ''}🕑 London Kill Zone &nbsp;·&nbsp; 2:30 AM – 5:00 AM → 8:00 AM
+                </button>
+              </div>
+            </div>
+
+            {/* 3. Bias 4H */}
+            <div className="px-4 py-3">
+              {itemRow(3, 'Bias 4H', v3, !!bias4h)}
+              <div className="flex flex-wrap gap-1.5 mt-2 ml-6">
+                {['Haussier','Baissier'].map(o => (
+                  <button key={o} onClick={() => updBias(o)} className="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95" style={radioBtnStyle(o, bias4h)}>
+                    {bias4h === o ? '✓ ' : ''}{o}
+                  </button>
+                ))}
+                <button onClick={() => updBias('Pas clair')} className="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95" style={radioBtnStyle('Pas clair', bias4h, true)}>
+                  {bias4h === 'Pas clair' ? '✗ ' : ''}Pas clair
+                </button>
+              </div>
+            </div>
+
+            {/* 4. Draw Liquidity — ALL 4 required */}
+            <div className="px-4 py-3">
+              {itemRow(4, 'Draw Liquidity', v4, drawLiq.length > 0,
+                <span className="text-xs font-semibold mr-1" style={{ color: 'var(--t-text-soft)' }}>{drawLiq.length}/4</span>
+              )}
+              <p className="text-xs mb-2 ml-6" style={{ color: 'var(--t-text-muted)' }}>Les 4 sont requis</p>
+              <div className="flex flex-wrap gap-1.5 ml-6">
+                {DRAW_BTNS.map(o => (
+                  <button key={o} onClick={() => updDrawLiq(o)} className="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95"
+                    style={multiBtnStyle(o, drawLiq, '#1e6091', '#dbeafe')}>
+                    {drawLiq.includes(o) ? '✓ ' : ''}{o}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 5. PD Array — multi, last 2 different color */}
+            <div className="px-4 py-3">
+              {itemRow(5, 'PD Array', v5, pdArray.length > 0)}
+              <div className="flex flex-wrap gap-1.5 mt-2 ml-6">
+                {PD_NORMAL.map(o => (
+                  <button key={o} onClick={() => updPdArray(o)} className="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95"
+                    style={multiBtnStyle(o, pdArray, '#2d6a4f', '#d8f3dc')}>
+                    {pdArray.includes(o) ? '✓ ' : ''}{o}
+                  </button>
+                ))}
+                {PD_SPECIAL.map(o => (
+                  <button key={o} onClick={() => updPdArray(o)} className="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95"
+                    style={{ backgroundColor: pdArray.includes(o) ? 'rgba(245,158,11,0.18)' : 'var(--t-item-bg)', color: '#b8860b', borderColor: '#b8860b' }}>
+                    {pdArray.includes(o) ? '✓ ' : ''}{o}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 6. TF in 5min — ALL 4 required */}
+            <div className="px-4 py-3">
+              {itemRow(6, 'TF in 5min', v6, tf5m.length > 0,
+                <span className="text-xs font-semibold mr-1" style={{ color: 'var(--t-text-soft)' }}>{tf5m.length}/4</span>
+              )}
+              <p className="text-xs mb-2 ml-6" style={{ color: 'var(--t-text-muted)' }}>Les 4 sont requis</p>
+              <div className="flex flex-wrap gap-1.5 ml-6">
+                {TF_BTNS.map(o => (
+                  <button key={o} onClick={() => updTf5m(o)} className="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95"
+                    style={multiBtnStyle(o, tf5m, '#8b5cf6', '#ede9fe')}>
+                    {tf5m.includes(o) ? '✓ ' : ''}{o}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+          </div>
+
+          {/* Verdict */}
+          <div className="p-4 border-t" style={{ borderColor: 'var(--t-border-soft)' }}>
+            <div className="rounded-2xl px-4 py-3 flex items-center gap-3" style={{ backgroundColor: vStyle.bg, border: `2px solid ${vStyle.border}` }}>
+              <span className="text-2xl shrink-0">{vStyle.icon}</span>
+              <p className="font-bold text-sm" style={{ color: vStyle.color }}>{vStyle.label}</p>
+            </div>
+            <button onClick={reset} className="w-full mt-3 py-2 rounded-xl text-xs font-semibold transition-all active:scale-95"
+              style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>
+              🔄 Réinitialiser
+            </button>
+          </div>
+        </>
       )}
     </div>
   )
@@ -764,7 +1005,7 @@ function PreTradeChecklist() {
         <div className="flex items-center gap-3">
           <span className="text-lg">🎯</span>
           <div className="text-left">
-            <p className="font-bold text-sm" style={{ color: 'var(--t-text-main)' }}>Checklist pré-trade</p>
+            <p className="font-bold text-sm" style={{ color: 'var(--t-text-main)' }}>Checklist</p>
             <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-muted)' }}>{answered}/{CHECKS.length} points · {passed} validés</p>
           </div>
         </div>
