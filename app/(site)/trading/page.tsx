@@ -38,9 +38,9 @@ export default function TradingPage() {
   useEffect(() => { loadTrades(); loadStrats() }, [])
   useEffect(() => { const s = localStorage.getItem('trading-default-checklist') as ChecklistMode; if (s) setChecklistMode(s) }, [])
 
-  const closedTrades = trades.filter(tr => tr.status === 'CLOSED' && tr.pnl != null)
-  const totalPnl = closedTrades.reduce((s, tr) => s + (tr.pnl || 0), 0)
-  const winRate = closedTrades.length > 0 ? Math.round((closedTrades.filter(tr => (tr.pnl || 0) > 0).length / closedTrades.length) * 100) : 0
+  const closedTrades = trades.filter(tr => tr.resultPct != null || tr.status === 'CLOSED')
+  const totalPnl = closedTrades.reduce((s, tr) => s + (tr.resultPct ?? tr.pnl ?? 0), 0)
+  const winRate = closedTrades.length > 0 ? Math.round((closedTrades.filter(tr => (tr.resultPct ?? tr.pnl ?? 0) > 0).length / closedTrades.length) * 100) : 0
 
   const openTradeModal = (tr?: Trade) => {
     if (tr) {
@@ -149,7 +149,7 @@ export default function TradingPage() {
             { label: t.total,   value: trades.length,         unit: '' },
             { label: t.closed,  value: closedTrades.length,   unit: '' },
             { label: t.winRate, value: winRate,                unit: '%' },
-            { label: 'P&L',     value: totalPnl.toFixed(1),   unit: '', color: totalPnl >= 0 ? '#2d6a4f' : '#c0303e' },
+            { label: 'P&L %',   value: (totalPnl >= 0 ? '+' : '') + totalPnl.toFixed(1), unit: '%', color: totalPnl >= 0 ? '#2d6a4f' : '#c0303e' },
           ].map(s => (
             <div key={s.label} className="rounded-2xl p-3 sm:p-4 border" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
               <p className="text-xs mb-0.5" style={{ color: 'var(--t-text-soft)' }}>{s.label}</p>
@@ -600,7 +600,6 @@ function AmineChecklist() {
   const [drawLiq, setDrawLiq] = useState<string[]>([])
   const [pdArray, setPdArray] = useState<string[]>([])
   const [tf5m,    setTf5m]    = useState<string[]>([])
-  const [open,    setOpen]    = useState(true)
 
   useEffect(() => {
     try {
@@ -614,194 +613,121 @@ function AmineChecklist() {
     } catch {}
   }, [])
 
-  const persist = (patch: object) => localStorage.setItem(AMINE_KEY, JSON.stringify({ pair, session, bias4h, drawLiq, pdArray, tf5m, ...patch }))
+  const persist = (patch: object) =>
+    localStorage.setItem(AMINE_KEY, JSON.stringify({ pair, session, bias4h, drawLiq, pdArray, tf5m, ...patch }))
 
-  const updPair    = (v: string) => { const n = pair === v ? '' : v;       setPair(n);    persist({ pair: n }) }
-  const updSession = (v: string) => { const n = session === v ? '' : v;    setSession(n); persist({ session: n }) }
-  const updBias    = (v: string) => { const n = bias4h === v ? '' : v;     setBias4h(n);  persist({ bias4h: n }) }
+  const updPair    = (v: string) => { const n = pair === v ? '' : v;    setPair(n);    persist({ pair: n }) }
+  const updSession = (v: string) => { const n = session === v ? '' : v; setSession(n); persist({ session: n }) }
+  const updBias    = (v: string) => { const n = bias4h === v ? '' : v;  setBias4h(n);  persist({ bias4h: n }) }
   const updDrawLiq = (v: string) => { const n = drawLiq.includes(v) ? drawLiq.filter(x => x !== v) : [...drawLiq, v]; setDrawLiq(n); persist({ drawLiq: n }) }
   const updPdArray = (v: string) => { const n = pdArray.includes(v) ? pdArray.filter(x => x !== v) : [...pdArray, v]; setPdArray(n); persist({ pdArray: n }) }
-  const updTf5m    = (v: string) => { const n = tf5m.includes(v)    ? tf5m.filter(x => x !== v)    : [...tf5m, v];    setTf5m(n);    persist({ tf5m: n }) }
+  const updTf5m    = (v: string) => { const n = tf5m.includes(v)    ? tf5m.filter(x => x !== v)    : [...tf5m, v];   setTf5m(n);    persist({ tf5m: n }) }
 
-  const DRAW_BTNS = ['HPS','LPS','HPD','LPD']
+  const DRAW_BTNS  = ['HPS','LPS','HPD','LPD']
   const PD_NORMAL  = ['Supply Zone','Demand Zone','BISI','SIBI','iFVG']
   const PD_SPECIAL = ['4H','1H']
-  const TF_BTNS   = ['CHOCH','MSS','iFVG','SMT']
+  const TF_REQ     = ['CHOCH','MSS','iFVG']   // required
+  const TF_OPT     = ['SMT']                  // optional
 
-  // Validity
+  // Validity — SMT is optional in item 6
   const v1 = pair !== ''
   const v2 = session !== ''
   const v3 = bias4h === 'Haussier' || bias4h === 'Baissier'
   const v4 = drawLiq.length === 4
   const v5 = pdArray.length > 0
-  const v6 = tf5m.length === 4
-  const items = [v1,v2,v3,v4,v5,v6]
-  const passed   = items.filter(Boolean).length
-  const answered = [pair, session, bias4h, drawLiq.length > 0 ? 'x' : '', pdArray.length > 0 ? 'x' : '', tf5m.length > 0 ? 'x' : ''].filter(Boolean).length
-  const allValid = passed === 6
+  const v6 = TF_REQ.every(b => tf5m.includes(b))   // only CHOCH + MSS + iFVG required
 
-  const verdict: 'incomplete'|'invalid'|'valid' = !allValid ? (answered < 6 ? 'incomplete' : 'invalid') : 'valid'
-  const vStyle = {
-    incomplete: { bg: 'var(--t-item-bg)', color: 'var(--t-text-muted)', border: 'var(--t-border-soft)', icon: '⏳', label: `${answered}/6 points complétés` },
-    invalid:    { bg: '#fde8ec',          color: '#c0303e',              border: '#e57373',              icon: '❌', label: 'Setup invalide — ne pas entrer' },
-    valid:      { bg: '#d8f3dc',          color: '#2d6a4f',              border: '#52b788',              icon: '✅', label: 'Setup valide — tu peux entrer' },
-  }[verdict]
+  const passed   = [v1,v2,v3,v4,v5,v6].filter(Boolean).length
+  const allGood  = passed === 6
+  const reset    = () => { setPair(''); setSession(''); setBias4h(''); setDrawLiq([]); setPdArray([]); setTf5m([]); localStorage.removeItem(AMINE_KEY) }
 
-  const reset = () => { setPair(''); setSession(''); setBias4h(''); setDrawLiq([]); setPdArray([]); setTf5m([]); localStorage.removeItem(AMINE_KEY) }
-
-  // Reusable button styles
-  const radioBtnStyle = (opt: string, val: string, danger = false) => ({
-    backgroundColor: val === opt ? (danger ? '#fde8ec' : '#d8f3dc') : 'var(--t-item-bg)',
-    color:           val === opt ? (danger ? '#c0303e' : '#2d6a4f') : 'var(--t-text-muted)' as string,
-    borderColor:     val === opt ? (danger ? '#e57373' : '#52b788') : 'var(--t-border-soft)',
-  })
-  const multiBtnStyle = (opt: string, arr: string[], selColor: string, selBg: string) => ({
-    backgroundColor: arr.includes(opt) ? selBg         : 'var(--t-item-bg)',
-    color:           arr.includes(opt) ? selColor       : 'var(--t-text-muted)' as string,
-    borderColor:     arr.includes(opt) ? selColor       : 'var(--t-border-soft)',
-  })
-
-  const itemRow = (num: number, label: string, valid: boolean, touched: boolean, extra?: React.ReactNode) => (
-    <div className="flex items-center gap-2 mb-1">
-      <span className="text-xs font-bold w-4 shrink-0" style={{ color: 'var(--t-text-soft)' }}>{num}</span>
-      <p className="text-sm font-semibold flex-1" style={{ color: 'var(--t-text-main)' }}>{label}</p>
-      {extra}
-      {touched && <span className="text-sm shrink-0">{valid ? '✅' : '❌'}</span>}
+  // Shared card row helper
+  const chk = (svg: boolean) => (
+    <div className="w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all"
+      style={{ borderColor: svg ? '#22c55e' : '#d1d5db', backgroundColor: svg ? '#22c55e' : 'transparent' }}>
+      {svg && <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><polyline points="2,6 5,9 10,3"/></svg>}
     </div>
   )
 
+  const row = (valid: boolean, label: string, children: React.ReactNode) => (
+    <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border-2 transition-all"
+      style={{ backgroundColor: valid ? 'rgba(34,197,94,0.08)' : 'var(--t-card-bg)', borderColor: valid ? '#22c55e' : 'var(--t-border-soft)' }}>
+      {chk(valid)}
+      <div className="flex-1 min-w-0">
+        <span className="text-sm font-semibold" style={{ color: valid ? '#16a34a' : 'var(--t-text-main)', textDecoration: valid ? 'line-through' : 'none' }}>{label}</span>
+        <div className="flex flex-wrap gap-1.5 mt-2">{children}</div>
+      </div>
+    </div>
+  )
+
+  const rBtn = (opt: string, val: string, fn: (v:string)=>void, danger=false) => {
+    const s = val === opt
+    return <button key={opt} onClick={() => fn(opt)} className="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95"
+      style={{ backgroundColor: s?(danger?'#fde8ec':'#d8f3dc'):'var(--t-item-bg)', color: s?(danger?'#c0303e':'#2d6a4f'):'var(--t-text-muted)' as string, borderColor: s?(danger?'#e57373':'#52b788'):'var(--t-border-soft)' }}>
+      {s?(danger?'✗ ':'✓ '):''}{opt}
+    </button>
+  }
+  const mBtn = (opt: string, arr: string[], fn:(v:string)=>void, sc:string, sb:string, optional=false) => {
+    const s = arr.includes(opt)
+    return <button key={opt} onClick={() => fn(opt)} className="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95"
+      style={{ backgroundColor: s?sb:'var(--t-item-bg)', color: s?sc:'var(--t-text-muted)' as string, borderColor: s?sc:'var(--t-border-soft)', opacity: optional ? 0.75 : 1 }}>
+      {s?'✓ ':''}{opt}{optional?' (opt)':''}
+    </button>
+  }
+
   return (
-    <div className="rounded-2xl border-2 overflow-hidden" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
-      {/* Header */}
-      <button onClick={() => setOpen(o => !o)} className="w-full p-4 flex items-center justify-between" style={{ backgroundColor: 'var(--t-item-bg)' }}>
-        <div className="flex items-center gap-3">
-          <span className="text-lg">🎯</span>
-          <div className="text-left">
-            <p className="font-bold text-sm" style={{ color: 'var(--t-text-main)' }}>Amine Checklist</p>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-muted)' }}>{answered}/6 points · {passed} validés</p>
-          </div>
+    <div className="flex flex-col gap-4">
+      {/* Progress bar card */}
+      <div className="rounded-2xl p-4 border-2" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: allGood ? '#22c55e' : 'var(--t-border-soft)' }}>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#b8860b' }}>🎯 Amine Checklist</p>
+          <button onClick={reset} className="text-xs px-2 py-1 rounded-lg" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>Reset</button>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="relative w-8 h-8">
-            <svg className="w-8 h-8 -rotate-90" viewBox="0 0 32 32">
-              <circle cx="16" cy="16" r="12" fill="none" stroke="var(--t-border-soft)" strokeWidth="3"/>
-              <circle cx="16" cy="16" r="12" fill="none" stroke={allValid ? '#52b788' : '#b8860b'} strokeWidth="3"
-                strokeDasharray={`${(passed/6)*75.4} 75.4`}/>
-            </svg>
-            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold" style={{ color: 'var(--t-text-muted)' }}>{passed}</span>
-          </div>
-          <span className="text-xs" style={{ color: 'var(--t-text-soft)' }}>{open ? '▲' : '▼'}</span>
+        <div className="h-2 rounded-full overflow-hidden mb-1" style={{ backgroundColor: 'var(--t-item-bg)' }}>
+          <div className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${(passed/6)*100}%`, background: allGood ? '#22c55e' : 'linear-gradient(90deg,#d4a017,#b8860b)' }} />
         </div>
+        <p className="text-xs font-semibold" style={{ color: allGood ? '#16a34a' : 'var(--t-text-muted)' }}>
+          {allGood ? '✅ Ready to trade!' : `${passed} / 6 conditions`}
+        </p>
+      </div>
+
+      {/* Items */}
+      <div className="flex flex-col gap-2">
+        {row(v1, 'Paire',
+          ['EURUSD','NZDUSD','GBPUSD'].map(o => rBtn(o, pair, updPair))
+        )}
+        {row(v2, 'Session',
+          <button onClick={() => updSession('lkz')} className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border text-left transition-all active:scale-95"
+            style={{ backgroundColor: session==='lkz'?'rgba(59,130,246,0.12)':'var(--t-item-bg)', color: session==='lkz'?'#3b82f6':'var(--t-text-muted)', borderColor: session==='lkz'?'#3b82f6':'var(--t-border-soft)' }}>
+            {session==='lkz'?'✓ ':''} 🕑 London Kill Zone · 2:30 AM – 5:00 AM → 8:00 AM
+          </button>
+        )}
+        {row(v3, 'Bias 4H', <>
+          {rBtn('Haussier', bias4h, updBias)}
+          {rBtn('Baissier', bias4h, updBias)}
+          {rBtn('Pas clair', bias4h, updBias, true)}
+        </>)}
+        {row(v4, `Draw Liquidity (${drawLiq.length}/4)`,
+          DRAW_BTNS.map(o => mBtn(o, drawLiq, updDrawLiq, '#1e6091', '#dbeafe'))
+        )}
+        {row(v5, 'PD Array', <>
+          {PD_NORMAL.map(o  => mBtn(o, pdArray, updPdArray, '#2d6a4f', '#d8f3dc'))}
+          {PD_SPECIAL.map(o => <button key={o} onClick={() => updPdArray(o)} className="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95"
+            style={{ backgroundColor: pdArray.includes(o)?'rgba(245,158,11,0.18)':'var(--t-item-bg)', color:'#b8860b', borderColor:'#b8860b' }}>
+            {pdArray.includes(o)?'✓ ':''}{o}
+          </button>)}
+        </>)}
+        {row(v6, `TF in 5min (${[...TF_REQ,...TF_OPT].filter(b=>tf5m.includes(b)).length}/4)`, <>
+          {TF_REQ.map(o => mBtn(o, tf5m, updTf5m, '#8b5cf6', '#ede9fe'))}
+          {TF_OPT.map(o => mBtn(o, tf5m, updTf5m, '#94a3b8', '#f1f5f9', true))}
+        </>)}
+      </div>
+
+      <button onClick={reset} className="w-full rounded-xl text-sm font-bold transition-all active:scale-95"
+        style={{ padding:'10px', border:'2px solid #e84057', color:'#e84057', backgroundColor:'transparent' }}>
+        🔄 Reset All
       </button>
-
-      {open && (
-        <>
-          <div className="divide-y" style={{ borderColor: 'var(--t-border-soft)' }}>
-
-            {/* 1. Paire */}
-            <div className="px-4 py-3">
-              {itemRow(1, 'Paire', v1, !!pair)}
-              <div className="flex flex-wrap gap-1.5 mt-2 ml-6">
-                {['EURUSD','NZDUSD','GBPUSD'].map(o => (
-                  <button key={o} onClick={() => updPair(o)} className="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95" style={radioBtnStyle(o, pair)}>
-                    {pair === o ? '✓ ' : ''}{o}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 2. Session */}
-            <div className="px-4 py-3">
-              {itemRow(2, 'Session', v2, !!session)}
-              <div className="ml-6 mt-2">
-                <button onClick={() => updSession('lkz')} className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold border text-left transition-all active:scale-95"
-                  style={{ backgroundColor: session === 'lkz' ? 'rgba(59,130,246,0.12)' : 'var(--t-item-bg)', color: session === 'lkz' ? '#3b82f6' : 'var(--t-text-muted)', borderColor: session === 'lkz' ? '#3b82f6' : 'var(--t-border-soft)' }}>
-                  {session === 'lkz' ? '✓ ' : ''}🕑 London Kill Zone &nbsp;·&nbsp; 2:30 AM – 5:00 AM → 8:00 AM
-                </button>
-              </div>
-            </div>
-
-            {/* 3. Bias 4H */}
-            <div className="px-4 py-3">
-              {itemRow(3, 'Bias 4H', v3, !!bias4h)}
-              <div className="flex flex-wrap gap-1.5 mt-2 ml-6">
-                {['Haussier','Baissier'].map(o => (
-                  <button key={o} onClick={() => updBias(o)} className="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95" style={radioBtnStyle(o, bias4h)}>
-                    {bias4h === o ? '✓ ' : ''}{o}
-                  </button>
-                ))}
-                <button onClick={() => updBias('Pas clair')} className="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95" style={radioBtnStyle('Pas clair', bias4h, true)}>
-                  {bias4h === 'Pas clair' ? '✗ ' : ''}Pas clair
-                </button>
-              </div>
-            </div>
-
-            {/* 4. Draw Liquidity — ALL 4 required */}
-            <div className="px-4 py-3">
-              {itemRow(4, 'Draw Liquidity', v4, drawLiq.length > 0,
-                <span className="text-xs font-semibold mr-1" style={{ color: 'var(--t-text-soft)' }}>{drawLiq.length}/4</span>
-              )}
-              <p className="text-xs mb-2 ml-6" style={{ color: 'var(--t-text-muted)' }}>Les 4 sont requis</p>
-              <div className="flex flex-wrap gap-1.5 ml-6">
-                {DRAW_BTNS.map(o => (
-                  <button key={o} onClick={() => updDrawLiq(o)} className="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95"
-                    style={multiBtnStyle(o, drawLiq, '#1e6091', '#dbeafe')}>
-                    {drawLiq.includes(o) ? '✓ ' : ''}{o}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 5. PD Array — multi, last 2 different color */}
-            <div className="px-4 py-3">
-              {itemRow(5, 'PD Array', v5, pdArray.length > 0)}
-              <div className="flex flex-wrap gap-1.5 mt-2 ml-6">
-                {PD_NORMAL.map(o => (
-                  <button key={o} onClick={() => updPdArray(o)} className="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95"
-                    style={multiBtnStyle(o, pdArray, '#2d6a4f', '#d8f3dc')}>
-                    {pdArray.includes(o) ? '✓ ' : ''}{o}
-                  </button>
-                ))}
-                {PD_SPECIAL.map(o => (
-                  <button key={o} onClick={() => updPdArray(o)} className="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95"
-                    style={{ backgroundColor: pdArray.includes(o) ? 'rgba(245,158,11,0.18)' : 'var(--t-item-bg)', color: '#b8860b', borderColor: '#b8860b' }}>
-                    {pdArray.includes(o) ? '✓ ' : ''}{o}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 6. TF in 5min — ALL 4 required */}
-            <div className="px-4 py-3">
-              {itemRow(6, 'TF in 5min', v6, tf5m.length > 0,
-                <span className="text-xs font-semibold mr-1" style={{ color: 'var(--t-text-soft)' }}>{tf5m.length}/4</span>
-              )}
-              <p className="text-xs mb-2 ml-6" style={{ color: 'var(--t-text-muted)' }}>Les 4 sont requis</p>
-              <div className="flex flex-wrap gap-1.5 ml-6">
-                {TF_BTNS.map(o => (
-                  <button key={o} onClick={() => updTf5m(o)} className="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-95"
-                    style={multiBtnStyle(o, tf5m, '#8b5cf6', '#ede9fe')}>
-                    {tf5m.includes(o) ? '✓ ' : ''}{o}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-          </div>
-
-          {/* Verdict */}
-          <div className="p-4 border-t" style={{ borderColor: 'var(--t-border-soft)' }}>
-            <div className="rounded-2xl px-4 py-3 flex items-center gap-3" style={{ backgroundColor: vStyle.bg, border: `2px solid ${vStyle.border}` }}>
-              <span className="text-2xl shrink-0">{vStyle.icon}</span>
-              <p className="font-bold text-sm" style={{ color: vStyle.color }}>{vStyle.label}</p>
-            </div>
-            <button onClick={reset} className="w-full mt-3 py-2 rounded-xl text-xs font-semibold transition-all active:scale-95"
-              style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>
-              🔄 Réinitialiser
-            </button>
-          </div>
-        </>
-      )}
     </div>
   )
 }
@@ -970,116 +896,78 @@ function RadioGroup({ options, value, onChange }: { options: string[]; value: st
 
 function PreTradeChecklist() {
   const [state, setState] = useState<CheckState>({})
-  const [open, setOpen] = useState(true)
 
   const setStr = (id: string, v: string) => setState(s => ({ ...s, [id]: v }))
   const setArr = (id: string, v: string[]) => setState(s => ({ ...s, [id]: v }))
 
-  const isAnswered = (c: typeof CHECKS[0]) => {
-    const v = state[c.id]
-    return c.multi ? getArr(v).length > 0 : getStr(v) !== ''
-  }
-  const answered = CHECKS.filter(isAnswered).length
   const passed = CHECKS.filter(c => c.valid(state[c.id] ?? (c.multi ? [] : ''))).length
   const hasWarning = CHECKS.some(c => c.warning?.(state[c.id] ?? ''))
   const isBlocked = state['losses'] === '2 — STOP'
-  const allAnswered = answered === CHECKS.length
-  const allValid = passed === CHECKS.length
-  const verdict = isBlocked ? 'blocked' : !allAnswered ? 'incomplete' : allValid ? 'valid' : 'invalid'
+  const allGood = !isBlocked && passed === CHECKS.length
 
-  const verdictStyle = {
-    blocked:    { bg: '#fde8ec', color: '#c0303e', border: '#e57373', icon: '🚫', label: 'STOP — 2 pertes atteintes, ne trade pas aujourd\'hui' },
-    incomplete: { bg: 'var(--t-item-bg)', color: 'var(--t-text-muted)', border: 'var(--t-border-soft)', icon: '⏳', label: `${answered}/${CHECKS.length} points complétés` },
-    invalid:    { bg: '#fde8ec', color: '#c0303e', border: '#e57373', icon: '❌', label: 'Setup invalide — ne pas entrer' },
-    valid:      { bg: '#d8f3dc', color: '#2d6a4f', border: '#52b788', icon: '✅', label: hasWarning ? 'Setup valide — réduire la taille (news)' : 'Setup valide — tu peux entrer' },
-  }[verdict]
+  const progressColor = isBlocked ? '#e57373' : allGood ? '#22c55e' : 'linear-gradient(90deg,#d4a017,#b8860b)'
+  const progressLabel = isBlocked
+    ? '🚫 STOP — 2 pertes, ne trade pas'
+    : allGood
+    ? (hasWarning ? '⚠️ Valide — réduire la taille (news)' : '✅ Ready to trade!')
+    : `${passed} / ${CHECKS.length} conditions`
 
   return (
-    <div className="rounded-2xl border-2 overflow-hidden" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
-      {/* Header */}
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full p-4 flex items-center justify-between"
-        style={{ backgroundColor: 'var(--t-item-bg)' }}
-      >
-        <div className="flex items-center gap-3">
-          <span className="text-lg">🎯</span>
-          <div className="text-left">
-            <p className="font-bold text-sm" style={{ color: 'var(--t-text-main)' }}>Checklist</p>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-muted)' }}>{answered}/{CHECKS.length} points · {passed} validés</p>
-          </div>
+    <div className="flex flex-col gap-2">
+      {/* Progress bar card */}
+      <div className="rounded-2xl p-4 border-2" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: allGood ? '#22c55e' : isBlocked ? '#e57373' : 'var(--t-border-soft)' }}>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#b8860b' }}>🎯 My Checklist</p>
+          <button
+            onClick={() => setState({})}
+            className="text-xs px-2 py-1 rounded-lg font-semibold transition-all active:scale-95"
+            style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}
+          >Reset</button>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Progress ring */}
-          <div className="relative w-8 h-8">
-            <svg className="w-8 h-8 -rotate-90" viewBox="0 0 32 32">
-              <circle cx="16" cy="16" r="12" fill="none" stroke="var(--t-border-soft)" strokeWidth="3" />
-              <circle cx="16" cy="16" r="12" fill="none"
-                stroke={verdict === 'valid' ? '#52b788' : verdict === 'blocked' || verdict === 'invalid' ? '#e57373' : '#b8860b'}
-                strokeWidth="3"
-                strokeDasharray={`${(passed / CHECKS.length) * 75.4} 75.4`}
-              />
-            </svg>
-            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold" style={{ color: 'var(--t-text-muted)' }}>
-              {passed}
-            </span>
-          </div>
-          <span className="text-xs" style={{ color: 'var(--t-text-soft)' }}>{open ? '▲' : '▼'}</span>
+        <div className="h-2 rounded-full overflow-hidden mb-2" style={{ backgroundColor: 'var(--t-item-bg)' }}>
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${(passed / CHECKS.length) * 100}%`, background: isBlocked ? '#e57373' : allGood ? '#22c55e' : 'linear-gradient(90deg,#d4a017,#b8860b)' }}
+          />
         </div>
-      </button>
+        <p className="text-xs font-semibold" style={{ color: allGood ? '#22c55e' : isBlocked ? '#c0303e' : 'var(--t-text-muted)' }}>{progressLabel}</p>
+      </div>
 
-      {open && (
-        <>
-          <div className="divide-y" style={{ borderColor: 'var(--t-border-soft)' }}>
-            {CHECKS.map((check, i) => {
-              const rawVal = state[check.id]
-              const strVal = getStr(rawVal)
-              const arrVal = getArr(rawVal)
-              const answered_ = check.multi ? arrVal.length > 0 : strVal !== ''
-              const isValid = check.valid(check.multi ? arrVal : strVal)
-              const isWarn = check.warning?.(strVal)
-              return (
-                <div key={check.id} className="px-4 py-3">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-xs font-bold w-4 shrink-0" style={{ color: 'var(--t-text-soft)' }}>{i + 1}</span>
-                    <p className="text-sm font-semibold flex-1" style={{ color: 'var(--t-text-main)' }}>{check.label}</p>
-                    {answered_ && (
-                      <span className="text-sm shrink-0">
-                        {isWarn ? '⚠️' : isValid ? '✅' : '❌'}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs mb-1 ml-6" style={{ color: 'var(--t-text-muted)' }}>{check.desc}</p>
-                  <div className="ml-6">
-                    {check.multi
-                      ? <MultiGroup options={check.options} value={arrVal} onChange={v => setArr(check.id, v)} />
-                      : <RadioGroup options={check.options} value={strVal} onChange={v => setStr(check.id, v)} />
-                    }
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Verdict */}
-          <div className="p-4 border-t" style={{ borderColor: 'var(--t-border-soft)' }}>
-            <div
-              className="rounded-2xl px-4 py-3 flex items-center gap-3"
-              style={{ backgroundColor: verdictStyle.bg, border: `2px solid ${verdictStyle.border}` }}
-            >
-              <span className="text-2xl shrink-0">{verdictStyle.icon}</span>
-              <p className="font-bold text-sm" style={{ color: verdictStyle.color }}>{verdictStyle.label}</p>
+      {/* Item cards */}
+      {CHECKS.map((check, i) => {
+        const rawVal = state[check.id]
+        const strVal = getStr(rawVal)
+        const arrVal = getArr(rawVal)
+        const isValid = check.valid(check.multi ? arrVal : strVal)
+        const isWarn = check.warning?.(strVal)
+        const isDanger = isBlocked && check.id === 'losses'
+        const cardBg = isDanger ? 'rgba(229,115,115,0.08)' : isValid ? 'rgba(34,197,94,0.08)' : 'var(--t-card-bg)'
+        const cardBorder = isDanger ? '#e57373' : isValid ? '#22c55e' : 'var(--t-border-soft)'
+        return (
+          <div
+            key={check.id}
+            className="flex items-start gap-3 px-4 py-3 rounded-2xl border-2 transition-all"
+            style={{ backgroundColor: cardBg, borderColor: cardBorder }}
+          >
+            {/* Circular checkbox */}
+            <div className="shrink-0 mt-0.5 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all"
+              style={{ borderColor: isValid ? '#22c55e' : isDanger ? '#e57373' : 'var(--t-border-soft)', backgroundColor: isValid ? '#22c55e' : isDanger ? '#e57373' : 'transparent' }}>
+              {(isValid || isDanger) && <span className="text-white text-xs font-bold">{isWarn ? '!' : '✓'}</span>}
             </div>
-            <button
-              onClick={() => setState({})}
-              className="w-full mt-3 py-2 rounded-xl text-xs font-semibold transition-all active:scale-95"
-              style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}
-            >
-              🔄 Réinitialiser
-            </button>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className="text-[10px] font-bold" style={{ color: 'var(--t-text-soft)' }}>{i + 1}</span>
+                <p className="text-sm font-semibold" style={{ color: 'var(--t-text-main)' }}>{check.label}</p>
+              </div>
+              <p className="text-xs mb-1.5" style={{ color: 'var(--t-text-muted)' }}>{check.desc}</p>
+              {check.multi
+                ? <MultiGroup options={check.options} value={arrVal} onChange={v => setArr(check.id, v)} />
+                : <RadioGroup options={check.options} value={strVal} onChange={v => setStr(check.id, v)} />
+              }
+            </div>
           </div>
-        </>
-      )}
+        )
+      })}
     </div>
   )
 }
