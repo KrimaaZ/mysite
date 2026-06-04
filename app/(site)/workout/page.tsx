@@ -543,7 +543,7 @@ export default function WorkoutPage() {
   }
 
   // ── Main tab ────────────────────────────────────────────────────────────────
-  const [mainTab, setMainTab] = useState<'library' | 'log' | 'week' | 'videos'>('library')
+  const [mainTab, setMainTab] = useState<'library' | 'week' | 'videos'>('library')
 
   // ── Videos state ────────────────────────────────────────────────────────────
   const [igVideos, setIgVideos] = useState<VideoEntry[]>([])
@@ -560,15 +560,6 @@ export default function WorkoutPage() {
   const [customNotes, setCustomNotes] = useState<Record<number, string>>({})
   const [noteInput, setNoteInput] = useState('')
 
-  // ── Log state ──────────────────────────────────────────────────────────────
-  const [logCat, setLogCat] = useState('PULL')
-  const [sessions, setSessions] = useState<Session[]>([])
-  const [logModal, setLogModal] = useState(false)
-  const [logForm, setLogForm] = useState(emptyLogForm)
-  const [logExercises, setLogExercises] = useState<{ name: string; sets: number; reps: string; notes: string }[]>([{ ...emptyLogEx }])
-  const [editingLog, setEditingLog] = useState<number | null>(null)
-  const [aiLoading, setAiLoading] = useState(false)
-  const [logSaving, setLogSaving] = useState(false)
 
   // ── Week plan state ────────────────────────────────────────────────────────
   const [splitOrder, setSplitOrder] = useState<number[]>([0, 1, 2]) // indices into SPLIT_TYPES
@@ -586,9 +577,6 @@ export default function WorkoutPage() {
     fetch('/api/videos').then(r => r.json()).then(setIgVideos).catch(() => {})
   }, [])
 
-  const loadSessions = (type?: string) =>
-    fetch(`/api/workout${type ? `?type=${type}` : ''}`).then(r => r.json()).then(setSessions)
-  useEffect(() => { if (mainTab === 'log') loadSessions(logCat) }, [logCat, mainTab])
 
   // ── Library helpers ────────────────────────────────────────────────────────
   const filteredLib = useMemo(() =>
@@ -610,35 +598,6 @@ export default function WorkoutPage() {
     setCustomNotes(next); localStorage.setItem('exNotes', JSON.stringify(next)); setEditEx(null)
   }
 
-  // ── Log helpers ────────────────────────────────────────────────────────────
-  const openLogAdd = () => { setLogForm({ ...emptyLogForm, type: logCat }); setLogExercises([{ ...emptyLogEx }]); setEditingLog(null); setLogModal(true) }
-  const openLogEdit = (s: Session) => {
-    setLogForm({ type: s.type, title: s.title, date: s.date, notes: s.notes || '' })
-    setLogExercises(JSON.parse(s.exercises)); setEditingLog(s.id); setLogModal(true)
-  }
-  const saveLog = async () => {
-    setLogSaving(true)
-    await fetch(editingLog ? `/api/workout/${editingLog}` : '/api/workout', { method: editingLog ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...logForm, exercises: logExercises }) })
-    await loadSessions(logCat); setLogModal(false); setLogSaving(false)
-  }
-  const delLog = async (id: number) => {
-    if (!confirm(t.deleteSession)) return
-    await fetch(`/api/workout/${id}`, { method: 'DELETE' }); loadSessions(logCat)
-  }
-  const generateAI = async () => {
-    setAiLoading(true)
-    try {
-      const r = await fetch('/api/ai', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'workout', data: { sessionType: logForm.type } }) })
-      const data = await r.json()
-      setLogForm(f => ({ ...f, title: data.title || f.title, notes: data.notes || f.notes }))
-      if (data.exercises?.length) setLogExercises(data.exercises)
-    } catch { alert(t.aiFailed) }
-    setAiLoading(false)
-  }
-  const addLogEx = () => setLogExercises(ex => [...ex, { ...emptyLogEx }])
-  const removeLogEx = (i: number) => setLogExercises(ex => ex.filter((_, j) => j !== i))
-  const updateLogEx = (i: number, k: string, v: string | number) =>
-    setLogExercises(ex => ex.map((e, j) => j === i ? { ...e, [k]: v } : e))
 
   // ── Week helpers ───────────────────────────────────────────────────────────
   const getSplitType = (dayIdx: number) => SPLIT_TYPES[splitOrder[dayIdx]]
@@ -670,19 +629,6 @@ export default function WorkoutPage() {
 
   return (
     <div>
-      {/* ── Hero last session ── */}
-      {sessions.length > 0 && (
-        <div className="rounded-2xl p-5 mb-5 relative overflow-hidden"
-          style={{ background: 'linear-gradient(135deg, var(--t-hero-from) 0%, var(--t-hero-mid) 55%, var(--t-hero-to) 100%)' }}>
-          <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.07)' }} />
-          <span className="inline-block text-xs font-bold uppercase tracking-widest px-2.5 py-1 rounded-full mb-3"
-            style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'var(--t-hero-text)' }}>
-            💪 Dernière séance
-          </span>
-          <p className="text-white font-bold text-lg leading-snug mb-1">{sessions[0].title}</p>
-          <p className="text-sm" style={{ color: 'var(--t-hero-text)' }}>{sessions[0].type} · {sessions[0].date}</p>
-        </div>
-      )}
 
       {/* Page Header */}
       <div className="flex items-center justify-between gap-3 mb-5">
@@ -690,14 +636,12 @@ export default function WorkoutPage() {
           <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: 'var(--t-text-main)' }}>💪 Workout</h1>
           <p className="text-xs sm:text-sm mt-0.5" style={{ color: 'var(--t-text-muted)' }}>{t.workoutSubtitle}</p>
         </div>
-        {mainTab === 'log' && (
-          <button onClick={openLogAdd} className="btn-glass btn-glass-green px-4 py-2.5 rounded-xl text-sm font-medium">{t.logBtn}</button>
-        )}
+
       </div>
 
       {/* Main Tabs */}
       <div className="flex gap-2 mb-5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-        {([['library', t.libraryTab], ['log', t.workoutLogTab], ['week', t.workoutWeekTab], ['videos', '🎬 Videos']] as const).map(([key, label]) => (
+        {([['library', t.libraryTab], ['week', t.workoutWeekTab], ['videos', '🎬 Videos']] as const).map(([key, label]) => (
           <button key={key} onClick={() => setMainTab(key)}
             className="px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all"
             style={{ backgroundColor: mainTab === key ? '#2d6a4f' : 'var(--t-item-bg)', color: mainTab === key ? '#fff' : 'var(--t-text-muted)' }}>
@@ -767,60 +711,6 @@ export default function WorkoutPage() {
         </>
       )}
 
-      {/* ── LOG TAB ──────────────────────────────────────────────────────────── */}
-      {mainTab === 'log' && (
-        <>
-          <div className="flex gap-2 overflow-x-auto pb-1 mb-5" style={{ scrollbarWidth: 'none' }}>
-            {TYPES.map(tp => {
-              const info = TYPE_INFO[tp]
-              return (
-                <button key={tp} onClick={() => setLogCat(tp)}
-                  className="px-3 sm:px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap flex items-center gap-1.5 transition-all"
-                  style={{ backgroundColor: logCat === tp ? info.color : 'var(--t-item-bg)', color: logCat === tp ? '#fff' : 'var(--t-text-muted)' }}>
-                  {info.emoji} {info.label}
-                </button>
-              )
-            })}
-          </div>
-          {sessions.length === 0 ? (
-            <div className="text-center py-16 rounded-2xl" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-soft)' }}>
-              <p className="text-4xl mb-2">{TYPE_INFO[logCat]?.emoji}</p>
-              <p className="font-medium text-sm">{t.noSessions(TYPE_INFO[logCat]?.label ?? '')}</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {sessions.map(s => {
-                const exs = JSON.parse(s.exercises) as { name: string; sets: number; reps: string; notes: string }[]
-                const info = TYPE_INFO[s.type]
-                return (
-                  <div key={s.id} className="rounded-2xl border-2 p-4 shadow-sm" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <span className="text-xs font-bold px-2.5 py-1 rounded-full text-white" style={{ backgroundColor: info?.color }}>{info?.emoji} {info?.label}</span>
-                        <h3 className="font-semibold text-base mt-1.5" style={{ color: 'var(--t-text-main)' }}>{s.title}</h3>
-                        <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-soft)' }}>{s.date}</p>
-                      </div>
-                      <div className="flex gap-1 shrink-0">
-                        <button onClick={() => openLogEdit(s)} className="text-xs px-2 py-1 rounded-lg" style={{ color: 'var(--t-text-muted)', backgroundColor: 'var(--t-item-bg)' }}>{t.edit}</button>
-                        <button onClick={() => delLog(s.id)} className="text-xs px-2 py-1 rounded-lg" style={{ color: '#c0303e', backgroundColor: '#fde8ec' }}>{t.del}</button>
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      {exs.map((ex, i) => (
-                        <div key={i} className="flex items-center gap-2 py-1.5 px-3 rounded-xl" style={{ backgroundColor: 'var(--t-item-bg)' }}>
-                          <span className="font-medium text-sm flex-1 truncate" style={{ color: 'var(--t-text-main)' }}>{ex.name}</span>
-                          <span className="text-xs px-2 py-0.5 rounded-full shrink-0" style={{ backgroundColor: '#d8f3dc', color: '#2d6a4f' }}>{ex.sets}×{ex.reps}</span>
-                        </div>
-                      ))}
-                    </div>
-                    {s.notes && <p className="text-xs mt-2 italic" style={{ color: 'var(--t-text-soft)' }}>{s.notes}</p>}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </>
-      )}
 
       {/* ── WEEK PLAN TAB ─────────────────────────────────────────────────────── */}
       {mainTab === 'week' && (
@@ -970,64 +860,6 @@ export default function WorkoutPage() {
       )}
 
 
-      {/* ── Log Session Modal ───────────────────────────────────────────────── */}
-      {logModal && (
-        <Modal title={editingLog ? t.editSession : t.logSession} onClose={() => setLogModal(false)} wide>
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.type}</label>
-                <select value={logForm.type} onChange={e => setLogForm(f => ({ ...f, type: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }}>
-                  {TYPES.map(tp => <option key={tp} value={tp}>{TYPE_INFO[tp].label}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.date}</label>
-                <input type="date" value={logForm.date} onChange={e => setLogForm(f => ({ ...f, date: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }} />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.sessionTitle}</label>
-              <input value={logForm.title} onChange={e => setLogForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Heavy Push Day" className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)' }} />
-            </div>
-            <button onClick={generateAI} disabled={aiLoading} className="w-full py-2.5 rounded-xl text-sm font-medium disabled:opacity-60" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>
-              {aiLoading ? t.aiGenerating : t.aiSuggest}
-            </button>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-medium" style={{ color: 'var(--t-text-muted)' }}>{t.exercises}</label>
-                <button onClick={addLogEx} className="text-xs px-2 py-1 rounded-lg" style={{ backgroundColor: '#d8f3dc', color: '#2d6a4f' }}>+ Add</button>
-              </div>
-              <div className="space-y-2">
-                {logExercises.map((ex, i) => (
-                  <div key={i} className="rounded-xl p-2 space-y-2" style={{ backgroundColor: 'var(--t-item-bg)' }}>
-                    <div className="flex gap-2">
-                      <input value={ex.name} onChange={e => updateLogEx(i, 'name', e.target.value)} placeholder={t.exerciseName}
-                        className="flex-1 px-2.5 py-2 rounded-lg border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)', backgroundColor: 'var(--t-card-bg)' }} />
-                      <button onClick={() => removeLogEx(i)} className="px-2 py-1 rounded-lg text-xs" style={{ color: '#c0303e', backgroundColor: '#fde8ec' }}>×</button>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <input type="number" value={ex.sets} onChange={e => updateLogEx(i, 'sets', Number(e.target.value))} placeholder={t.sets} className="px-2.5 py-2 rounded-lg border text-sm outline-none text-center" style={{ borderColor: 'var(--t-border-soft)', backgroundColor: 'var(--t-card-bg)' }} />
-                      <input value={ex.reps} onChange={e => updateLogEx(i, 'reps', e.target.value)} placeholder={t.reps} className="px-2.5 py-2 rounded-lg border text-sm outline-none text-center" style={{ borderColor: 'var(--t-border-soft)', backgroundColor: 'var(--t-card-bg)' }} />
-                      <input value={ex.notes} onChange={e => updateLogEx(i, 'notes', e.target.value)} placeholder={t.notes} className="px-2.5 py-2 rounded-lg border text-sm outline-none" style={{ borderColor: 'var(--t-border-soft)', backgroundColor: 'var(--t-card-bg)' }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--t-text-muted)' }}>{t.sessionNotes}</label>
-              <textarea value={logForm.notes} onChange={e => setLogForm(f => ({ ...f, notes: e.target.value }))} rows={2} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none resize-none" style={{ borderColor: 'var(--t-border-soft)' }} />
-            </div>
-          </div>
-          <div className="flex gap-2 mt-5">
-            <button onClick={() => setLogModal(false)} className="btn-glass btn-glass-neutral flex-1 py-2.5 rounded-xl text-sm font-medium">{t.cancel}</button>
-            <button onClick={saveLog} disabled={logSaving} className="btn-glass btn-glass-green flex-1 py-2.5 rounded-xl text-sm font-medium disabled:opacity-60">
-              {logSaving ? t.saving : t.saveSession}
-            </button>
-          </div>
-        </Modal>
-      )}
 
       {/* ── VIDEOS TAB ──────────────────────────────────────────────────────── */}
       {mainTab === 'videos' && (
