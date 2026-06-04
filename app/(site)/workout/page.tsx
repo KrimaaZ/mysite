@@ -125,6 +125,22 @@ const LEVELS = ['novice', 'beginner', 'intermediate', 'advanced', 'elite'] as co
 const emptyLogForm = { type: 'PULL', title: '', date: new Date().toISOString().split('T')[0], notes: '' }
 const emptyLogEx = { name: '', sets: 3, reps: '8-10', notes: '' }
 
+// ─── 3-Day Split Plan ─────────────────────────────────────────────────────────
+// Indices map to SPLIT_TYPES: 0=PULL, 1=PUSH, 2=ABS_LEGS
+const SPLIT_TYPES = ['PULL', 'PUSH', 'ABS_LEGS'] as const
+// Exercise IDs for each session — ordered: warmup → main lifts → cardio finisher
+const DAY_PROGRAMS: Record<string, number[]> = {
+  PULL:     [18, 1, 2, 3, 4, 5, 19],          // Treadmill warmup, 5 pulls, HIIT
+  PUSH:     [20, 6, 7, 8, 9, 10, 11, 21],      // Bike warmup, 6 pushes, LISS
+  ABS_LEGS: [18, 13, 14, 15, 16, 12, 17, 21],  // Treadmill warmup, 6 abs/legs, LISS
+}
+// Estimated session sets/reps for display
+const DAY_DETAILS: Record<string, { sets: string; time: string }> = {
+  PULL:     { sets: '20 sets', time: '~1h45' },
+  PUSH:     { sets: '23 sets', time: '~1h45' },
+  ABS_LEGS: { sets: '23 sets', time: '~1h45' },
+}
+
 // ─── Exercise Detail Overlay ──────────────────────────────────────────────────
 function PhotoEditPopup({ index, current, onSave, onClose }: {
   index: number; current: string | null; onSave: (url: string | null) => void; onClose: () => void
@@ -555,18 +571,16 @@ export default function WorkoutPage() {
   const [logSaving, setLogSaving] = useState(false)
 
   // ── Week plan state ────────────────────────────────────────────────────────
-  const [weekDay, setWeekDay] = useState(0)
-  const [weekPlan, setWeekPlan] = useState<Record<string, number[]>>({})
-  const [pickModal, setPickModal] = useState(false)
-  const [pickCat, setPickCat] = useState('PULL')
-  const [doneSets, setDoneSets] = useState<Set<string>>(new Set()) // "day-exId"
+  const [splitOrder, setSplitOrder] = useState<number[]>([0, 1, 2]) // indices into SPLIT_TYPES
+  const [activeDay, setActiveDay] = useState(0)                      // which day card is expanded
+  const [doneSets, setDoneSets] = useState<Set<string>>(new Set())   // "d{dayIdx}-{exId}"
 
   // ── Load ───────────────────────────────────────────────────────────────────
   useEffect(() => {
     try {
       setFavExercises(new Set(JSON.parse(localStorage.getItem('favEx') || '[]')))
       setCustomNotes(JSON.parse(localStorage.getItem('exNotes') || '{}'))
-      setWeekPlan(JSON.parse(localStorage.getItem('weekWorkout') || '{}'))
+      setSplitOrder(JSON.parse(localStorage.getItem('splitOrder') || '[0,1,2]'))
       setDoneSets(new Set(JSON.parse(localStorage.getItem('exDone') || '[]')))
     } catch {}
     fetch('/api/videos').then(r => r.json()).then(setIgVideos).catch(() => {})
@@ -627,32 +641,32 @@ export default function WorkoutPage() {
     setLogExercises(ex => ex.map((e, j) => j === i ? { ...e, [k]: v } : e))
 
   // ── Week helpers ───────────────────────────────────────────────────────────
-  const dayKey = t.days[weekDay]
-  const dayExIds = weekPlan[dayKey] || []
-  const dayExercises = EXERCISES.filter(e => dayExIds.includes(e.id))
+  const getSplitType = (dayIdx: number) => SPLIT_TYPES[splitOrder[dayIdx]]
+  const getDayExercises = (dayIdx: number) =>
+    DAY_PROGRAMS[getSplitType(dayIdx)]
+      .map(id => EXERCISES.find(e => e.id === id))
+      .filter((e): e is ExCard => !!e)
 
-  const addToDay = (id: number) => {
-    const cur = weekPlan[dayKey] || []
-    if (cur.includes(id)) return
-    const next = { ...weekPlan, [dayKey]: [...cur, id] }
-    setWeekPlan(next); localStorage.setItem('weekWorkout', JSON.stringify(next))
-  }
-  const removeFromDay = (id: number) => {
-    const next = { ...weekPlan, [dayKey]: (weekPlan[dayKey] || []).filter(i => i !== id) }
-    setWeekPlan(next); localStorage.setItem('weekWorkout', JSON.stringify(next))
-  }
-  const clearDay = () => {
-    const next = { ...weekPlan }; delete next[dayKey]
-    setWeekPlan(next); localStorage.setItem('weekWorkout', JSON.stringify(next))
-    const cleaned = new Set([...doneSets].filter(k => !k.startsWith(dayKey + '-')))
+  // Rotate: Day 1 done → Day 2 becomes Day 1, Day 3 → Day 2, old Day 1 → Day 3
+  const rotateDay = () => {
+    const next = [...splitOrder.slice(1), splitOrder[0]]
+    setSplitOrder(next)
+    localStorage.setItem('splitOrder', JSON.stringify(next))
+    // Reset done checkmarks for what was Day 1 (now Day 3 after rotation)
+    const cleaned = new Set([...doneSets].filter(k => !k.startsWith('d0-')))
     setDoneSets(cleaned); localStorage.setItem('exDone', JSON.stringify([...cleaned]))
+    setActiveDay(0)
   }
-  const toggleDone = (exId: number) => {
-    const key = `${dayKey}-${exId}`
+
+  const toggleDone = (dayIdx: number, exId: number) => {
+    const key = `d${dayIdx}-${exId}`
     const next = new Set(doneSets)
     if (next.has(key)) next.delete(key); else next.add(key)
     setDoneSets(next); localStorage.setItem('exDone', JSON.stringify([...next]))
   }
+
+  const dayAllDone = (dayIdx: number) =>
+    getDayExercises(dayIdx).every(ex => doneSets.has(`d${dayIdx}-${ex.id}`))
 
   return (
     <div>
@@ -678,9 +692,6 @@ export default function WorkoutPage() {
         </div>
         {mainTab === 'log' && (
           <button onClick={openLogAdd} className="btn-glass btn-glass-green px-4 py-2.5 rounded-xl text-sm font-medium">{t.logBtn}</button>
-        )}
-        {mainTab === 'week' && (
-          <button onClick={() => setPickModal(true)} className="btn-glass btn-glass-green px-4 py-2.5 rounded-xl text-sm font-medium">{t.addToDay}</button>
         )}
       </div>
 
@@ -813,68 +824,125 @@ export default function WorkoutPage() {
 
       {/* ── WEEK PLAN TAB ─────────────────────────────────────────────────────── */}
       {mainTab === 'week' && (
-        <>
-          {/* Day selector */}
-          <div className="flex gap-1.5 mb-5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-            {t.days.map((day, i) => {
-              const planned = (weekPlan[day] || []).length
-              return (
-                <button key={day} onClick={() => setWeekDay(i)}
-                  className="flex-1 min-w-[42px] flex flex-col items-center py-2.5 px-1 rounded-xl text-xs font-medium transition-all relative"
-                  style={{ backgroundColor: weekDay === i ? '#2d6a4f' : 'var(--t-item-bg)', color: weekDay === i ? '#fff' : 'var(--t-text-muted)' }}>
-                  {day}
-                  {planned > 0 && (
-                    <span className="mt-0.5 w-4 h-4 rounded-full flex items-center justify-center text-white font-bold"
-                      style={{ backgroundColor: weekDay === i ? '#74c69d' : '#40916c', fontSize: '9px' }}>{planned}</span>
-                  )}
-                </button>
-              )
-            })}
+        <div className="space-y-4">
+
+          {/* ── Day 1 rotate tip ── */}
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
+            style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-soft)' }}>
+            <span>💡</span>
+            <span>Complete Day 1 → press <strong style={{ color: 'var(--t-text-main)' }}>Day Done ↻</strong> to shift the queue forward</span>
           </div>
 
-          {/* Day exercises */}
-          {dayExercises.length === 0 ? (
-            <div className="text-center py-16 rounded-2xl" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-soft)' }}>
-              <p className="text-4xl mb-2">📅</p>
-              <p className="font-medium text-sm px-4">{t.workoutWeekEmpty}</p>
-            </div>
-          ) : (
-            <>
-              <div className="flex justify-end mb-3">
-                <button onClick={clearDay} className="text-xs px-3 py-1.5 rounded-lg" style={{ backgroundColor: '#fde8ec', color: '#c0303e' }}>{t.clearDay}</button>
-              </div>
-              <div className="space-y-3">
-                {dayExercises.map(ex => {
-                  const doneKey = `${dayKey}-${ex.id}`
-                  const isDone = doneSets.has(doneKey)
-                  const info = TYPE_INFO_STATIC[ex.type]
-                  return (
-                    <div key={ex.id} className="rounded-2xl border-2 p-4 flex items-center gap-3 transition-all"
-                      style={{ backgroundColor: isDone ? '#f0faf2' : 'var(--t-card-bg)', borderColor: isDone ? '#2d6a4f' : 'var(--t-border-soft)' }}>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                          <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: info.color }}>{info.emoji}</span>
-                          <span className="font-semibold text-sm truncate" style={{ color: isDone ? '#52b788' : 'var(--t-text-main)', textDecoration: isDone ? 'line-through' : 'none' }}>{ex.name}</span>
-                        </div>
-                        <p className="text-xs" style={{ color: 'var(--t-text-soft)' }}>{ex.muscle} · {ex.equipment}</p>
-                      </div>
-                      <div className="flex gap-1.5 shrink-0">
-                        <button onClick={() => toggleDone(ex.id)}
-                          className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
-                          style={{ backgroundColor: isDone ? '#d8f3dc' : '#f0faf2', color: '#2d6a4f' }}>
-                          {isDone ? '✓' : t.markExDone}
-                        </button>
-                        <button onClick={() => removeFromDay(ex.id)}
-                          className="w-7 h-7 rounded-full flex items-center justify-center text-xs"
-                          style={{ backgroundColor: '#fde8ec', color: '#c0303e' }}>×</button>
-                      </div>
+          {/* ── 3 day cards ── */}
+          {[0, 1, 2].map(dayIdx => {
+            const type = getSplitType(dayIdx)
+            const info = TYPE_INFO_STATIC[type]
+            const exList = getDayExercises(dayIdx)
+            const details = DAY_DETAILS[type]
+            const isNext = dayIdx === 0
+            const isOpen = activeDay === dayIdx
+            const doneCount = exList.filter(ex => doneSets.has(`d${dayIdx}-${ex.id}`)).length
+            const allDone = doneCount === exList.length
+
+            return (
+              <div key={dayIdx}
+                className="rounded-2xl border-2 overflow-hidden transition-all"
+                style={{
+                  borderColor: isNext ? info.color : 'var(--t-border-soft)',
+                  backgroundColor: 'var(--t-card-bg)',
+                  opacity: dayIdx === 2 ? 0.75 : 1,
+                }}>
+
+                {/* Card header — always visible */}
+                <button
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left"
+                  onClick={() => setActiveDay(isOpen ? -1 : dayIdx)}>
+
+                  {/* Day badge */}
+                  <div className="flex flex-col items-center justify-center w-10 h-10 rounded-xl shrink-0 text-white font-black text-sm"
+                    style={{ backgroundColor: isNext ? info.color : 'var(--t-item-bg)', color: isNext ? '#fff' : 'var(--t-text-muted)' }}>
+                    {dayIdx + 1}
+                  </div>
+
+                  {/* Label + meta */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      {isNext && <span className="text-xs font-bold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: info.color }}>Next</span>}
+                      <span className="font-bold text-sm" style={{ color: 'var(--t-text-main)' }}>
+                        {info.emoji} Day {dayIdx + 1} — {type === 'ABS_LEGS' ? 'Abs & Legs' : type === 'PULL' ? 'Pull Day' : 'Push Day'}
+                      </span>
                     </div>
-                  )
-                })}
+                    <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--t-text-soft)' }}>
+                      <span>⏱ {details.time}</span>
+                      <span>·</span>
+                      <span>{details.sets}</span>
+                      <span>·</span>
+                      <span style={{ color: doneCount > 0 ? '#2d6a4f' : 'var(--t-text-soft)' }}>
+                        {doneCount}/{exList.length} done
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Progress ring + chevron */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {allDone && <span className="text-lg">✅</span>}
+                    <span className="text-sm" style={{ color: 'var(--t-text-soft)' }}>
+                      {isOpen ? '▲' : '▼'}
+                    </span>
+                  </div>
+                </button>
+
+                {/* Expanded exercise list */}
+                {isOpen && (
+                  <div className="border-t px-4 pb-4 pt-3 space-y-2"
+                    style={{ borderColor: 'var(--t-border-soft)' }}>
+
+                    {exList.map((ex, i) => {
+                      const isDone = doneSets.has(`d${dayIdx}-${ex.id}`)
+                      const exInfo = TYPE_INFO_STATIC[ex.type]
+                      const isWarmup = ex.type === 'CARDIO' && i === 0
+                      const isFinisher = ex.type === 'CARDIO' && i === exList.length - 1
+                      return (
+                        <div key={ex.id}
+                          className="flex items-center gap-3 p-3 rounded-xl transition-all"
+                          style={{ backgroundColor: isDone ? '#f0faf2' : 'var(--t-item-bg)', borderLeft: `3px solid ${isDone ? '#2d6a4f' : exInfo.color}` }}>
+                          {/* Order number */}
+                          <span className="text-xs font-black w-5 text-center shrink-0"
+                            style={{ color: isDone ? '#52b788' : 'var(--t-text-soft)' }}>{i + 1}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold truncate"
+                              style={{ color: isDone ? '#52b788' : 'var(--t-text-main)', textDecoration: isDone ? 'line-through' : 'none' }}>
+                              {ex.name}
+                              {isWarmup && <span className="ml-1 text-xs font-normal" style={{ color: '#a07850' }}>· warmup</span>}
+                              {isFinisher && <span className="ml-1 text-xs font-normal" style={{ color: '#a07850' }}>· finisher</span>}
+                            </p>
+                            <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-soft)' }}>{ex.muscle}</p>
+                          </div>
+                          <button
+                            onClick={() => toggleDone(dayIdx, ex.id)}
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 transition-all"
+                            style={{ backgroundColor: isDone ? '#2d6a4f' : 'var(--t-card-bg)', color: isDone ? '#fff' : 'var(--t-text-muted)', border: `2px solid ${isDone ? '#2d6a4f' : 'var(--t-border-soft)'}` }}>
+                            {isDone ? '✓' : ''}
+                          </button>
+                        </div>
+                      )
+                    })}
+
+                    {/* Day 1 Done → Rotate button */}
+                    {isNext && (
+                      <button
+                        onClick={rotateDay}
+                        className="w-full mt-3 py-3 rounded-xl text-sm font-bold transition-all active:scale-95"
+                        style={{ backgroundColor: allDone ? info.color : 'var(--t-item-bg)', color: allDone ? '#fff' : 'var(--t-text-muted)', border: `2px solid ${allDone ? info.color : 'var(--t-border-soft)'}` }}>
+                        {allDone ? '🎉 Day Done — Rotate Queue ↻' : '↻ Day Done — Rotate Queue'}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
-            </>
-          )}
-        </>
+            )
+          })}
+        </div>
       )}
 
       {/* ── Edit Exercise Modal ─────────────────────────────────────────────── */}
@@ -901,44 +969,6 @@ export default function WorkoutPage() {
         </Modal>
       )}
 
-      {/* ── Pick Exercise Modal (Week Plan) ────────────────────────────────── */}
-      {pickModal && (
-        <Modal title={t.pickExercise} onClose={() => setPickModal(false)} wide>
-          <div className="flex gap-2 overflow-x-auto pb-2 mb-3" style={{ scrollbarWidth: 'none' }}>
-            {TYPES.map(tp => {
-              const info = TYPE_INFO[tp]
-              return (
-                <button key={tp} onClick={() => setPickCat(tp)}
-                  className="px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap flex items-center gap-1 transition-all"
-                  style={{ backgroundColor: pickCat === tp ? info.color : 'var(--t-item-bg)', color: pickCat === tp ? '#fff' : 'var(--t-text-muted)' }}>
-                  {info.emoji} {info.label}
-                </button>
-              )
-            })}
-          </div>
-          <div className="space-y-2">
-            {EXERCISES.filter(e => e.type === pickCat).map(ex => {
-              const already = (weekPlan[dayKey] || []).includes(ex.id)
-              return (
-                <div key={ex.id} className="flex items-center gap-3 p-3 rounded-xl border"
-                  style={{ backgroundColor: 'var(--t-item-bg)', borderColor: already ? '#2d6a4f' : 'var(--t-border-soft)' }}>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm" style={{ color: 'var(--t-text-main)' }}>{ex.name}</p>
-                    <p className="text-xs" style={{ color: 'var(--t-text-soft)' }}>{ex.muscle} · {ex.equipment}</p>
-                  </div>
-                  <button
-                    onClick={() => { addToDay(ex.id); }}
-                    disabled={already}
-                    className="text-xs px-3 py-1.5 rounded-lg font-medium disabled:opacity-40"
-                    style={{ backgroundColor: already ? '#d8f3dc' : '#2d6a4f', color: '#fff' }}>
-                    {already ? '✓' : '+'}
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-        </Modal>
-      )}
 
       {/* ── Log Session Modal ───────────────────────────────────────────────── */}
       {logModal && (
