@@ -157,3 +157,11 @@ model PreTradeState {
   id   Int    @id @default(1)
   data String @default("{}")
 }
+
+model VaultEntry {
+  id        Int      @id @default(autoincrement())
+  app       String
+  login     String
+  password  String
+  createdAt DateTime @default(now())
+}
