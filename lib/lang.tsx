@@ -10,7 +10,7 @@ type T = {
   date: string; name: string; description: string; type: string; title: string; content: string; category: string
   aiGenerating: string; aiFailed: string; saving: string
   // Welcome
-  tagline: string; enter: string
+  tagline: string; enter: string; subtitle: string; home: string; menu: string
   // Feed
   welcomeBack: string; latestActivity: string; nothingYet: string; nothingYetSub: string
   foodPlan: string; workout: string
@@ -78,7 +78,7 @@ const en: T = {
   date: 'Date', name: 'Name', description: 'Description', type: 'Type', title: 'Title',
   content: 'Content', category: 'Category',
   aiGenerating: '✨ Generating…', aiFailed: 'AI failed', saving: 'Saving…',
-  tagline: 'time to change ur life is now', enter: 'Enter →',
+  tagline: 'time to change ur life is now', enter: 'Enter', subtitle: 'Sign in securely', home: 'Home', menu: 'Menu',
   welcomeBack: 'Welcome back, ZK', latestActivity: 'Latest Activity',
   nothingYet: 'Nothing here yet', nothingYetSub: 'Start adding content in any section above.',
   foodPlan: 'Food Plan', workout: 'Workout',
@@ -151,7 +151,7 @@ const fr: T = {
   date: 'Date', name: 'Nom', description: 'Description', type: 'Type', title: 'Titre',
   content: 'Contenu', category: 'Catégorie',
   aiGenerating: '✨ Génération...', aiFailed: "L'IA a échoué", saving: 'Enregistrement...',
-  tagline: "le moment de changer ta vie c'est maintenant", enter: 'Entrer →',
+  tagline: "le moment de changer ta vie c'est maintenant", enter: 'Entrer', subtitle: 'Connecte-toi en toute sécurité', home: 'Accueil', menu: 'Menu',
   welcomeBack: 'Bon retour, ZK', latestActivity: 'Activité récente',
   nothingYet: 'Rien ici pour l\'instant', nothingYetSub: 'Ajoutez du contenu dans une section ci-dessus.',
   foodPlan: 'Plan alimentaire', workout: 'Entraînement',
