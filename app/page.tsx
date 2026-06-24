@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { useLang } from '@/lib/lang'
 import { useTheme } from '@/lib/theme'
@@ -47,21 +48,25 @@ export default function WelcomePage() {
       <div className="relative z-10 flex flex-col items-center text-center px-6">
         {/* Logo mark */}
         <div
-          className="w-24 h-24 sm:w-32 sm:h-32 rounded-3xl flex items-center justify-center mb-8 btn-glass"
+          className="w-24 h-24 sm:w-32 sm:h-32 rounded-3xl flex items-center justify-center mb-8 btn-glass overflow-hidden"
           style={{
             background: 'rgba(45,106,79,0.35)',
             borderColor: 'rgba(116,198,157,0.3)',
             boxShadow: '0 8px 40px rgba(26,58,26,0.5), inset 0 1px 0 rgba(255,255,255,0.15)',
           }}
         >
-          <span className="font-bold text-4xl sm:text-5xl tracking-tighter" style={{ color: '#74c69d' }}>{theme === 'sb' ? 'SB' : 'ZK'}</span>
+          {theme === 'sb' ? (
+            <span className="font-bold text-4xl sm:text-5xl tracking-tighter" style={{ color: '#74c69d' }}>SB</span>
+          ) : (
+            <Image src="/icon-512.png" alt="ZK" width={128} height={128} className="w-full h-full object-cover" priority />
+          )}
         </div>
 
         <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-3" style={{ color: '#d8f3dc' }}>
           {t.tagline}
         </h1>
         <p className="text-base sm:text-lg mb-10" style={{ color: '#74c69d' }}>
-          Food &nbsp;·&nbsp; Fitness &nbsp;·&nbsp; Valorant &nbsp;·&nbsp; Trading
+          Food &nbsp;·&nbsp; Fitness &nbsp;·&nbsp; Spanish &nbsp;·&nbsp; Trading
         </p>
 
         <Link
@@ -73,10 +78,11 @@ export default function WelcomePage() {
 
         <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-10">
           {[
-            { href: '/food',     label: '🥗 Food',     cls: 'btn-glass-green' },
-            { href: '/workout',  label: '💪 Workout',  cls: 'btn-glass-brown' },
-            { href: '/valorant', label: '🎮 Valorant', cls: 'btn-glass-red'   },
-            { href: '/trading',  label: '📈 Trading',  cls: 'btn-glass-gold'  },
+            { href: '/food',     label: '🍌 Food',     cls: 'btn-glass-green'   },
+            { href: '/workout',  label: '💪 Workout',  cls: 'btn-glass-brown'   },
+            { href: '/notes',    label: '🇪🇸 Spanish', cls: 'btn-glass-red'     },
+            { href: '/trading',  label: '📈 Trading',  cls: 'btn-glass-gold'    },
+            { href: '/raja',     label: '🐾 Raja',     cls: 'btn-glass-neutral' },
           ].map(item => (
             <Link key={item.href} href={item.href}
               className={`btn-glass ${item.cls} px-4 py-2.5 rounded-xl text-sm font-medium`}>
