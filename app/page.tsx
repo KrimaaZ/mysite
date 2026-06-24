@@ -65,7 +65,7 @@ export default function WelcomePage() {
         </p>
 
         <Link
-          href="/workout"
+          href="/raja"
           className="btn-glass btn-glass-green px-10 py-4 rounded-2xl text-base sm:text-lg font-semibold"
         >
           {t.enter}
