@@ -25,7 +25,8 @@ export const metadata: Metadata = {
     title: "ZK",
   },
   icons: {
-    apple: "/icon-192.svg",
+    apple: "/apple-touch-icon.png",
+    icon: "/icon-512.png",
   },
 };
 
@@ -37,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="ZK" />
-        <link rel="apple-touch-icon" href="/icon-192.svg" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className="min-h-full flex flex-col" style={{ backgroundColor: "var(--t-bg)" }}>
