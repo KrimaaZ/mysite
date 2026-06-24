@@ -13,6 +13,7 @@ const menuLinks = [
   { href: '/trading',   label: 'Trading',   emoji: '📈' },
   { href: '/notes',     label: 'Spanish',   emoji: '🇪🇸' },
   { href: '/pomodoro',  label: 'Pomodoro',  emoji: '🍅' },
+  { href: '/raja',      label: 'Raja',      emoji: '🐾' },
 ]
 
 // ── Default daily tasks (from the board screenshot) ───────────────────────
@@ -57,28 +58,6 @@ function saveTasks(tasks: Task[]) {
 }
 
 // ── SVG icons ──────────────────────────────────────────────────────────────
-function IconHome({ active }: { active: boolean }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-      stroke={active ? 'var(--t-primary)' : '#9ca3af'}
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-      <polyline points="9 22 9 12 15 12 15 22"/>
-    </svg>
-  )
-}
-
-function IconStar({ active }: { active: boolean }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24"
-      fill={active ? 'var(--t-primary)' : 'none'}
-      stroke={active ? 'var(--t-primary)' : '#9ca3af'}
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-    </svg>
-  )
-}
-
 function IconGrid() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
@@ -88,6 +67,54 @@ function IconGrid() {
       <rect x="14" y="14" width="7" height="7" rx="1"/>
       <rect x="3" y="14" width="7" height="7" rx="1"/>
     </svg>
+  )
+}
+
+function IconBanana({ active }: { active: boolean }) {
+  const c = active ? 'var(--t-primary)' : '#9ca3af'
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+      stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 4c.5 5-1 11 2.5 14.5C10.5 21.5 16 21 19 16.5" />
+      <path d="M19 16.5c1.2-.2 2-1 2.3-1.8.2-.5-.2-1-.7-.9-1 .2-2.3 1-3.1 2.2" />
+      <path d="M5 4c1.6.2 2.3 1.2 2.3 2.4" />
+    </svg>
+  )
+}
+
+function IconDumbbell({ active }: { active: boolean }) {
+  const c = active ? 'var(--t-primary)' : '#9ca3af'
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+      stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12h2"/>
+      <path d="M5 9v6"/>
+      <path d="M7 7v10"/>
+      <path d="M7 12h10"/>
+      <path d="M17 7v10"/>
+      <path d="M19 9v6"/>
+      <path d="M20 12h2"/>
+    </svg>
+  )
+}
+
+function IconChart({ active }: { active: boolean }) {
+  const c = active ? 'var(--t-primary)' : '#9ca3af'
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+      stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+      <polyline points="17 6 23 6 23 12"/>
+    </svg>
+  )
+}
+
+function IconLetterS({ active }: { active: boolean }) {
+  const c = active ? 'var(--t-primary)' : '#9ca3af'
+  return (
+    <span className="flex items-center justify-center" style={{ width: 22, height: 22, fontSize: 17, fontWeight: 800, color: c, lineHeight: 1 }}>
+      S
+    </span>
   )
 }
 
@@ -313,8 +340,10 @@ export default function Navbar() {
 
   if (pathname === '/') return null
 
-  const feedActive = pathname === '/feed' || pathname.startsWith('/feed/')
-  const rajaActive = pathname.startsWith('/raja')
+  const foodActive = pathname.startsWith('/food')
+  const workoutActive = pathname.startsWith('/workout')
+  const spanishActive = pathname.startsWith('/notes')
+  const tradingActive = pathname.startsWith('/trading')
   const isSB = theme === 'sb'
 
   return (
@@ -322,14 +351,28 @@ export default function Navbar() {
       {/* ── Bottom bar ── */}
       <div className="fixed bottom-0 left-0 right-0 z-50"
         style={{ backgroundColor: 'var(--t-card-bg)', boxShadow: '0 -1px 0 rgba(0,0,0,0.06), 0 -6px 24px rgba(0,0,0,0.05)' }}>
-        <div className="flex h-16 items-center max-w-lg mx-auto px-6">
-          {/* Feed */}
-          <Link href="/feed" className="flex-1 flex flex-col items-center justify-center gap-0.5">
-            <IconHome active={feedActive} />
-            <span className="text-xs font-semibold" style={{ color: feedActive ? 'var(--t-primary)' : '#9ca3af' }}>Feed</span>
+        <div className="flex h-16 items-center max-w-lg mx-auto px-4">
+          {/* Food */}
+          <Link href="/food" className="flex-1 flex flex-col items-center justify-center gap-1">
+            <IconBanana active={foodActive} />
           </Link>
 
-          {/* FAB — centre */}
+          {/* Workout */}
+          <Link href="/workout" className="flex-1 flex flex-col items-center justify-center gap-1">
+            <IconDumbbell active={workoutActive} />
+          </Link>
+
+          {/* Spanish */}
+          <Link href="/notes" className="flex-1 flex flex-col items-center justify-center gap-1">
+            <IconLetterS active={spanishActive} />
+          </Link>
+
+          {/* Trading */}
+          <Link href="/trading" className="flex-1 flex flex-col items-center justify-center gap-1">
+            <IconChart active={tradingActive} />
+          </Link>
+
+          {/* Menu — right */}
           <div className="flex-1 flex justify-center">
             <button onClick={() => { setOpen(true); setDrawerTab('menu') }}
               className="w-14 h-14 rounded-full flex items-center justify-center transition-transform active:scale-90 hover:scale-105"
@@ -338,16 +381,10 @@ export default function Navbar() {
                 background: 'linear-gradient(135deg, var(--t-fab-from) 0%, var(--t-fab-to) 100%)',
                 boxShadow: isSB ? '0 8px 32px rgba(236,72,153,0.45)' : '0 8px 32px rgba(22,163,74,0.45)',
               }}
-              aria-label="Ma journée">
+              aria-label="Menu">
               <IconGrid />
             </button>
           </div>
-
-          {/* Raja */}
-          <Link href="/raja" className="flex-1 flex flex-col items-center justify-center gap-0.5">
-            <IconStar active={rajaActive} />
-            <span className="text-xs font-semibold" style={{ color: rajaActive ? 'var(--t-primary)' : '#9ca3af' }}>Raja</span>
-          </Link>
         </div>
       </div>
 
