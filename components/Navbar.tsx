@@ -60,7 +60,7 @@ function saveTasks(tasks: Task[]) {
 // ── SVG icons ──────────────────────────────────────────────────────────────
 function IconGrid() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
       stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="3" width="7" height="7" rx="1"/>
       <rect x="14" y="3" width="7" height="7" rx="1"/>
@@ -71,14 +71,14 @@ function IconGrid() {
 }
 
 function IconBanana({ active }: { active: boolean }) {
-  const c = active ? 'var(--t-primary)' : '#9ca3af'
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-      stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 4c.5 5-1 11 2.5 14.5C10.5 21.5 16 21 19 16.5" />
-      <path d="M19 16.5c1.2-.2 2-1 2.3-1.8.2-.5-.2-1-.7-.9-1 .2-2.3 1-3.1 2.2" />
-      <path d="M5 4c1.6.2 2.3 1.2 2.3 2.4" />
-    </svg>
+    <span className="flex items-center justify-center" style={{
+      width: 22, height: 22, fontSize: 19, lineHeight: 1,
+      filter: active ? 'none' : 'grayscale(1)',
+      opacity: active ? 1 : 0.55,
+    }}>
+      🍌
+    </span>
   )
 }
 
@@ -375,11 +375,10 @@ export default function Navbar() {
           {/* Menu — right */}
           <div className="flex-1 flex justify-center">
             <button onClick={() => { setOpen(true); setDrawerTab('menu') }}
-              className="w-14 h-14 rounded-full flex items-center justify-center transition-transform active:scale-90 hover:scale-105"
+              className="w-9 h-9 rounded-full flex items-center justify-center transition-transform active:scale-90 hover:scale-105"
               style={{
-                marginBottom: '28px',
                 background: 'linear-gradient(135deg, var(--t-fab-from) 0%, var(--t-fab-to) 100%)',
-                boxShadow: isSB ? '0 8px 32px rgba(236,72,153,0.45)' : '0 8px 32px rgba(22,163,74,0.45)',
+                boxShadow: isSB ? '0 4px 14px rgba(236,72,153,0.4)' : '0 4px 14px rgba(22,163,74,0.4)',
               }}
               aria-label="Menu">
               <IconGrid />
