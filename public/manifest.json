@@ -2,7 +2,7 @@
   "name": "ZK Dashboard",
   "short_name": "ZK",
   "description": "Food · Fitness · Gaming · Trading",
-  "start_url": "/feed",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#0e131b",
   "theme_color": "#16a34a",
