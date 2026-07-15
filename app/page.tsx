@@ -41,6 +41,15 @@ function IconKey() {
   )
 }
 
+function IconScan() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 7V4a1 1 0 0 1 1-1h3M3 17v3a1 1 0 0 0 1 1h3M21 7V4a1 1 0 0 0-1-1h-3M21 17v3a1 1 0 0 1-1 1h-3"/>
+      <path d="M8 12a4 4 0 1 0 8 0 4 4 0 1 0-8 0"/>
+    </svg>
+  )
+}
+
 function IconHome({ active }: { active: boolean }) {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill={active ? '#fff' : 'none'}
@@ -130,11 +139,11 @@ export default function WelcomePage() {
           )}
         </div>
 
-        {/* Enter button — half width, centered */}
+        {/* Enter button — 1/4 screen width */}
         <Link
           href="/raja"
-          className="px-10 py-3.5 rounded-full text-sm font-semibold transition-transform active:scale-[0.97]"
-          style={{ backgroundColor: '#6d28d9', color: '#fff', boxShadow: '0 6px 24px rgba(109,40,217,0.45)' }}
+          className="text-center py-3.5 rounded-full text-sm font-semibold transition-transform active:scale-[0.97]"
+          style={{ width: '25vw', backgroundColor: '#6d28d9', color: '#fff', boxShadow: '0 6px 24px rgba(109,40,217,0.45)' }}
         >
           {t.enter}
         </Link>
@@ -179,12 +188,12 @@ export default function WelcomePage() {
             {t.home}
           </button>
 
-          {/* Vault key — centre */}
+          {/* Vault — centre, face ID style */}
           <button onClick={() => setVaultOpen(true)}
             className="w-11 h-11 rounded-full flex items-center justify-center transition-all active:scale-90"
-            style={{ background: 'linear-gradient(135deg,var(--t-fab-from),var(--t-fab-to))', boxShadow: '0 4px 14px rgba(0,0,0,0.3)' }}
+            style={{ backgroundColor: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(10px)' }}
             title="Vault">
-            <IconKey />
+            <IconScan />
           </button>
 
           {/* Menu */}
