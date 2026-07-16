@@ -110,10 +110,9 @@ export default function Navbar() {
         <div
           className="flex items-center rounded-2xl px-3 py-2.5 gap-1"
           style={{
-            background: 'rgba(22,22,22,0.75)',
-            backdropFilter: 'blur(25px)',
-            WebkitBackdropFilter: 'blur(25px)',
-            border: '1px solid rgba(255,255,255,0.12)',
+            backgroundColor: '#111111',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 0 30px rgba(255,45,149,0.08)',
           }}
         >
           <Link href="/" className="w-11 h-11 flex items-center justify-center rounded-xl transition-all active:scale-90">
@@ -133,7 +132,7 @@ export default function Navbar() {
           </Link>
           <button onClick={() => setMenuOpen(m => !m)}
             className="w-11 h-11 rounded-xl flex items-center justify-center transition-transform active:scale-90 hover:scale-105"
-            style={{ background: 'linear-gradient(90deg, #76FF03, #FF2E88)', boxShadow: '0 2px 12px rgba(255,46,136,0.35)' }}
+            style={{ backgroundColor: '#FF2D95', boxShadow: '0 0 16px rgba(255,45,149,0.5)' }}
             aria-label="Menu">
             <IconGrid />
           </button>
