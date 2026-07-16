@@ -8,11 +8,11 @@ import { useTheme } from '@/lib/theme'
 import VaultLoginPopup from '@/components/VaultLoginPopup'
 
 const menuLinks = [
+  { href: '/feed',     label: 'Feed',    emoji: '🏠' },
   { href: '/food',     label: 'Food',    emoji: '🍌' },
   { href: '/workout',  label: 'Workout', emoji: '💪' },
   { href: '/notes',    label: 'Spanish', emoji: '🇪🇸' },
   { href: '/trading',  label: 'Trading', emoji: '📈' },
-  { href: '/raja',     label: 'Raja',    emoji: '🐾' },
   { href: '/routine',  label: 'Routine', emoji: '📋' },
 ]
 
@@ -95,6 +95,8 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [vaultOpen, setVaultOpen] = useState(false)
 
+  if (pathname === '/') return null
+
   const foodActive    = pathname.startsWith('/food')
   const workoutActive = pathname.startsWith('/workout')
   const spanishActive = pathname.startsWith('/notes')
@@ -113,8 +115,8 @@ export default function Navbar() {
             boxShadow: '0 0 30px rgba(255,45,149,0.08)',
           }}
         >
-          <Link href="/" className="w-11 h-11 flex items-center justify-center rounded-xl transition-all active:scale-90">
-            <IconHome active={pathname === '/'} />
+          <Link href="/feed" className="w-11 h-11 flex items-center justify-center rounded-xl transition-all active:scale-90">
+            <IconHome active={pathname.startsWith('/feed')} />
           </Link>
           <Link href="/food" className="w-11 h-11 flex items-center justify-center rounded-xl transition-all active:scale-90">
             <IconBanana active={foodActive} />
