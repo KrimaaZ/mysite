@@ -105,42 +105,44 @@ export default function Navbar() {
 
   return (
     <>
-      {/* ── Bottom bar ── */}
-      <div className="fixed bottom-0 left-0 right-0 z-50"
-        style={{ backgroundColor: '#0D1015', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-        <div className="flex h-16 items-center max-w-lg mx-auto px-4">
-          <Link href="/" className="flex-1 flex flex-col items-center justify-center gap-1">
+      {/* ── Floating glass dock ── */}
+      <div className="fixed bottom-6 left-0 right-0 z-50 flex justify-center px-4">
+        <div
+          className="flex items-center rounded-2xl px-3 py-2.5 gap-1"
+          style={{
+            background: 'rgba(22,22,22,0.75)',
+            backdropFilter: 'blur(25px)',
+            WebkitBackdropFilter: 'blur(25px)',
+            border: '1px solid rgba(255,255,255,0.12)',
+          }}
+        >
+          <Link href="/" className="w-11 h-11 flex items-center justify-center rounded-xl transition-all active:scale-90">
             <IconHome active={pathname === '/'} />
           </Link>
-          <Link href="/food" className="flex-1 flex flex-col items-center justify-center gap-1">
+          <Link href="/food" className="w-11 h-11 flex items-center justify-center rounded-xl transition-all active:scale-90">
             <IconBanana active={foodActive} />
           </Link>
-          <Link href="/workout" className="flex-1 flex flex-col items-center justify-center gap-1">
+          <Link href="/workout" className="w-11 h-11 flex items-center justify-center rounded-xl transition-all active:scale-90">
             <IconDumbbell active={workoutActive} />
           </Link>
-          <Link href="/notes" className="flex-1 flex flex-col items-center justify-center gap-1">
+          <Link href="/notes" className="w-11 h-11 flex items-center justify-center rounded-xl transition-all active:scale-90">
             <IconLetterS active={spanishActive} />
           </Link>
-          <Link href="/trading" className="flex-1 flex flex-col items-center justify-center gap-1">
+          <Link href="/trading" className="w-11 h-11 flex items-center justify-center rounded-xl transition-all active:scale-90">
             <IconChart active={tradingActive} />
           </Link>
-          <div className="flex-1 flex justify-center">
-            <button onClick={() => setMenuOpen(m => !m)}
-              className="w-9 h-9 rounded-full flex items-center justify-center transition-transform active:scale-90 hover:scale-105"
-              style={{
-                background: 'linear-gradient(135deg, var(--t-fab-from) 0%, var(--t-fab-to) 100%)',
-                boxShadow: isSB ? '0 4px 14px rgba(236,72,153,0.4)' : '0 4px 14px rgba(22,163,74,0.4)',
-              }}
-              aria-label="Menu">
-              <IconGrid />
-            </button>
-          </div>
+          <button onClick={() => setMenuOpen(m => !m)}
+            className="w-11 h-11 rounded-xl flex items-center justify-center transition-transform active:scale-90 hover:scale-105"
+            style={{ background: 'linear-gradient(90deg, #76FF03, #FF2E88)', boxShadow: '0 2px 12px rgba(255,46,136,0.35)' }}
+            aria-label="Menu">
+            <IconGrid />
+          </button>
         </div>
       </div>
 
       {/* ── Menu popup overlay ── */}
       {menuOpen && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center pb-20"
+        <div className="fixed inset-0 z-[100] flex items-end justify-center pb-28"
           style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}
           onClick={() => setMenuOpen(false)}>
           <div className="w-full max-w-sm rounded-3xl p-5 mx-4"

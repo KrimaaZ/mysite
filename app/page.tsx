@@ -2,7 +2,6 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState } from 'react'
 import { useLang } from '@/lib/lang'
 import { useTheme } from '@/lib/theme'
 
@@ -27,13 +26,19 @@ const BG = `
   radial-gradient(circle at 50% 15%, #063A2C 0%, transparent 45%),
   radial-gradient(circle at 15% 80%, #4D1734 0%, transparent 35%),
   radial-gradient(circle at 85% 85%, #5A2508 0%, transparent 35%),
-  #07090C
+  #050505
 `.trim()
+
+const GLASS: React.CSSProperties = {
+  background: 'rgba(22,22,22,0.75)',
+  backdropFilter: 'blur(25px)',
+  WebkitBackdropFilter: 'blur(25px)',
+  border: '1px solid rgba(255,255,255,0.12)',
+}
 
 export default function WelcomePage() {
   const { lang, t, toggle } = useLang()
   const { theme, toggle: toggleTheme, dark, toggleDark } = useTheme()
-  const [enterHover, setEnterHover] = useState(false)
   const isSB = theme === 'sb'
 
   return (
@@ -52,12 +57,12 @@ export default function WelcomePage() {
         <div className="flex items-center gap-2">
           <button onClick={toggleDark}
             className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)' }}>
+            style={{ ...GLASS }}>
             {dark ? <IconSun /> : <IconMoon />}
           </button>
           <button onClick={toggle}
             className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold"
-            style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)', color: '#fff' }}>
+            style={{ ...GLASS, color: '#fff' }}>
             {lang === 'en' ? 'FR' : 'EN'}
           </button>
         </div>
@@ -70,7 +75,7 @@ export default function WelcomePage() {
           style={{
             background: 'rgba(6,58,44,0.4)',
             border: '1px solid rgba(255,255,255,0.08)',
-            boxShadow: '0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)',
+            boxShadow: '0 8px 40px rgba(0,0,0,0.6)',
           }}
         >
           {isSB ? (
@@ -81,17 +86,22 @@ export default function WelcomePage() {
         </div>
       </div>
 
-      {/* ── Bottom Enter bar ── */}
-      <div className="relative z-20 w-full" style={{ backgroundColor: '#0D1015', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-        <Link
-          href="/raja"
-          className="flex items-center justify-center w-full text-base font-bold transition-colors"
-          style={{ height: 64, backgroundColor: enterHover ? '#FF5EAA' : '#FF3F98', color: '#fff', letterSpacing: '0.05em' }}
-          onMouseEnter={() => setEnterHover(true)}
-          onMouseLeave={() => setEnterHover(false)}
-        >
-          {t.enter}
-        </Link>
+      {/* ── Floating glass dock ── */}
+      <div className="relative z-20 flex justify-center pb-8 px-6">
+        <div className="w-full max-w-xs rounded-2xl p-2" style={GLASS}>
+          <Link
+            href="/raja"
+            className="flex items-center justify-center w-full rounded-xl text-base font-bold transition-opacity active:opacity-80"
+            style={{
+              height: 48,
+              background: 'linear-gradient(90deg, #76FF03, #FF2E88)',
+              color: '#fff',
+              letterSpacing: '0.06em',
+            }}
+          >
+            {t.enter}
+          </Link>
+        </div>
       </div>
     </div>
   )
