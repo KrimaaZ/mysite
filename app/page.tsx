@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { useState } from 'react'
 import { useLang } from '@/lib/lang'
 import { useTheme } from '@/lib/theme'
 
@@ -22,29 +23,21 @@ function IconMoon() {
   )
 }
 
+const BG = `
+  radial-gradient(circle at 50% 15%, #063A2C 0%, transparent 45%),
+  radial-gradient(circle at 15% 80%, #4D1734 0%, transparent 35%),
+  radial-gradient(circle at 85% 85%, #5A2508 0%, transparent 35%),
+  #07090C
+`.trim()
+
 export default function WelcomePage() {
   const { lang, t, toggle } = useLang()
   const { theme, toggle: toggleTheme, dark, toggleDark } = useTheme()
+  const [enterHover, setEnterHover] = useState(false)
   const isSB = theme === 'sb'
 
   return (
-    <div
-      className="min-h-screen flex flex-col relative overflow-hidden"
-      style={{
-        background: isSB
-          ? 'radial-gradient(ellipse at 50% 0%, #2a0f1f 0%, #1a0a16 35%, #1f1410 70%, #0d0805 100%)'
-          : 'radial-gradient(ellipse at 50% 0%, #102a1f 0%, #0c1e16 35%, #1f1410 70%, #0d0805 100%)',
-      }}
-    >
-      {/* Ambient blur orbs */}
-      <div className="absolute inset-0 pointer-events-none" aria-hidden>
-        <div className="absolute top-0 left-1/4 w-80 h-80 rounded-full opacity-25"
-          style={{ background: isSB ? '#ec4899' : '#40916c', filter: 'blur(90px)' }} />
-        <div className="absolute bottom-0 right-0 w-96 h-72 rounded-full opacity-30"
-          style={{ background: '#c2410c', filter: 'blur(100px)' }} />
-        <div className="absolute bottom-1/4 left-0 w-64 h-64 rounded-full opacity-20"
-          style={{ background: '#ec4899', filter: 'blur(90px)' }} />
-      </div>
+    <div className="min-h-screen flex flex-col relative overflow-hidden" style={{ background: BG }}>
 
       {/* ── Top bar ── */}
       <div className="relative z-20 flex items-center justify-between px-6 pt-8">
@@ -59,13 +52,12 @@ export default function WelcomePage() {
         <div className="flex items-center gap-2">
           <button onClick={toggleDark}
             className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(10px)' }}
-            title={dark ? 'Mode clair' : 'Mode sombre'}>
+            style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)' }}>
             {dark ? <IconSun /> : <IconMoon />}
           </button>
           <button onClick={toggle}
             className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold"
-            style={{ backgroundColor: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(10px)', color: '#fff' }}>
+            style={{ backgroundColor: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(10px)', color: '#fff' }}>
             {lang === 'en' ? 'FR' : 'EN'}
           </button>
         </div>
@@ -76,9 +68,9 @@ export default function WelcomePage() {
         <div
           className="w-32 h-32 sm:w-40 sm:h-40 rounded-3xl flex items-center justify-center overflow-hidden"
           style={{
-            background: 'rgba(45,106,79,0.35)',
-            border: '1px solid rgba(116,198,157,0.3)',
-            boxShadow: '0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15)',
+            background: 'rgba(6,58,44,0.4)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            boxShadow: '0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)',
           }}
         >
           {isSB ? (
@@ -89,12 +81,14 @@ export default function WelcomePage() {
         </div>
       </div>
 
-      {/* ── Bottom Enter bar — replaces navbar ── */}
-      <div className="relative z-20 w-full">
+      {/* ── Bottom Enter bar ── */}
+      <div className="relative z-20 w-full" style={{ backgroundColor: '#0D1015', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
         <Link
           href="/raja"
-          className="flex items-center justify-center w-full text-base font-bold transition-opacity active:opacity-80"
-          style={{ height: 64, backgroundColor: '#ec4899', color: '#fff', letterSpacing: '0.05em' }}
+          className="flex items-center justify-center w-full text-base font-bold transition-colors"
+          style={{ height: 64, backgroundColor: enterHover ? '#FF5EAA' : '#FF3F98', color: '#fff', letterSpacing: '0.05em' }}
+          onMouseEnter={() => setEnterHover(true)}
+          onMouseLeave={() => setEnterHover(false)}
         >
           {t.enter}
         </Link>

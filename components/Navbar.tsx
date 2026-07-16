@@ -107,7 +107,7 @@ export default function Navbar() {
     <>
       {/* ── Bottom bar ── */}
       <div className="fixed bottom-0 left-0 right-0 z-50"
-        style={{ backgroundColor: 'var(--t-card-bg)', boxShadow: '0 -1px 0 rgba(0,0,0,0.06), 0 -6px 24px rgba(0,0,0,0.05)' }}>
+        style={{ backgroundColor: '#0D1015', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
         <div className="flex h-16 items-center max-w-lg mx-auto px-4">
           <Link href="/" className="flex-1 flex flex-col items-center justify-center gap-1">
             <IconHome active={pathname === '/'} />
