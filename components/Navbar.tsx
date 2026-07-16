@@ -95,8 +95,6 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [vaultOpen, setVaultOpen] = useState(false)
 
-  if (pathname === '/') return null
-
   const foodActive    = pathname.startsWith('/food')
   const workoutActive = pathname.startsWith('/workout')
   const spanishActive = pathname.startsWith('/notes')
