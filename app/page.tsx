@@ -2,19 +2,8 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState } from 'react'
 import { useLang } from '@/lib/lang'
 import { useTheme } from '@/lib/theme'
-import VaultLoginPopup from '@/components/VaultLoginPopup'
-
-const quickLinks = [
-  { href: '/food',     label: '🍌 Food'     },
-  { href: '/workout',  label: '💪 Workout'  },
-  { href: '/notes',    label: '🇪🇸 Spanish' },
-  { href: '/trading',  label: '📈 Trading'  },
-  { href: '/raja',     label: '🐾 Raja'     },
-  { href: '/pomodoro', label: '🍅 Pomodoro' },
-]
 
 function IconSun() {
   return (
@@ -33,50 +22,9 @@ function IconMoon() {
   )
 }
 
-function IconKey() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
-    </svg>
-  )
-}
-
-function IconScan() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 7V4a1 1 0 0 1 1-1h3M3 17v3a1 1 0 0 0 1 1h3M21 7V4a1 1 0 0 0-1-1h-3M21 17v3a1 1 0 0 1-1 1h-3"/>
-      <path d="M8 12a4 4 0 1 0 8 0 4 4 0 1 0-8 0"/>
-    </svg>
-  )
-}
-
-function IconHome({ active }: { active: boolean }) {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill={active ? '#fff' : 'none'}
-      stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-      <polyline points="9 22 9 12 15 12 15 22"/>
-    </svg>
-  )
-}
-
-function IconGrid({ active }: { active: boolean }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-      stroke={active ? '#fff' : 'rgba(255,255,255,0.6)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="7" height="7" rx="1"/>
-      <rect x="14" y="3" width="7" height="7" rx="1"/>
-      <rect x="14" y="14" width="7" height="7" rx="1"/>
-      <rect x="3" y="14" width="7" height="7" rx="1"/>
-    </svg>
-  )
-}
-
 export default function WelcomePage() {
   const { lang, t, toggle } = useLang()
   const { theme, toggle: toggleTheme, dark, toggleDark } = useTheme()
-  const [vaultOpen, setVaultOpen] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
   const isSB = theme === 'sb'
 
   return (
@@ -95,15 +43,17 @@ export default function WelcomePage() {
         <div className="absolute bottom-0 right-0 w-96 h-72 rounded-full opacity-30"
           style={{ background: '#c2410c', filter: 'blur(100px)' }} />
         <div className="absolute bottom-1/4 left-0 w-64 h-64 rounded-full opacity-20"
-          style={{ background: '#7c3aed', filter: 'blur(90px)' }} />
+          style={{ background: '#ec4899', filter: 'blur(90px)' }} />
       </div>
 
       {/* ── Top bar ── */}
       <div className="relative z-20 flex items-center justify-between px-6 pt-8">
-        <button onClick={toggleTheme}
-          className="font-black text-3xl leading-none"
-          style={{ color: '#fff' }}
-          title="Switch profile">
+        <button
+          onClick={toggleTheme}
+          className="font-black leading-none select-none"
+          style={{ color: '#fff', fontSize: 'clamp(3rem, 12vw, 5rem)' }}
+          title="Switch profile"
+        >
           {isSB ? 'S' : 'Z'}
         </button>
         <div className="flex items-center gap-2">
@@ -121,11 +71,10 @@ export default function WelcomePage() {
         </div>
       </div>
 
-      {/* ── Center content ── */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center text-center px-6 gap-6">
-        {/* Logo */}
+      {/* ── Center: Logo ── */}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center">
         <div
-          className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl flex items-center justify-center overflow-hidden"
+          className="w-32 h-32 sm:w-40 sm:h-40 rounded-3xl flex items-center justify-center overflow-hidden"
           style={{
             background: 'rgba(45,106,79,0.35)',
             border: '1px solid rgba(116,198,157,0.3)',
@@ -135,79 +84,21 @@ export default function WelcomePage() {
           {isSB ? (
             <span className="font-bold text-4xl tracking-tighter" style={{ color: '#74c69d' }}>SB</span>
           ) : (
-            <Image src="/icon-512.png" alt="ZK" width={128} height={128} className="w-full h-full object-cover" priority />
+            <Image src="/icon-512.png" alt="ZK" width={160} height={160} className="w-full h-full object-cover" priority />
           )}
         </div>
+      </div>
 
-        {/* Enter button — 1/4 screen width */}
+      {/* ── Bottom Enter bar — replaces navbar ── */}
+      <div className="relative z-20 w-full">
         <Link
           href="/raja"
-          className="text-center py-3.5 rounded-full text-sm font-semibold transition-transform active:scale-[0.97]"
-          style={{ width: '25vw', backgroundColor: '#6d28d9', color: '#fff', boxShadow: '0 6px 24px rgba(109,40,217,0.45)' }}
+          className="flex items-center justify-center w-full text-base font-bold transition-opacity active:opacity-80"
+          style={{ height: 64, backgroundColor: '#ec4899', color: '#fff', letterSpacing: '0.05em' }}
         >
           {t.enter}
         </Link>
       </div>
-
-      {/* ── Menu popup overlay ── */}
-      {menuOpen && (
-        <div className="fixed inset-0 z-[150] flex items-end justify-center pb-28"
-          style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}
-          onClick={() => setMenuOpen(false)}>
-          <div
-            className="w-full max-w-sm rounded-3xl p-5 mx-4"
-            style={{ backgroundColor: 'rgba(30,30,35,0.95)', border: '1px solid rgba(255,255,255,0.1)' }}
-            onClick={e => e.stopPropagation()}>
-            <p className="text-xs font-bold uppercase tracking-widest mb-4 text-center"
-              style={{ color: 'rgba(255,255,255,0.4)' }}>
-              {t.menu}
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {quickLinks.map(item => (
-                <Link key={item.href} href={item.href}
-                  onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all active:scale-[0.97]"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.07)', color: '#fff' }}>
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Bottom pill nav: Home | 🔑 | Menu ── */}
-      <div className="relative z-20 flex justify-center pb-8 px-6">
-        <div className="flex rounded-full p-1 gap-1"
-          style={{ backgroundColor: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)' }}>
-          {/* Home */}
-          <button onClick={() => setMenuOpen(false)}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all"
-            style={{ backgroundColor: !menuOpen ? 'rgba(255,255,255,0.18)' : 'transparent', color: '#fff' }}>
-            <IconHome active={!menuOpen} />
-            {t.home}
-          </button>
-
-          {/* Vault — centre, face ID style */}
-          <button onClick={() => setVaultOpen(true)}
-            className="w-11 h-11 rounded-full flex items-center justify-center transition-all active:scale-90"
-            style={{ backgroundColor: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(10px)' }}
-            title="Vault">
-            <IconScan />
-          </button>
-
-          {/* Menu */}
-          <button onClick={() => setMenuOpen(m => !m)}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all"
-            style={{ backgroundColor: menuOpen ? 'rgba(255,255,255,0.18)' : 'transparent', color: menuOpen ? '#fff' : 'rgba(255,255,255,0.65)' }}>
-            <IconGrid active={menuOpen} />
-            {t.menu}
-          </button>
-        </div>
-      </div>
-
-      {/* ── Vault login popup ── */}
-      {vaultOpen && <VaultLoginPopup onClose={() => setVaultOpen(false)} />}
     </div>
   )
 }
