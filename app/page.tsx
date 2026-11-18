@@ -41,40 +41,44 @@ export default function LandingPage() {
   const { theme, toggle: toggleTheme, dark, toggleDark } = useTheme()
   const isSB = theme === 'sb'
 
-  const accent      = isSB ? '#FF2D95' : '#22c55e'
-  const accentGlow  = isSB ? 'rgba(255,45,149,0.18)' : 'rgba(34,197,94,0.15)'
-  const accentBorder= isSB ? 'rgba(255,45,149,0.35)' : 'rgba(34,197,94,0.35)'
+  const accent      = isSB ? '#FF2D95' : '#16a34a'
+  const accentGlow  = isSB ? 'rgba(255,45,149,0.18)' : 'rgba(22,163,74,0.15)'
+  const accentBorder= isSB ? 'rgba(255,45,149,0.35)' : 'rgba(22,163,74,0.35)'
 
-  const bg = `
-    radial-gradient(circle at 20% 10%, ${isSB ? 'rgba(255,45,149,0.13)' : 'rgba(34,197,94,0.11)'} 0%, transparent 45%),
-    radial-gradient(circle at 80% 80%, ${isSB ? 'rgba(255,45,149,0.08)' : 'rgba(34,197,94,0.07)'} 0%, transparent 45%),
-    #000
-  `.trim()
+  const bgDark  = `radial-gradient(circle at 20% 10%, ${isSB ? 'rgba(255,45,149,0.13)' : 'rgba(34,197,94,0.11)'} 0%, transparent 45%), radial-gradient(circle at 80% 80%, ${isSB ? 'rgba(255,45,149,0.08)' : 'rgba(34,197,94,0.07)'} 0%, transparent 45%), #000`
+  const bgLight = isSB ? '#fdf2f8' : '#f4f9f5'
+  const bg      = dark ? bgDark : bgLight
+
+  const textPrimary = dark ? '#fff' : '#0f172a'
+  const textSub     = dark ? '#ccc' : '#374151'
+  const textMuted   = dark ? '#555' : '#9ca3af'
+  const cardBg      = dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'
+  const cardBorder  = dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'
 
   const now     = new Date()
   const weekday = now.toLocaleDateString('en-US', { weekday: 'long' })
   const monthDay= now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
 
   const glass = {
-    background: 'rgba(255,255,255,0.05)',
+    background: cardBg,
     backdropFilter: 'blur(16px)',
     WebkitBackdropFilter: 'blur(16px)',
-    border: '1px solid rgba(255,255,255,0.1)',
+    border: `1px solid ${cardBorder}`,
   } as React.CSSProperties
 
   const btnGlass = {
     ...glass,
     width: 36, height: 36, borderRadius: 10,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    cursor: 'pointer', color: '#aaa',
+    cursor: 'pointer', color: dark ? '#aaa' : '#555',
   } as React.CSSProperties
 
   return (
-    <div style={{ minHeight: '100svh', background: bg, color: '#fff', maxWidth: 480, margin: '0 auto' }}>
+    <div style={{ minHeight: '100svh', background: bg, color: textPrimary, maxWidth: 480, margin: '0 auto', transition: 'background 0.3s, color 0.3s' }}>
 
       {/* ── Header ── */}
       <div style={{ padding: '56px 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <p style={{ margin: 0, fontSize: 15, fontWeight: 500, color: '#ccc' }}>
+        <p style={{ margin: 0, fontSize: 15, fontWeight: 500, color: textSub }}>
           {lang === 'en' ? 'Hi, Zak 👋' : 'Salut, Zak 👋'}
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -93,7 +97,7 @@ export default function LandingPage() {
 
       {/* ── Date ── */}
       <div style={{ padding: '22px 20px 0' }}>
-        <p style={{ margin: '0 0 3px', fontSize: 12, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+        <p style={{ margin: '0 0 3px', fontSize: 12, fontWeight: 600, color: textMuted, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
           {weekday}
         </p>
         <h1 style={{ margin: 0, fontSize: 'clamp(2.4rem, 10vw, 3.5rem)', fontWeight: 800, lineHeight: 1.05, letterSpacing: '-0.03em' }}>
@@ -104,8 +108,8 @@ export default function LandingPage() {
       {/* ── Search ── */}
       <div style={{ padding: '20px 20px 0' }}>
         <div style={{ ...glass, borderRadius: 14, padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ color: '#555', display: 'flex' }}><IconSearch /></span>
-          <span style={{ color: '#555', fontSize: 14 }}>{lang === 'en' ? 'Search sections…' : 'Rechercher…'}</span>
+          <span style={{ color: textMuted, display: 'flex' }}><IconSearch /></span>
+          <span style={{ color: textMuted, fontSize: 14 }}>{lang === 'en' ? 'Search sections…' : 'Rechercher…'}</span>
         </div>
       </div>
 
@@ -116,7 +120,7 @@ export default function LandingPage() {
             <Link key={chip.href} href={chip.href} style={{ textDecoration: 'none' }}>
               <div style={{ ...glass, borderRadius: 18, padding: '14px 18px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, minWidth: 78, transition: 'opacity 0.15s' }}>
                 <span style={{ fontSize: 26 }}>{chip.icon}</span>
-                <span style={{ fontSize: 12, color: '#bbb', fontWeight: 500 }}>{chip.label}</span>
+                <span style={{ fontSize: 12, color: textSub, fontWeight: 500 }}>{chip.label}</span>
               </div>
             </Link>
           ))}
@@ -161,10 +165,10 @@ export default function LandingPage() {
               📌 Today&apos;s Focus
             </span>
 
-            <h2 style={{ margin: '0 0 5px', fontSize: 22, fontWeight: 700, color: '#fff' }}>
+            <h2 style={{ margin: '0 0 5px', fontSize: 22, fontWeight: 700, color: textPrimary }}>
               Trading <span style={{ color: accent }}>Session</span>
             </h2>
-            <p style={{ margin: '0 0 18px', fontSize: 13, color: '#666' }}>
+            <p style={{ margin: '0 0 18px', fontSize: 13, color: textMuted }}>
               Checklist · Journal · Backtest
             </p>
 
