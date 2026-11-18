@@ -41,19 +41,23 @@ export default function LandingPage() {
   const { theme, toggle: toggleTheme, dark, toggleDark } = useTheme()
   const isSB = theme === 'sb'
 
-  const accent       = isSB ? '#FF2D95' : '#16a34a'
-  const accentGlow   = isSB ? 'rgba(255,45,149,0.18)' : 'rgba(22,163,74,0.15)'
-  const accentBorder = isSB ? 'rgba(255,45,149,0.35)' : 'rgba(22,163,74,0.35)'
+  const accent       = isSB ? '#FF2D95' : (dark ? '#00D995' : '#00B978')
+  const accentGlow   = isSB ? 'rgba(255,45,149,0.18)' : (dark ? 'rgba(0,217,149,0.15)' : 'rgba(0,185,120,0.15)')
+  const accentBorder = isSB ? 'rgba(255,45,149,0.35)' : (dark ? 'rgba(0,217,149,0.35)' : 'rgba(0,185,120,0.3)')
 
-  const bgDark  = `radial-gradient(circle at 20% 10%, ${isSB ? 'rgba(255,45,149,0.13)' : 'rgba(34,197,94,0.11)'} 0%, transparent 45%), radial-gradient(circle at 80% 80%, ${isSB ? 'rgba(255,45,149,0.08)' : 'rgba(34,197,94,0.07)'} 0%, transparent 45%), #000`
-  const bgLight = isSB ? '#fdf2f8' : '#f4f9f5'
-  const bg      = dark ? bgDark : bgLight
+  const bgDark  = isSB
+    ? `radial-gradient(circle at 20% 10%, rgba(255,45,149,0.13) 0%, transparent 45%), radial-gradient(circle at 80% 80%, rgba(255,45,149,0.08) 0%, transparent 45%), #000`
+    : `radial-gradient(circle at 15% 15%, rgba(0,107,70,0.5) 0%, transparent 50%), radial-gradient(circle at 85% 85%, rgba(5,39,24,0.8) 0%, transparent 50%), #020A08`
+  const bgLight = isSB
+    ? '#fdf2f8'
+    : `radial-gradient(circle at 20% 10%, rgba(184,245,222,0.6) 0%, transparent 50%), #F7FBF9`
+  const bg = dark ? bgDark : bgLight
 
-  const textPrimary = dark ? '#fff'  : '#0f172a'
-  const textSub     = dark ? '#ccc'  : '#374151'
-  const textMuted   = dark ? '#555'  : '#9ca3af'
-  const cardBg      = dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'
-  const cardBorder  = dark ? 'rgba(255,255,255,0.1)'  : 'rgba(0,0,0,0.08)'
+  const textPrimary = dark ? '#F5F7F6' : '#052718'
+  const textSub     = dark ? '#B8FFB4' : '#006B46'
+  const textMuted   = dark ? 'rgba(245,247,246,0.4)' : 'rgba(5,39,24,0.45)'
+  const cardBg      = dark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.7)'
+  const cardBorder  = dark ? 'rgba(0,217,149,0.15)'   : 'rgba(0,185,120,0.2)'
 
   const now     = new Date()
   const weekday = now.toLocaleDateString('en-US', { weekday: 'long' })
