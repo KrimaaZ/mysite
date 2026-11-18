@@ -75,14 +75,14 @@ export default function LandingPage() {
       {/* ── Header ── */}
       <div style={{ padding: '56px 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <p style={{ margin: 0, fontSize: 15, fontWeight: 500, color: '#ccc' }}>
-          Hi, Zak 👋
+          {lang === 'en' ? 'Hi, Zak 👋' : 'Salut, Zak 👋'}
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button onClick={toggleDark} style={btnGlass}>
             {dark ? <IconSun /> : <IconMoon />}
           </button>
-          <button onClick={toggle} style={{ ...btnGlass, fontSize: 11, fontWeight: 700 }}>
-            {lang === 'en' ? 'FR' : 'EN'}
+          <button onClick={toggle} style={{ ...btnGlass, fontSize: 18 }}>
+            {lang === 'en' ? '🇫🇷' : '🇺🇸'}
           </button>
           <button onClick={toggleTheme}
             style={{ ...btnGlass, background: accent, border: `1px solid ${accent}`, color: '#fff', fontSize: 11, fontWeight: 800, letterSpacing: '0.03em' }}>
@@ -105,7 +105,7 @@ export default function LandingPage() {
       <div style={{ padding: '20px 20px 0' }}>
         <div style={{ ...glass, borderRadius: 14, padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ color: '#555', display: 'flex' }}><IconSearch /></span>
-          <span style={{ color: '#555', fontSize: 14 }}>Search sections…</span>
+          <span style={{ color: '#555', fontSize: 14 }}>{lang === 'en' ? 'Search sections…' : 'Rechercher…'}</span>
         </div>
       </div>
 
