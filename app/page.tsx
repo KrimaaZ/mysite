@@ -41,19 +41,19 @@ export default function LandingPage() {
   const { theme, toggle: toggleTheme, dark, toggleDark } = useTheme()
   const isSB = theme === 'sb'
 
-  const accent      = isSB ? '#FF2D95' : '#16a34a'
-  const accentGlow  = isSB ? 'rgba(255,45,149,0.18)' : 'rgba(22,163,74,0.15)'
-  const accentBorder= isSB ? 'rgba(255,45,149,0.35)' : 'rgba(22,163,74,0.35)'
+  const accent       = isSB ? '#FF2D95' : '#16a34a'
+  const accentGlow   = isSB ? 'rgba(255,45,149,0.18)' : 'rgba(22,163,74,0.15)'
+  const accentBorder = isSB ? 'rgba(255,45,149,0.35)' : 'rgba(22,163,74,0.35)'
 
   const bgDark  = `radial-gradient(circle at 20% 10%, ${isSB ? 'rgba(255,45,149,0.13)' : 'rgba(34,197,94,0.11)'} 0%, transparent 45%), radial-gradient(circle at 80% 80%, ${isSB ? 'rgba(255,45,149,0.08)' : 'rgba(34,197,94,0.07)'} 0%, transparent 45%), #000`
   const bgLight = isSB ? '#fdf2f8' : '#f4f9f5'
   const bg      = dark ? bgDark : bgLight
 
-  const textPrimary = dark ? '#fff' : '#0f172a'
-  const textSub     = dark ? '#ccc' : '#374151'
-  const textMuted   = dark ? '#555' : '#9ca3af'
+  const textPrimary = dark ? '#fff'  : '#0f172a'
+  const textSub     = dark ? '#ccc'  : '#374151'
+  const textMuted   = dark ? '#555'  : '#9ca3af'
   const cardBg      = dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'
-  const cardBorder  = dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'
+  const cardBorder  = dark ? 'rgba(255,255,255,0.1)'  : 'rgba(0,0,0,0.08)'
 
   const now     = new Date()
   const weekday = now.toLocaleDateString('en-US', { weekday: 'long' })
@@ -74,119 +74,139 @@ export default function LandingPage() {
   } as React.CSSProperties
 
   return (
-    <div style={{ minHeight: '100svh', background: bg, color: textPrimary, maxWidth: 480, margin: '0 auto', transition: 'background 0.3s, color 0.3s' }}>
+    <div
+      className="min-h-svh transition-colors duration-300"
+      style={{ background: bg, color: textPrimary }}
+    >
+      {/* ── Centered container ── */}
+      <div className="mx-auto px-5 max-w-sm md:max-w-5xl">
 
-      {/* ── Header ── */}
-      <div style={{ padding: '56px 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <p style={{ margin: 0, fontSize: 15, fontWeight: 500, color: textSub }}>
-          {lang === 'en' ? 'Hi, Zak 👋' : 'Salut, Zak 👋'}
-        </p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button onClick={toggleDark} style={btnGlass}>
-            {dark ? <IconSun /> : <IconMoon />}
-          </button>
-          <button onClick={toggle} style={{ ...btnGlass, fontSize: 18 }}>
-            {lang === 'en' ? '🇫🇷' : '🇺🇸'}
-          </button>
-          <button onClick={toggleTheme}
-            style={{ ...btnGlass, background: accent, border: `1px solid ${accent}`, color: '#fff', fontSize: 11, fontWeight: 800, letterSpacing: '0.03em' }}>
-            {isSB ? 'SB' : 'ZK'}
-          </button>
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between pt-14 md:pt-16">
+          <p style={{ margin: 0, fontSize: 15, fontWeight: 500, color: textSub }}>
+            {lang === 'en' ? 'Hi, Zak 👋' : 'Salut, Zak 👋'}
+          </p>
+          <div className="flex items-center gap-2">
+            <button onClick={toggleDark} style={btnGlass}>
+              {dark ? <IconSun /> : <IconMoon />}
+            </button>
+            <button onClick={toggle} style={{ ...btnGlass, fontSize: 18 }}>
+              {lang === 'en' ? '🇫🇷' : '🇺🇸'}
+            </button>
+            <button onClick={toggleTheme}
+              style={{ ...btnGlass, background: accent, border: `1px solid ${accent}`, color: '#fff', fontSize: 11, fontWeight: 800, letterSpacing: '0.03em' }}>
+              {isSB ? 'SB' : 'ZK'}
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* ── Date ── */}
-      <div style={{ padding: '22px 20px 0' }}>
-        <p style={{ margin: '0 0 3px', fontSize: 12, fontWeight: 600, color: textMuted, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-          {weekday}
-        </p>
-        <h1 style={{ margin: 0, fontSize: 'clamp(2.4rem, 10vw, 3.5rem)', fontWeight: 800, lineHeight: 1.05, letterSpacing: '-0.03em' }}>
-          {monthDay}
-        </h1>
-      </div>
+        {/* ── Desktop 2-col / Mobile single-col ── */}
+        <div className="md:grid md:grid-cols-2 md:gap-12 md:items-center md:min-h-[calc(100svh-120px)]">
 
-      {/* ── Search ── */}
-      <div style={{ padding: '20px 20px 0' }}>
-        <div style={{ ...glass, borderRadius: 14, padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ color: textMuted, display: 'flex' }}><IconSearch /></span>
-          <span style={{ color: textMuted, fontSize: 14 }}>{lang === 'en' ? 'Search sections…' : 'Rechercher…'}</span>
-        </div>
-      </div>
+          {/* ── LEFT: Date + Search + Chips ── */}
+          <div>
+            {/* Date */}
+            <div className="mt-6 md:mt-0">
+              <p style={{ margin: '0 0 3px', fontSize: 12, fontWeight: 600, color: textMuted, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                {weekday}
+              </p>
+              <h1 style={{ margin: 0, fontSize: 'clamp(2.4rem, 8vw, 4rem)', fontWeight: 800, lineHeight: 1.05, letterSpacing: '-0.03em' }}>
+                {monthDay}
+              </h1>
+            </div>
 
-      {/* ── Category chips ── */}
-      <div style={{ padding: '20px 0 0', overflowX: 'auto', scrollbarWidth: 'none' }}>
-        <div style={{ display: 'flex', gap: 10, padding: '0 20px', width: 'max-content' }}>
-          {CHIPS.map(chip => (
-            <Link key={chip.href} href={chip.href} style={{ textDecoration: 'none' }}>
-              <div style={{ ...glass, borderRadius: 18, padding: '14px 18px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, minWidth: 78, transition: 'opacity 0.15s' }}>
-                <span style={{ fontSize: 26 }}>{chip.icon}</span>
-                <span style={{ fontSize: 12, color: textSub, fontWeight: 500 }}>{chip.label}</span>
+            {/* Search */}
+            <div className="mt-5">
+              <div style={{ ...glass, borderRadius: 14, padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ color: textMuted, display: 'flex' }}><IconSearch /></span>
+                <span style={{ color: textMuted, fontSize: 14 }}>
+                  {lang === 'en' ? 'Search sections…' : 'Rechercher…'}
+                </span>
               </div>
-            </Link>
-          ))}
-        </div>
-      </div>
+            </div>
 
-      {/* ── Featured banner ── */}
-      <div style={{ padding: '20px 20px 0' }}>
-        <Link href="/trading" style={{ textDecoration: 'none' }}>
-          <div style={{
-            background: accentGlow,
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            border: `1px solid ${accentBorder}`,
-            borderRadius: 22,
-            padding: '22px 22px',
-            position: 'relative',
-            overflow: 'hidden',
-          }}>
-            {/* subtle glow blob */}
-            <div style={{
-              position: 'absolute', top: -30, right: -30,
-              width: 120, height: 120,
-              borderRadius: '50%',
-              background: accentGlow,
-              filter: 'blur(30px)',
-              pointerEvents: 'none',
-            }} />
+            {/* Chips — scroll on mobile, 2×2 grid on desktop */}
+            <div className="mt-5 md:hidden overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+              <div style={{ display: 'flex', gap: 10, width: 'max-content' }}>
+                {CHIPS.map(chip => (
+                  <Link key={chip.href} href={chip.href} style={{ textDecoration: 'none' }}>
+                    <div style={{ ...glass, borderRadius: 18, padding: '14px 18px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, minWidth: 78 }}>
+                      <span style={{ fontSize: 26 }}>{chip.icon}</span>
+                      <span style={{ fontSize: 12, color: textSub, fontWeight: 500 }}>{chip.label}</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
 
-            <span style={{
-              display: 'inline-block',
-              background: 'rgba(255,255,255,0.07)',
-              backdropFilter: 'blur(8px)',
-              borderRadius: 7,
-              padding: '3px 9px',
-              fontSize: 11,
-              color: '#888',
-              marginBottom: 12,
-              letterSpacing: '0.07em',
-              textTransform: 'uppercase',
-            }}>
-              📌 Today&apos;s Focus
-            </span>
-
-            <h2 style={{ margin: '0 0 5px', fontSize: 22, fontWeight: 700, color: textPrimary }}>
-              Trading <span style={{ color: accent }}>Session</span>
-            </h2>
-            <p style={{ margin: '0 0 18px', fontSize: 13, color: textMuted }}>
-              Checklist · Journal · Backtest
-            </p>
-
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              background: accent,
-              borderRadius: 11,
-              padding: '10px 20px',
-              color: '#fff', fontWeight: 600, fontSize: 13,
-            }}>
-              Open →
+            {/* Chips — 2×2 grid on desktop */}
+            <div className="hidden md:grid grid-cols-2 gap-3 mt-5">
+              {CHIPS.map(chip => (
+                <Link key={chip.href} href={chip.href} style={{ textDecoration: 'none' }}>
+                  <div style={{ ...glass, borderRadius: 18, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14, transition: 'opacity 0.15s' }}>
+                    <span style={{ fontSize: 28 }}>{chip.icon}</span>
+                    <span style={{ fontSize: 14, color: textSub, fontWeight: 600 }}>{chip.label}</span>
+                  </div>
+                </Link>
+              ))}
             </div>
           </div>
-        </Link>
+
+          {/* ── RIGHT: Featured banner ── */}
+          <div className="mt-5 md:mt-0">
+            <Link href="/trading" style={{ textDecoration: 'none' }}>
+              <div style={{
+                background: accentGlow,
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                border: `1px solid ${accentBorder}`,
+                borderRadius: 22,
+                padding: '28px 26px',
+                position: 'relative',
+                overflow: 'hidden',
+              }}>
+                {/* glow blob */}
+                <div style={{
+                  position: 'absolute', top: -40, right: -40,
+                  width: 160, height: 160, borderRadius: '50%',
+                  background: accentGlow, filter: 'blur(40px)',
+                  pointerEvents: 'none',
+                }} />
+
+                <span style={{
+                  display: 'inline-block',
+                  background: 'rgba(255,255,255,0.07)',
+                  backdropFilter: 'blur(8px)',
+                  borderRadius: 7, padding: '3px 9px',
+                  fontSize: 11, color: '#888', marginBottom: 14,
+                  letterSpacing: '0.07em', textTransform: 'uppercase',
+                }}>
+                  📌 Today&apos;s Focus
+                </span>
+
+                <h2 style={{ margin: '0 0 6px', fontSize: 'clamp(1.4rem, 4vw, 2rem)', fontWeight: 700, color: textPrimary }}>
+                  Trading <span style={{ color: accent }}>Session</span>
+                </h2>
+                <p style={{ margin: '0 0 22px', fontSize: 14, color: textMuted }}>
+                  Checklist · Journal · Backtest
+                </p>
+
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center',
+                  background: accent, borderRadius: 11,
+                  padding: '11px 22px', color: '#fff', fontWeight: 600, fontSize: 14,
+                }}>
+                  Open →
+                </div>
+              </div>
+            </Link>
+          </div>
+
+        </div>
       </div>
 
-      {/* bottom padding for safe area */}
-      <div style={{ height: 60 }} />
+      {/* safe area bottom */}
+      <div className="h-16 md:h-8" />
     </div>
   )
 }
