@@ -1,13 +1,20 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
 import { useLang } from '@/lib/lang'
 import { useTheme } from '@/lib/theme'
 
+function IconSearch() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+  )
+}
+
 function IconSun() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="4"/>
       <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
     </svg>
@@ -16,81 +23,166 @@ function IconSun() {
 
 function IconMoon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
     </svg>
   )
 }
 
-const BG = `
-  radial-gradient(circle at 15% 20%, rgba(57,255,20,0.12) 0%, transparent 40%),
-  radial-gradient(circle at 85% 75%, rgba(255,45,149,0.12) 0%, transparent 40%),
-  #000000
-`.trim()
+const CHIPS = [
+  { label: 'Trading', icon: '📈', href: '/trading' },
+  { label: 'Food',    icon: '🍽️', href: '/food'    },
+  { label: 'Vault',   icon: '🔐', href: '/vault'   },
+  { label: 'Routine', icon: '⚡', href: '/routine' },
+]
 
 export default function LandingPage() {
-  const { lang, t, toggle } = useLang()
+  const { lang, toggle } = useLang()
   const { theme, toggle: toggleTheme, dark, toggleDark } = useTheme()
   const isSB = theme === 'sb'
 
-  return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden" style={{ background: BG }}>
+  const accent      = isSB ? '#FF2D95' : '#22c55e'
+  const accentGlow  = isSB ? 'rgba(255,45,149,0.18)' : 'rgba(34,197,94,0.15)'
+  const accentBorder= isSB ? 'rgba(255,45,149,0.35)' : 'rgba(34,197,94,0.35)'
 
-      {/* ── Top bar ── */}
-      <div className="relative z-20 flex items-center justify-between px-6 pt-8">
-        <button
-          onClick={toggleTheme}
-          className="font-black leading-none select-none"
-          style={{ color: '#fff', fontSize: 'clamp(3rem, 12vw, 5rem)' }}
-          title="Switch profile"
-        >
-          {isSB ? 'S' : 'Z'}
-        </button>
-        <div className="flex items-center gap-2">
-          <button onClick={toggleDark}
-            className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ backgroundColor: '#111', border: '1px solid rgba(255,255,255,0.1)' }}>
+  const bg = `
+    radial-gradient(circle at 20% 10%, ${isSB ? 'rgba(255,45,149,0.13)' : 'rgba(34,197,94,0.11)'} 0%, transparent 45%),
+    radial-gradient(circle at 80% 80%, ${isSB ? 'rgba(255,45,149,0.08)' : 'rgba(34,197,94,0.07)'} 0%, transparent 45%),
+    #000
+  `.trim()
+
+  const now     = new Date()
+  const weekday = now.toLocaleDateString('en-US', { weekday: 'long' })
+  const monthDay= now.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+
+  const glass = {
+    background: 'rgba(255,255,255,0.05)',
+    backdropFilter: 'blur(16px)',
+    WebkitBackdropFilter: 'blur(16px)',
+    border: '1px solid rgba(255,255,255,0.1)',
+  } as React.CSSProperties
+
+  const btnGlass = {
+    ...glass,
+    width: 36, height: 36, borderRadius: 10,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    cursor: 'pointer', color: '#aaa',
+  } as React.CSSProperties
+
+  return (
+    <div style={{ minHeight: '100svh', background: bg, color: '#fff', maxWidth: 480, margin: '0 auto' }}>
+
+      {/* ── Header ── */}
+      <div style={{ padding: '56px 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <p style={{ margin: 0, fontSize: 15, fontWeight: 500, color: '#ccc' }}>
+          Hi, Zak 👋
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button onClick={toggleDark} style={btnGlass}>
             {dark ? <IconSun /> : <IconMoon />}
           </button>
-          <button onClick={toggle}
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold"
-            style={{ backgroundColor: '#111', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}>
+          <button onClick={toggle} style={{ ...btnGlass, fontSize: 11, fontWeight: 700 }}>
             {lang === 'en' ? 'FR' : 'EN'}
+          </button>
+          <button onClick={toggleTheme}
+            style={{ ...btnGlass, background: accent, border: `1px solid ${accent}`, color: '#fff', fontSize: 11, fontWeight: 800, letterSpacing: '0.03em' }}>
+            {isSB ? 'SB' : 'ZK'}
           </button>
         </div>
       </div>
 
-      {/* ── Center: Logo ── */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center">
-        <div
-          className="w-32 h-32 sm:w-40 sm:h-40 rounded-3xl flex items-center justify-center overflow-hidden"
-          style={{
-            backgroundColor: '#0a0a0a',
-            border: '1px solid rgba(57,255,20,0.2)',
-            boxShadow: '0 0 50px rgba(57,255,20,0.25)',
-          }}
-        >
-          {isSB ? (
-            <span className="font-bold text-4xl tracking-tighter" style={{ color: '#39FF14' }}>SB</span>
-          ) : (
-            <Image src="/icon-512.png" alt="ZK" width={160} height={160} className="w-full h-full object-cover" priority />
-          )}
+      {/* ── Date ── */}
+      <div style={{ padding: '22px 20px 0' }}>
+        <p style={{ margin: '0 0 3px', fontSize: 12, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+          {weekday}
+        </p>
+        <h1 style={{ margin: 0, fontSize: 'clamp(2.4rem, 10vw, 3.5rem)', fontWeight: 800, lineHeight: 1.05, letterSpacing: '-0.03em' }}>
+          {monthDay}
+        </h1>
+      </div>
+
+      {/* ── Search ── */}
+      <div style={{ padding: '20px 20px 0' }}>
+        <div style={{ ...glass, borderRadius: 14, padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ color: '#555', display: 'flex' }}><IconSearch /></span>
+          <span style={{ color: '#555', fontSize: 14 }}>Search sections…</span>
         </div>
       </div>
 
-      {/* ── Floating dock with Enter → /feed ── */}
-      <div className="relative z-20 flex justify-center pb-8 px-6">
-        <div className="w-full max-w-xs rounded-2xl p-2"
-          style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.1)' }}>
-          <Link
-            href="/feed"
-            className="flex items-center justify-center w-full rounded-xl text-base font-bold transition-opacity active:opacity-80"
-            style={{ height: 48, backgroundColor: '#FF2D95', color: '#fff', letterSpacing: '0.06em' }}
-          >
-            {t.enter}
-          </Link>
+      {/* ── Category chips ── */}
+      <div style={{ padding: '20px 0 0', overflowX: 'auto', scrollbarWidth: 'none' }}>
+        <div style={{ display: 'flex', gap: 10, padding: '0 20px', width: 'max-content' }}>
+          {CHIPS.map(chip => (
+            <Link key={chip.href} href={chip.href} style={{ textDecoration: 'none' }}>
+              <div style={{ ...glass, borderRadius: 18, padding: '14px 18px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, minWidth: 78, transition: 'opacity 0.15s' }}>
+                <span style={{ fontSize: 26 }}>{chip.icon}</span>
+                <span style={{ fontSize: 12, color: '#bbb', fontWeight: 500 }}>{chip.label}</span>
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
+
+      {/* ── Featured banner ── */}
+      <div style={{ padding: '20px 20px 0' }}>
+        <Link href="/trading" style={{ textDecoration: 'none' }}>
+          <div style={{
+            background: accentGlow,
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            border: `1px solid ${accentBorder}`,
+            borderRadius: 22,
+            padding: '22px 22px',
+            position: 'relative',
+            overflow: 'hidden',
+          }}>
+            {/* subtle glow blob */}
+            <div style={{
+              position: 'absolute', top: -30, right: -30,
+              width: 120, height: 120,
+              borderRadius: '50%',
+              background: accentGlow,
+              filter: 'blur(30px)',
+              pointerEvents: 'none',
+            }} />
+
+            <span style={{
+              display: 'inline-block',
+              background: 'rgba(255,255,255,0.07)',
+              backdropFilter: 'blur(8px)',
+              borderRadius: 7,
+              padding: '3px 9px',
+              fontSize: 11,
+              color: '#888',
+              marginBottom: 12,
+              letterSpacing: '0.07em',
+              textTransform: 'uppercase',
+            }}>
+              📌 Today&apos;s Focus
+            </span>
+
+            <h2 style={{ margin: '0 0 5px', fontSize: 22, fontWeight: 700, color: '#fff' }}>
+              Trading <span style={{ color: accent }}>Session</span>
+            </h2>
+            <p style={{ margin: '0 0 18px', fontSize: 13, color: '#666' }}>
+              Checklist · Journal · Backtest
+            </p>
+
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: accent,
+              borderRadius: 11,
+              padding: '10px 20px',
+              color: '#fff', fontWeight: 600, fontSize: 13,
+            }}>
+              Open →
+            </div>
+          </div>
+        </Link>
+      </div>
+
+      {/* bottom padding for safe area */}
+      <div style={{ height: 60 }} />
     </div>
   )
 }
