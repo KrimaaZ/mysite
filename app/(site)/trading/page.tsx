@@ -377,12 +377,57 @@ const JAMO_SESSION_BTNS = [
 const ZONE_TFS  = ['4H', '1H', '30m'] as const
 const ZONE_OPTS = [
   { label: 'BISI', color: '#22c55e' },
-  { label: 'SIBI', color: '#3b82f6' },
-  { label: 'OB+',  color: '#f97316' },
+  { label: 'SIBI', color: '#e84057' },
+  { label: 'OB+',  color: '#22c55e' },
   { label: 'OB-',  color: '#e84057' },
   { label: 'Clear', color: '#9ca3af' },
 ]
-const CANDLE_SIZES = ['1m', '3m', '5m', '15m', '30m', '1H']
+
+// SVG candle definitions for the candle picker
+type CandleType = { id: string; bullish: boolean; wick: 'none' | 'top' | 'bottom' | 'both'; neutral?: boolean }
+const CANDLE_TYPES: CandleType[] = [
+  { id: 'bull_plain',  bullish: true,  wick: 'none' },
+  { id: 'bull_top',    bullish: true,  wick: 'top' },
+  { id: 'bull_bot',    bullish: true,  wick: 'bottom' },
+  { id: 'bear_plain',  bullish: false, wick: 'none' },
+  { id: 'bear_top',    bullish: false, wick: 'top' },
+  { id: 'bear_bot',    bullish: false, wick: 'bottom' },
+  { id: 'neutral',     bullish: true,  wick: 'both', neutral: true },
+]
+
+function CandleSvg({ candle, size = 28, selected = false }: { candle: CandleType | null; size?: number; selected?: boolean }) {
+  const w = size, h = size
+  const bodyW = w * 0.45
+  const bodyX = (w - bodyW) / 2
+  const wickX = w / 2
+
+  if (!candle) {
+    return (
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+        <rect x={bodyX} y={h * 0.2} width={bodyW} height={h * 0.6} rx="2"
+          fill="none" stroke="var(--t-text-muted)" strokeWidth="1.5" strokeDasharray="3,2" />
+      </svg>
+    )
+  }
+
+  const color = candle.neutral ? 'var(--t-text-muted)' : candle.bullish ? '#22c55e' : '#e84057'
+  const bodyTop = candle.wick === 'top' || candle.wick === 'both' ? h * 0.35 : h * 0.15
+  const bodyBot = candle.wick === 'bottom' || candle.wick === 'both' ? h * 0.65 : h * 0.85
+  const bodyH = bodyBot - bodyTop
+
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+      {(candle.wick === 'top' || candle.wick === 'both') && (
+        <line x1={wickX} y1={h * 0.05} x2={wickX} y2={bodyTop} stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+      )}
+      {(candle.wick === 'bottom' || candle.wick === 'both') && (
+        <line x1={wickX} y1={bodyBot} x2={wickX} y2={h * 0.95} stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+      )}
+      <rect x={bodyX} y={bodyTop} width={bodyW} height={bodyH} rx="2"
+        fill={selected ? color : `${color}55`} stroke={color} strokeWidth="1.5" />
+    </svg>
+  )
+}
 
 function PreTradeTab() {
   const edt = (() => { const m = new Date().getMonth() + 1; return m >= 3 && m <= 11 })()
@@ -395,7 +440,8 @@ function PreTradeTab() {
   const [activeDay,         setActiveDay]        = useState<string | null>(null)
   const [activeSession,     setActiveSession]    = useState<string | null>(null)
   const [activeJamoSession, setActiveJamoSession]= useState<string | null>(null)
-  const [activeCandleSize,  setActiveCandleSize] = useState<string | null>(null)
+  const [activeCandle,      setActiveCandle]     = useState<string | null>(null)
+  const [candlePickerOpen,  setCandlePickerOpen] = useState(false)
   const [zoneByTf,          setZoneByTf]         = useState<Record<string, string>>({})
   const [guideOpen,         setGuideOpen]        = useState(false)
 
@@ -407,7 +453,7 @@ function PreTradeTab() {
       if (d.activeDay)          setActiveDay(d.activeDay)
       if (d.activeSession)      setActiveSession(d.activeSession)
       if (d.activeJamoSession)  setActiveJamoSession(d.activeJamoSession)
-      if (d.activeCandleSize)   setActiveCandleSize(d.activeCandleSize)
+      if (d.activeCandle)       setActiveCandle(d.activeCandle)
       if (d.zoneByTf)           setZoneByTf(d.zoneByTf)
     } catch {}
     initialLoaded.current = true
@@ -415,25 +461,25 @@ function PreTradeTab() {
 
   useEffect(() => {
     if (!initialLoaded.current) return
-    const data = { checks, biasByTf, activeDay, activeSession, activeJamoSession, activeCandleSize, zoneByTf }
+    const data = { checks, biasByTf, activeDay, activeSession, activeJamoSession, activeCandle, zoneByTf }
     localStorage.setItem(PRE_CHECK_KEY, JSON.stringify(data))
     const timer = setTimeout(() => {
       fetch('/api/pretrade', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: JSON.stringify(data) }) })
     }, 800)
     return () => clearTimeout(timer)
-  }, [checks, biasByTf, activeDay, activeSession, activeJamoSession, activeCandleSize, zoneByTf])
+  }, [checks, biasByTf, activeDay, activeSession, activeJamoSession, activeCandle, zoneByTf])
 
   const toggle         = (id: string) => setChecks(p => ({ ...p, [id]: !p[id] }))
   const toggleBias     = (tf: string, val: string) => setBiasByTf(p => ({ ...p, [tf]: p[tf] === val ? '' : val }))
   const toggleDay      = (d: string)  => setActiveDay(p => p === d ? null : d)
   const toggleSession  = (k: string)  => setActiveSession(p => p === k ? null : k)
   const toggleJamo     = (k: string)  => setActiveJamoSession(p => p === k ? null : k)
-  const toggleCandle   = (s: string)  => setActiveCandleSize(p => p === s ? null : s)
+  const pickCandle     = (id: string) => { setActiveCandle(id); setCandlePickerOpen(false) }
   const setZone        = (tf: string, val: string) => setZoneByTf(p => ({ ...p, [tf]: p[tf] === val ? '' : val }))
 
   const reset = () => {
     setChecks({}); setBiasByTf({}); setActiveDay(null); setActiveSession(null)
-    setActiveJamoSession(null); setActiveCandleSize(null); setZoneByTf({})
+    setActiveJamoSession(null); setActiveCandle(null); setCandlePickerOpen(false); setZoneByTf({})
     localStorage.removeItem(PRE_CHECK_KEY)
   }
 
@@ -516,10 +562,12 @@ function PreTradeTab() {
                 <div className="px-4 pb-3 flex gap-1.5">
                   {DAY_BTNS.map(d => {
                     const isFomo = d === 'Mon' || d === 'Fri'
-                    const borderColor = isFomo ? '#e84057' : '#b8860b'
+                    const borderColor = isFomo ? '#e84057' : 'rgba(255,255,255,0.4)'
+                    const activeColor = isFomo ? 'rgba(232,64,87,0.2)' : 'rgba(255,255,255,0.12)'
+                    const textColor   = isFomo ? '#e84057' : 'var(--t-text-main)'
                     return (
                       <button key={d} onClick={() => toggleDay(d)} className="flex-1 rounded-xl font-bold transition-all active:scale-95"
-                        style={{ fontSize: 11, padding: '5px 0', border: `2px solid ${borderColor}`, backgroundColor: activeDay === d ? (isFomo ? 'rgba(232,64,87,0.2)' : 'rgba(184,134,11,0.2)') : 'transparent', color: isFomo ? '#e84057' : 'var(--t-text-main)' }}>
+                        style={{ fontSize: 11, padding: '5px 0', border: `2px solid ${borderColor}`, backgroundColor: activeDay === d ? activeColor : 'transparent', color: textColor }}>
                         {d}
                       </button>
                     )
@@ -549,24 +597,39 @@ function PreTradeTab() {
                 </div>
               )}
 
-              {/* DOP: XAUUSD non-clickable + candle picker (items 12 & 13) */}
+              {/* DOP: XAUUSD 18h + SVG candle picker */}
               {c.id === 'dop' && (
-                <div className="px-4 pb-3 flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="px-3 py-1 rounded-xl text-xs font-bold"
+                <div className="px-4 pb-3">
+                  <div className="flex items-center gap-3">
+                    {/* XAUUSD badge with 18h inside */}
+                    <span className="px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5"
                       style={{ backgroundColor: 'rgba(184,134,11,0.15)', color: '#b8860b', border: '2px solid #b8860b' }}>
-                      XAUUSD
+                      XAUUSD <span style={{ opacity: 0.7 }}>18h</span>
                     </span>
-                    <span className="text-xs font-semibold" style={{ color: 'var(--t-text-muted)' }}>18h</span>
-                  </div>
-                  <div className="flex gap-1.5 flex-wrap">
-                    {CANDLE_SIZES.map(size => (
-                      <button key={size} onClick={() => toggleCandle(size)}
-                        className="rounded-xl font-bold transition-all active:scale-95"
-                        style={{ fontSize: 11, padding: '4px 10px', border: '2px solid #b8860b', backgroundColor: activeCandleSize === size ? 'rgba(184,134,11,0.3)' : 'transparent', color: activeCandleSize === size ? '#b8860b' : 'var(--t-text-muted)' }}>
-                        {size}
+                    {/* Candle picker trigger */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setCandlePickerOpen(o => !o)}
+                        className="flex items-center justify-center rounded-xl transition-all active:scale-95"
+                        style={{ width: 40, height: 40, border: '2px solid var(--t-border-soft)', backgroundColor: 'transparent' }}
+                      >
+                        <CandleSvg candle={CANDLE_TYPES.find(ct => ct.id === activeCandle) ?? null} size={28} selected={!!activeCandle} />
                       </button>
-                    ))}
+                      {/* Picker dropdown */}
+                      {candlePickerOpen && (
+                        <div className="absolute left-0 top-12 z-50 flex gap-1.5 p-2 rounded-2xl"
+                          style={{ backgroundColor: 'var(--t-card-bg)', border: '2px solid var(--t-border-soft)', boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
+                          {CANDLE_TYPES.map(ct => (
+                            <button key={ct.id}
+                              onClick={() => pickCandle(ct.id)}
+                              className="flex items-center justify-center rounded-xl transition-all active:scale-90"
+                              style={{ width: 36, height: 36, border: `2px solid ${activeCandle === ct.id ? '#b8860b' : 'var(--t-border-soft)'}`, backgroundColor: activeCandle === ct.id ? 'rgba(184,134,11,0.2)' : 'transparent' }}>
+                              <CandleSvg candle={ct} size={26} selected={activeCandle === ct.id} />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -577,13 +640,13 @@ function PreTradeTab() {
                   {ZONE_TFS.map(tf => (
                     <div key={tf} className="flex items-center gap-2">
                       <span className="text-xs font-bold w-8 shrink-0 text-right" style={{ color: 'var(--t-text-soft)' }}>{tf}</span>
-                      <div className="flex gap-1 flex-wrap flex-1">
+                      <div className="flex gap-1 flex-1">
                         {ZONE_OPTS.map(o => {
                           const active = zoneByTf[tf] === o.label
                           return (
                             <button key={o.label} onClick={() => setZone(tf, o.label)}
-                              className="rounded-xl font-bold transition-all active:scale-95"
-                              style={{ fontSize: 11, padding: '4px 8px', border: `2px solid ${o.color}`, backgroundColor: active ? `${o.color}44` : 'transparent', color: active ? '#fff' : o.color }}>
+                              className="flex-1 rounded-xl font-bold transition-all active:scale-95"
+                              style={{ fontSize: 11, padding: '6px 2px', border: `2px solid ${o.color}`, backgroundColor: active ? `${o.color}44` : 'transparent', color: active ? '#fff' : o.color }}>
                               {o.label}
                             </button>
                           )
