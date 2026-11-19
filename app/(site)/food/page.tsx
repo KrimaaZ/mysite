@@ -1920,11 +1920,22 @@ export default function FoodPage() {
           setTab('list')
         }
 
+        const handlePastePhoto = (e: React.ClipboardEvent) => {
+          const item = Array.from(e.clipboardData.items).find(i => i.type.startsWith('image/'))
+          if (!item) return
+          const file = item.getAsFile()
+          if (!file) return
+          const reader = new FileReader()
+          reader.onload = () => setMealPhotos(prev => ({ ...prev, [itemKey]: reader.result as string }))
+          reader.readAsDataURL(file)
+        }
+
         return (
           <div
             className="fixed inset-0 z-50 flex items-end justify-center"
             style={{ backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}
             onClick={() => setDetailItem(null)}
+            onPaste={handlePastePhoto}
           >
             <div
               className="w-full max-w-lg flex flex-col"
@@ -1963,7 +1974,7 @@ export default function FoodPage() {
                     className="absolute bottom-2.5 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
                     style={{ backgroundColor: 'rgba(0,0,0,0.45)', color: '#fff', backdropFilter: 'blur(8px)' }}
                   >
-                    📷 {photo ? 'Changer' : 'Photo'}
+                    📷 {photo ? 'Changer' : 'Photo / Coller'}
                   </button>
                   <input
                     ref={photoInputRef}
