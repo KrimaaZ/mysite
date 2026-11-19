@@ -31,6 +31,7 @@ type Meal = {
   id: number; type: string; name: string; protein: string; kcal: string
   time: string; ingredients: string; prep: string; tip: string
 }
+type CarouselItem = { kind: 'meal'; meal: Meal } | { kind: 'recipe'; recipe: Recipe }
 
 const MEALS: Meal[] = [
   // ── BREAKFAST (15) ──────────────────────────────────────────────────────────
@@ -238,7 +239,7 @@ export default function FoodPage() {
     smoothie:  { label: t.typeSmoothie,  emoji: '🥤', color: '#40916c', bg: '#d8f3dc' },
   }
 
-  const [tab, setTab] = useState<'rotation' | 'recipes' | 'week' | 'videos' | 'list' | 'aliments'>('rotation')
+  const [tab, setTab] = useState<'recipes' | 'list' | 'aliments'>('recipes')
 
   // ── Week schedule state ──────────────────────────────────────────────────
   const [weekSchedule, setWeekSchedule] = useState<WeekSchedule>(emptySchedule)
@@ -318,6 +319,14 @@ export default function FoodPage() {
   const [hiddenMeals, setHiddenMeals] = useState<Set<number>>(new Set())
   const [favoriteMeals, setFavoriteMeals] = useState<Set<number>>(new Set())
   const [weekPlan, setWeekPlan] = useState<Set<number>>(new Set())
+
+  // ── Carousel state (My Recipes tab) ─────────────────────────────────────
+  const [carouselFilter, setCarouselFilter] = useState<string>('ALL')
+  const [activeCarouselIndex, setActiveCarouselIndex] = useState(0)
+  const carouselRef = useRef<HTMLDivElement>(null)
+  const [detailItem, setDetailItem] = useState<CarouselItem | null>(null)
+  const [mealPhotos, setMealPhotos] = useState<Record<string, string>>({})
+  const photoInputRef = useRef<HTMLInputElement>(null)
   const [weekGroceryModal, setWeekGroceryModal] = useState(false)
   const [weekCellDetail, setWeekCellDetail] = useState<{ id: string; name: string } | null>(null)
   const [weekChecked, setWeekChecked] = useState<Set<number>>(new Set())
@@ -451,6 +460,31 @@ export default function FoodPage() {
     return base
   }, [mealFilter, visibleMeals, favoriteMeals, mealSearch])
   const filteredRecipes = recipeFilter === 'ALL' ? recipes : recipes.filter(r => r.category === recipeFilter)
+
+  // Carousel computed data
+  const CAROUSEL_FILTER_CHIPS = [
+    { key: 'ALL',       label: 'All' },
+    { key: 'breakfast', label: 'Breakfast', emoji: '☀️' },
+    { key: 'main',      label: 'Main meal', emoji: '🍽️' },
+    { key: 'snack',     label: 'Snack',     emoji: '🍎' },
+    { key: 'smoothie',  label: 'Smoothie',  emoji: '🥤' },
+    { key: 'favs',      label: 'Favorites', emoji: '❤️' },
+  ]
+  const carouselMeals = useMemo(() => {
+    if (carouselFilter === 'favs') return visibleMeals.filter(m => favoriteMeals.has(m.id))
+    if (carouselFilter === 'ALL') return visibleMeals
+    return visibleMeals.filter(m => m.type === carouselFilter)
+  }, [carouselFilter, visibleMeals, favoriteMeals])
+  const carouselRecipes = useMemo(() => {
+    if (carouselFilter === 'favs') return []
+    if (carouselFilter === 'ALL') return recipes
+    if (carouselFilter === 'main') return recipes.filter(r => ['lunch','dinner'].includes(r.category))
+    return recipes.filter(r => r.category === carouselFilter)
+  }, [carouselFilter, recipes])
+  const carouselItems: CarouselItem[] = useMemo(() => [
+    ...carouselMeals.map(m => ({ kind: 'meal' as const, meal: m })),
+    ...carouselRecipes.map(r => ({ kind: 'recipe' as const, recipe: r })),
+  ], [carouselMeals, carouselRecipes])
 
   const openAdd = () => { setForm(empty); setEditing(null); setModal(true) }
   const openEdit = (r: Recipe) => {
@@ -631,73 +665,35 @@ export default function FoodPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: 'var(--t-text-main)' }}>🥗 {t.foodPlan}</h1>
           <p className="text-xs sm:text-sm mt-0.5" style={{ color: 'var(--t-text-muted)' }}>
-            {tab === 'rotation'
-              ? mealSearch.trim()
-                ? `${filteredMeals.length} résultat${filteredMeals.length !== 1 ? 's' : ''} pour "${mealSearch}"`
-                : t.mealsSubtitle(
-                    visibleMeals.length,
-                    visibleMeals.filter(m => m.type === 'breakfast').length,
-                    visibleMeals.filter(m => m.type === 'main').length,
-                    visibleMeals.filter(m => m.type === 'snack').length,
-                    visibleMeals.filter(m => m.type === 'smoothie').length,
-                  )
-              : tab === 'week' ? t.weekSubtitle(weekPlan.size)
-              : tab === 'recipes' ? 'Ajouter une recette à la rotation'
-              : tab === 'list' ? `${buyItems.length} articles · ${buyItems.filter(i => i.checked).length} cochés`
-              : t.recipesSubtitle(recipes.length)}
+            {tab === 'recipes'
+              ? `${carouselItems.length} repas${carouselFilter !== 'ALL' ? ' filtrés' : ''}`
+              : tab === 'list'
+              ? `${buyItems.length} articles · ${buyItems.filter(i => i.checked).length} cochés`
+              : ''}
           </p>
         </div>
 
-        {/* Search — lives in header, aligned with title */}
-        <div className="shrink-0 flex items-center transition-all duration-200"
-          style={{ width: searchOpen ? 180 : 'auto' }}>
-          {searchOpen ? (
-            <div className="flex items-center gap-1 rounded-xl px-3 py-2 w-full"
-              style={{ backgroundColor: 'var(--t-card-bg)', border: '1.5px solid var(--t-border-soft)' }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--t-text-muted)" strokeWidth="2.5" strokeLinecap="round">
-                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-              </svg>
-              <input
-                ref={searchInputRef}
-                value={mealSearch}
-                onChange={e => setMealSearch(e.target.value)}
-                placeholder="Rechercher…"
-                className="flex-1 bg-transparent text-sm outline-none min-w-0"
-                style={{ color: 'var(--t-text-main)' }}
-                onBlur={() => { if (!mealSearch) { setSearchOpen(false) } }}
-              />
-              {mealSearch && (
-                <button onClick={() => { setMealSearch(''); searchInputRef.current?.focus() }}
-                  className="text-sm leading-none" style={{ color: 'var(--t-text-muted)' }}>✕</button>
-              )}
-            </div>
-          ) : (
-            <button
-              onClick={() => { setSearchOpen(true); setTimeout(() => searchInputRef.current?.focus(), 50) }}
-              className="px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all active:scale-95 whitespace-nowrap text-sm font-semibold"
-              style={{ backgroundColor: 'var(--t-card-bg)', color: 'var(--t-text-muted)', border: '1.5px solid var(--t-border-soft)' }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-              </svg>
-              <span>Chercher</span>
-            </button>
-          )}
-        </div>
+        {/* + Recipe button in header */}
+        {tab === 'recipes' && (
+          <button
+            onClick={openAdd}
+            className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95"
+            style={{ background: 'linear-gradient(135deg,#2d6a4f,#40916c)', color: '#fff' }}
+          >
+            + Recette
+          </button>
+        )}
       </div>
 
       {/* Main tabs */}
-      <div className="flex gap-2 mb-5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-        {[{ key: 'rotation', label: t.mealRotation }, { key: 'week', label: t.weekTab }, { key: 'recipes', label: t.myRecipes }, { key: 'videos', label: '🎬 Vidéos' }, { key: 'list', label: '🛒 Liste' }, { key: 'aliments', label: '🥦 Aliments' }].map(tb => (
-          <button key={tb.key} onClick={() => setTab(tb.key as 'rotation' | 'recipes' | 'week' | 'videos' | 'list' | 'aliments')}
+      <div className="flex gap-2 mb-5">
+        {([{ key: 'recipes', label: '🍽️ Mes Recettes' }, { key: 'list', label: '🛒 Liste' }, { key: 'aliments', label: '🥦 Aliments' }] as const).map(tb => (
+          <button key={tb.key} onClick={() => setTab(tb.key)}
             className="px-4 py-2 rounded-xl text-sm font-medium transition-all relative whitespace-nowrap"
             style={tab === tb.key
               ? { backgroundColor: '#2d6a4f', color: '#fff', border: '2px solid #2d6a4f' }
               : { backgroundColor: 'var(--t-card-bg)', color: 'var(--t-text-muted)', border: '2px solid #2d6a4f' }}>
             {tb.label}
-            {tb.key === 'week' && weekPlan.size > 0 && (
-              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full font-bold ml-1 align-middle"
-                style={{ backgroundColor: '#c0303e', color: '#fff', fontSize: '9px' }}>{weekPlan.size}</span>
-            )}
             {tb.key === 'list' && buyItems.filter(i => !i.checked).length > 0 && (
               <span className="inline-flex items-center justify-center w-4 h-4 rounded-full font-bold ml-1 align-middle"
                 style={{ backgroundColor: '#c0303e', color: '#fff', fontSize: '9px' }}>{buyItems.filter(i => !i.checked).length}</span>
@@ -706,8 +702,173 @@ export default function FoodPage() {
         ))}
       </div>
 
-      {/* ── MEAL ROTATION ── */}
-      {tab === 'rotation' && (
+      {/* ── MY RECIPES CAROUSEL ── */}
+      {tab === 'recipes' && (() => {
+        const CARD_W = 272
+        const CARD_GAP = 12
+        return (
+          <>
+            {/* Filter chips */}
+            <div className="flex gap-2 mb-5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+              {CAROUSEL_FILTER_CHIPS.map(chip => (
+                <button
+                  key={chip.key}
+                  onClick={() => {
+                    setCarouselFilter(chip.key)
+                    setActiveCarouselIndex(0)
+                    if (carouselRef.current) carouselRef.current.scrollLeft = 0
+                  }}
+                  className="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all"
+                  style={{
+                    backgroundColor: carouselFilter === chip.key ? '#2d6a4f' : 'var(--t-item-bg)',
+                    color: carouselFilter === chip.key ? '#fff' : 'var(--t-text-muted)',
+                    border: carouselFilter === chip.key ? '1px solid #2d6a4f' : '1px solid var(--t-border-soft)',
+                  }}
+                >
+                  {'emoji' in chip ? `${chip.emoji} ` : ''}{chip.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Carousel */}
+            {carouselItems.length === 0 ? (
+              <div className="text-center py-16 rounded-2xl" style={{ backgroundColor: 'var(--t-item-bg)' }}>
+                <p className="text-4xl mb-3">🍽️</p>
+                <p className="text-sm font-semibold" style={{ color: 'var(--t-text-muted)' }}>Aucun repas dans cette catégorie</p>
+              </div>
+            ) : (
+              <>
+                <div
+                  ref={carouselRef}
+                  className="flex overflow-x-auto"
+                  style={{
+                    scrollSnapType: 'x mandatory',
+                    scrollbarWidth: 'none',
+                    WebkitOverflowScrolling: 'touch',
+                    gap: CARD_GAP,
+                    paddingLeft: `calc(50% - ${CARD_W / 2}px)`,
+                    paddingRight: `calc(50% - ${CARD_W / 2}px)`,
+                    paddingBottom: 24,
+                    paddingTop: 8,
+                  } as React.CSSProperties}
+                  onScroll={() => {
+                    if (!carouselRef.current) return
+                    const { scrollLeft } = carouselRef.current
+                    const idx = Math.round(scrollLeft / (CARD_W + CARD_GAP))
+                    setActiveCarouselIndex(Math.max(0, Math.min(idx, carouselItems.length - 1)))
+                  }}
+                >
+                  {carouselItems.map((item, idx) => {
+                    const dist = Math.abs(idx - activeCarouselIndex)
+                    const isActive = dist === 0
+                    const scale = isActive ? 1 : 0.88
+                    const opacity = isActive ? 1 : dist === 1 ? 0.72 : 0.5
+                    const isMeal = item.kind === 'meal'
+                    const name = isMeal ? item.meal.name : item.recipe.title
+                    const type = isMeal ? item.meal.type : (['lunch','dinner'].includes(item.recipe.category) ? 'main' : item.recipe.category as string)
+                    const meta = TYPE_META[type] ?? TYPE_META['snack']
+                    const isFav = isMeal && favoriteMeals.has(item.meal.id)
+                    const itemKey = isMeal ? `meal_${item.meal.id}` : `recipe_${item.recipe.id}`
+                    const photo = mealPhotos[itemKey]
+
+                    return (
+                      <div
+                        key={itemKey}
+                        onClick={() => setDetailItem(item)}
+                        style={{
+                          scrollSnapAlign: 'center',
+                          flexShrink: 0,
+                          width: CARD_W,
+                          transition: 'transform 0.3s ease, opacity 0.3s ease',
+                          transform: `scale(${scale})`,
+                          opacity,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <div
+                          className="rounded-3xl overflow-hidden"
+                          style={{
+                            backgroundColor: 'var(--t-card-bg)',
+                            border: isActive ? '2px solid #2d6a4f' : '2px solid var(--t-border-soft)',
+                            boxShadow: isActive ? '0 12px 40px rgba(45,106,79,0.25)' : '0 2px 8px rgba(0,0,0,0.08)',
+                          }}
+                        >
+                          {/* Photo / placeholder */}
+                          <div
+                            className="relative flex items-center justify-center"
+                            style={{ height: 155, backgroundColor: photo ? 'transparent' : meta.bg, overflow: 'hidden' }}
+                          >
+                            {photo ? (
+                              <img src={photo} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              <span style={{ fontSize: 54 }}>{meta.emoji}</span>
+                            )}
+                            <div className="absolute top-2.5 left-2.5">
+                              <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full"
+                                style={{ backgroundColor: 'rgba(0,0,0,0.45)', color: '#fff', backdropFilter: 'blur(8px)' }}>
+                                {meta.emoji} {meta.label}
+                              </span>
+                            </div>
+                            {isFav && (
+                              <div className="absolute top-2.5 right-2.5">
+                                <span style={{ fontSize: 16 }}>❤️</span>
+                              </div>
+                            )}
+                            {!isMeal && (
+                              <div className="absolute bottom-2.5 right-2.5">
+                                <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                                  style={{ backgroundColor: 'rgba(0,0,0,0.45)', color: '#fff', backdropFilter: 'blur(8px)' }}>
+                                  👤 custom
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          {/* Info */}
+                          <div className="px-4 py-3">
+                            <h3 className="font-bold text-sm leading-snug mb-2" style={{ color: 'var(--t-text-main)' }}>
+                              {name}
+                            </h3>
+                            {isMeal ? (
+                              <div className="flex flex-wrap gap-1.5">
+                                <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: '#e8f4fd', color: '#1a56db' }}>💪 {item.meal.protein}</span>
+                                <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: '#d8f3dc', color: '#2d6a4f' }}>🔥 {item.meal.kcal}</span>
+                                <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: '#fff3cd', color: '#856404' }}>⏱ {item.meal.time}</span>
+                              </div>
+                            ) : (
+                              <div className="flex flex-wrap gap-1.5">
+                                <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>⏱ {item.recipe.prepTime + item.recipe.cookTime} min</span>
+                                <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>👤 {item.recipe.servings} pers</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                {/* Dot indicators */}
+                <div className="flex justify-center gap-1.5">
+                  {carouselItems.slice(0, Math.min(carouselItems.length, 12)).map((_, i) => (
+                    <div key={i} style={{
+                      width: i === activeCarouselIndex ? 16 : 6,
+                      height: 6,
+                      borderRadius: 3,
+                      backgroundColor: i === activeCarouselIndex ? '#2d6a4f' : 'var(--t-border-soft)',
+                      transition: 'all 0.3s',
+                    }} />
+                  ))}
+                  {carouselItems.length > 12 && (
+                    <div style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: 'var(--t-border-soft)' }} />
+                  )}
+                </div>
+              </>
+            )}
+          </>
+        )
+      })()}
+
+      {/* ── OLD MEAL ROTATION (kept as hidden, data still used) ── */}
+      {false && (
         <>
           {/* Category filter + select button */}
           <div className="flex items-center gap-2 mb-5">
@@ -867,8 +1028,8 @@ export default function FoodPage() {
         </>
       )}
 
-      {/* ── ADD RECIPE (→ Meal Rotation) ── */}
-      {tab === 'recipes' && (
+      {/* ── ADD RECIPE FORM (opened via modal, not a tab) ── */}
+      {false && (
         <div className="space-y-4">
           {/* Inline add form */}
           <div className="rounded-2xl border-2 p-5 space-y-3" style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
@@ -933,8 +1094,8 @@ export default function FoodPage() {
         </div>
       )}
 
-      {/* ── WEEK SCHEDULE ── */}
-      {tab === 'week' && (
+      {/* ── WEEK SCHEDULE (removed per item 20) ── */}
+      {false && (
         <div>
           {/* Action buttons */}
           <div className="flex gap-2 mb-4">
@@ -1566,8 +1727,8 @@ export default function FoodPage() {
         )
       })()}
 
-      {/* ── VIDEOS TAB ── */}
-      {tab === 'videos' && (
+      {/* ── VIDEOS TAB (removed per item 20) ── */}
+      {false && (
         <FoodVideoTab
           videos={foodVideos}
           adding={addingFV}
@@ -1737,6 +1898,197 @@ export default function FoodPage() {
 
       {/* ── ALIMENTS TAB ── */}
       {tab === 'aliments' && <AlimentsTab />}
+
+      {/* ── RECIPE DETAIL OVERLAY (item 22) ── */}
+      {detailItem && (() => {
+        const isMeal = detailItem.kind === 'meal'
+        const meal = isMeal ? detailItem.meal : null
+        const recipe = !isMeal ? detailItem.recipe : null
+        const name = isMeal ? meal!.name : recipe!.title
+        const type = isMeal ? meal!.type : (['lunch','dinner'].includes(recipe!.category) ? 'main' : recipe!.category)
+        const meta = TYPE_META[type] ?? TYPE_META['snack']
+        const itemKey = isMeal ? `meal_${meal!.id}` : `recipe_${recipe!.id}`
+        const photo = mealPhotos[itemKey]
+
+        const handleAddToList = () => {
+          const rawIngredients = isMeal
+            ? meal!.ingredients
+            : (() => { try { return JSON.parse(recipe!.ingredients).join('\n') } catch { return recipe!.ingredients } })()
+          const newItems = splitIngredients(rawIngredients).map(text => ({ text, checked: false }))
+          saveBuy([...buyItems, ...newItems])
+          setDetailItem(null)
+          setTab('list')
+        }
+
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-end justify-center"
+            style={{ backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}
+            onClick={() => setDetailItem(null)}
+          >
+            <div
+              className="w-full max-w-lg flex flex-col"
+              style={{
+                maxHeight: '72vh',
+                borderRadius: '24px 24px 0 0',
+                background: 'var(--t-card-bg)',
+                backdropFilter: 'blur(24px)',
+                WebkitBackdropFilter: 'blur(24px)',
+                border: '1px solid rgba(45,106,79,0.3)',
+                borderBottom: 'none',
+                boxShadow: '0 -16px 60px rgba(0,0,0,0.4)',
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Fixed header: photo + name + stats */}
+              <div className="shrink-0">
+                {/* Photo area */}
+                <div
+                  className="relative flex items-center justify-center"
+                  style={{ height: 155, backgroundColor: photo ? 'transparent' : meta.bg, borderRadius: '24px 24px 0 0', overflow: 'hidden' }}
+                >
+                  {photo
+                    ? <img src={photo} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <span style={{ fontSize: 60 }}>{meta.emoji}</span>
+                  }
+                  {/* Close */}
+                  <button
+                    onClick={() => setDetailItem(null)}
+                    className="absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm"
+                    style={{ backgroundColor: 'rgba(0,0,0,0.45)', color: '#fff', backdropFilter: 'blur(8px)' }}
+                  >✕</button>
+                  {/* Upload photo */}
+                  <button
+                    onClick={() => photoInputRef.current?.click()}
+                    className="absolute bottom-2.5 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+                    style={{ backgroundColor: 'rgba(0,0,0,0.45)', color: '#fff', backdropFilter: 'blur(8px)' }}
+                  >
+                    📷 {photo ? 'Changer' : 'Photo'}
+                  </button>
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={e => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      const reader = new FileReader()
+                      reader.onload = () => setMealPhotos(prev => ({ ...prev, [itemKey]: reader.result as string }))
+                      reader.readAsDataURL(file)
+                    }}
+                  />
+                </div>
+
+                {/* Name + meta */}
+                <div className="px-5 py-3 border-b" style={{ borderColor: 'var(--t-border-soft)' }}>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full"
+                      style={{ backgroundColor: meta.bg, color: meta.color }}>
+                      {meta.emoji} {meta.label}
+                    </span>
+                    {isMeal && favoriteMeals.has(meal!.id) && <span style={{ fontSize: 14 }}>❤️</span>}
+                    {!isMeal && (
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>
+                        👤 custom
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="text-lg font-bold leading-snug" style={{ color: 'var(--t-text-main)' }}>{name}</h2>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {isMeal ? (
+                      <>
+                        <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: '#e8f4fd', color: '#1a56db' }}>💪 {meal!.protein}</span>
+                        <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: '#d8f3dc', color: '#2d6a4f' }}>🔥 {meal!.kcal}</span>
+                        <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: '#fff3cd', color: '#856404' }}>⏱ {meal!.time}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>⏱ {recipe!.prepTime + recipe!.cookTime} min</span>
+                        <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}>👤 {recipe!.servings} pers.</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Scrollable content */}
+              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 min-h-0">
+                {!isMeal && recipe!.description && (
+                  <p className="text-sm leading-relaxed" style={{ color: 'var(--t-text-muted)' }}>{recipe!.description}</p>
+                )}
+                {/* Ingredients */}
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider mb-2.5" style={{ color: 'var(--t-text-soft)' }}>🧺 Ingrédients</p>
+                  <div className="space-y-1.5">
+                    {(isMeal
+                      ? splitIngredients(meal!.ingredients)
+                      : (() => { try { return JSON.parse(recipe!.ingredients) as string[] } catch { return recipe!.ingredients.split(/\n|\s\+\s/).filter(Boolean) } })()
+                    ).map((ing: string, i: number) => (
+                      <div key={i} className="flex items-start gap-2 text-sm" style={{ color: 'var(--t-text-main)' }}>
+                        <span style={{ color: '#2d6a4f', marginTop: 2 }}>•</span> {ing}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {/* Prep / Instructions */}
+                {isMeal && meal!.prep && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider mb-2.5" style={{ color: 'var(--t-text-soft)' }}>👨‍🍳 Préparation</p>
+                    <p className="text-sm leading-relaxed" style={{ color: 'var(--t-text-main)' }}>{meal!.prep}</p>
+                  </div>
+                )}
+                {!isMeal && recipe!.instructions && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider mb-2.5" style={{ color: 'var(--t-text-soft)' }}>👨‍🍳 Instructions</p>
+                    <p className="text-sm leading-relaxed" style={{ color: 'var(--t-text-main)' }}>{recipe!.instructions}</p>
+                  </div>
+                )}
+                {/* Tip */}
+                {isMeal && meal!.tip && (
+                  <div className="rounded-2xl px-4 py-3" style={{ backgroundColor: 'var(--t-item-bg)' }}>
+                    <p className="text-xs font-bold mb-1" style={{ color: '#2d6a4f' }}>💡 Tip</p>
+                    <p className="text-sm" style={{ color: 'var(--t-text-muted)' }}>{meal!.tip}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Action buttons */}
+              <div className="shrink-0 flex items-center gap-2 px-5 py-4 border-t" style={{ borderColor: 'var(--t-border-soft)' }}>
+                <button
+                  onClick={() => {
+                    setDetailItem(null)
+                    if (isMeal) openMealEdit(meal!)
+                    else openEdit(recipe!)
+                  }}
+                  className="flex-1 py-2.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-95"
+                  style={{ backgroundColor: 'var(--t-item-bg)', color: 'var(--t-text-muted)' }}
+                >
+                  ✏️ Éditer
+                </button>
+                <button
+                  onClick={() => {
+                    if (isMeal) { deleteMeal(meal!.id); setDetailItem(null) }
+                    else { del(recipe!.id); setDetailItem(null) }
+                  }}
+                  className="flex-1 py-2.5 rounded-2xl text-sm font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-95"
+                  style={{ backgroundColor: '#fde8ec', color: '#c0303e' }}
+                >
+                  🗑 Supprimer
+                </button>
+                <button
+                  onClick={handleAddToList}
+                  className="flex-1 py-2.5 rounded-2xl text-sm font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95"
+                  style={{ background: 'linear-gradient(135deg,#2d6a4f,#40916c)', color: '#fff' }}
+                >
+                  🛒 Liste
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
