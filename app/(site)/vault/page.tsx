@@ -1,25 +1,53 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 
 type Entry = { id: number; app: string; login: string; password: string }
 
 export default function VaultPage() {
-  const router = useRouter()
+  const [unlocked, setUnlocked] = useState(false)
+  const [loginForm, setLoginForm] = useState({ login: '', password: '' })
+  const [loginError, setLoginError] = useState('')
+  const [loginLoading, setLoginLoading] = useState(false)
+
   const [entries, setEntries] = useState<Entry[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({ app: '', login: '', password: '' })
   const [adding, setAdding] = useState(false)
   const [copied, setCopied] = useState<number | null>(null)
 
+  // Check existing session on mount
   useEffect(() => {
     const token = sessionStorage.getItem('vault-token')
-    if (!token) { router.replace('/'); return }
-    fetch('/api/vault')
-      .then(r => r.json())
-      .then(data => { setEntries(data); setLoading(false) })
-  }, [router])
+    if (token) {
+      setUnlocked(true)
+      setLoading(true)
+      fetch('/api/vault')
+        .then(r => r.json())
+        .then(data => { setEntries(data); setLoading(false) })
+    }
+  }, [])
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoginLoading(true); setLoginError('')
+    const res = await fetch('/api/vault/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(loginForm),
+    })
+    setLoginLoading(false)
+    if (res.ok) {
+      sessionStorage.setItem('vault-token', 'vault-session-ok')
+      setUnlocked(true)
+      setLoading(true)
+      fetch('/api/vault')
+        .then(r => r.json())
+        .then(data => { setEntries(data); setLoading(false) })
+    } else {
+      setLoginError('Identifiants incorrects')
+    }
+  }
 
   const handleAdd = async () => {
     if (!form.app.trim() || !form.login.trim() || !form.password.trim()) return
@@ -47,9 +75,56 @@ export default function VaultPage() {
 
   const handleLogout = () => {
     sessionStorage.removeItem('vault-token')
-    router.replace('/')
+    setUnlocked(false)
+    setEntries([])
   }
 
+  // ── Login form ──────────────────────────────────────────────
+  if (!unlocked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: 'var(--t-bg)' }}>
+        <div className="w-full max-w-sm rounded-3xl p-8 border"
+          style={{ backgroundColor: 'var(--t-card-bg)', borderColor: 'var(--t-border-soft)' }}>
+          <div className="text-center mb-8">
+            <div className="text-4xl mb-3">🔑</div>
+            <h1 className="text-xl font-black" style={{ color: 'var(--t-text-main)' }}>Vault</h1>
+            <p className="text-sm mt-1" style={{ color: 'var(--t-text-muted)' }}>Accès privé</p>
+          </div>
+          <form onSubmit={handleLogin} className="flex flex-col gap-3">
+            <input
+              type="text"
+              placeholder="Login"
+              value={loginForm.login}
+              onChange={e => setLoginForm(f => ({ ...f, login: e.target.value }))}
+              autoFocus
+              className="px-4 py-3 rounded-2xl text-sm outline-none border"
+              style={{ borderColor: 'var(--t-border)', color: 'var(--t-text-main)', backgroundColor: 'var(--t-bg-soft)' }}
+            />
+            <input
+              type="password"
+              placeholder="Mot de passe"
+              value={loginForm.password}
+              onChange={e => setLoginForm(f => ({ ...f, password: e.target.value }))}
+              className="px-4 py-3 rounded-2xl text-sm outline-none border"
+              style={{ borderColor: 'var(--t-border)', color: 'var(--t-text-main)', backgroundColor: 'var(--t-bg-soft)' }}
+            />
+            {loginError && (
+              <p className="text-xs text-center" style={{ color: '#dc2626' }}>{loginError}</p>
+            )}
+            <button
+              type="submit"
+              disabled={loginLoading}
+              className="py-3 rounded-2xl text-sm font-bold text-white mt-1"
+              style={{ backgroundColor: 'var(--t-primary)', opacity: loginLoading ? 0.6 : 1 }}>
+              {loginLoading ? 'Vérification…' : 'Entrer'}
+            </button>
+          </form>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Vault content ────────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--t-bg)' }}>
