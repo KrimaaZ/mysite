@@ -33,7 +33,6 @@ const CHIPS = [
   { label: 'Trading', icon: '📈', href: '/trading' },
   { label: 'Food',    icon: '🍽️', href: '/food'    },
   { label: 'Vault',   icon: '🔐', href: '/vault'   },
-  { label: 'Routine', icon: '⚡', href: '/routine' },
 ]
 
 export default function LandingPage() {
@@ -88,7 +87,7 @@ export default function LandingPage() {
         {/* ── Header ── */}
         <div className="flex items-center justify-between pt-14 md:pt-16">
           <p style={{ margin: 0, fontSize: 15, fontWeight: 500, color: textSub }}>
-            {lang === 'en' ? 'Hi, Zak 👋' : 'Salut, Zak 👋'}
+            {lang === 'en' ? 'Welcome 👋' : 'Bienvenue 👋'}
           </p>
           <div className="flex items-center gap-2">
             <button onClick={toggleDark} style={btnGlass}>
@@ -192,7 +191,7 @@ export default function LandingPage() {
                   Trading <span style={{ color: accent }}>Session</span>
                 </h2>
                 <p style={{ margin: '0 0 22px', fontSize: 14, color: textMuted }}>
-                  Checklist · Journal · Backtest
+                  Checklist · Journal
                 </p>
 
                 <div style={{

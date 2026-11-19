@@ -165,3 +165,28 @@ model VaultEntry {
   password  String
   createdAt DateTime @default(now())
 }
+
+model BacktestTrade {
+  id          Int                  @id @default(autoincrement())
+  date        String
+  type        String
+  entry       Float
+  sl          Float?
+  tp          Float?
+  rr          Float?
+  riskPct     Float?
+  result      Float?
+  comment     String?
+  flagged     Boolean              @default(false)
+  createdAt   DateTime             @default(now())
+  screenshots BacktestScreenshot[]
+}
+
+model BacktestScreenshot {
+  id        Int           @id @default(autoincrement())
+  tradeId   Int
+  timeframe String
+  imageData String        @db.Text
+  trade     BacktestTrade @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  @@unique([tradeId, timeframe])
+}

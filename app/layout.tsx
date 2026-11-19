@@ -41,7 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body className="min-h-full flex flex-col" style={{ backgroundColor: "var(--t-bg)" }}>
+      <body className="min-h-full flex flex-col" style={{ backgroundColor: "#000000" }}>
         <PullToRefresh />
         <Providers>{children}</Providers>
       </body>

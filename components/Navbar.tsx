@@ -8,19 +8,17 @@ import { useTheme } from '@/lib/theme'
 import VaultLoginPopup from '@/components/VaultLoginPopup'
 
 const NAV_ITEMS = [
-  { href: '/',         emoji: '🏠', label: 'Home'    },
-  { href: '/trading',  emoji: '📈', label: 'Trading' },
-  { href: '/food',     emoji: '🍽️', label: 'Food'    },
-  { href: '/vault',    emoji: '🔐', label: 'Vault'   },
-  { href: '/routine',  emoji: '⚡', label: 'Routine' },
+  { href: '/',        emoji: '🏠', label: 'Home'    },
+  { href: '/trading', emoji: '📈', label: 'Trading' },
+  { href: '/food',    emoji: '🍽️', label: 'Food'    },
+  { href: '/vault',   emoji: '🔐', label: 'Vault'   },
 ]
 
 const MENU_LINKS = [
-  { href: '/',         emoji: '🏠', label: 'Home'    },
-  { href: '/trading',  emoji: '📈', label: 'Trading' },
-  { href: '/food',     emoji: '🍽️', label: 'Food'    },
-  { href: '/vault',    emoji: '🔐', label: 'Vault'   },
-  { href: '/routine',  emoji: '⚡', label: 'Routine' },
+  { href: '/',        emoji: '🏠', label: 'Home'    },
+  { href: '/trading', emoji: '📈', label: 'Trading' },
+  { href: '/food',    emoji: '🍽️', label: 'Food'    },
+  { href: '/vault',   emoji: '🔐', label: 'Vault'   },
 ]
 
 function IconGrid() {

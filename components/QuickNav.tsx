@@ -8,7 +8,6 @@ const CHIPS = [
   { label: 'Trading', icon: '📈', href: '/trading' },
   { label: 'Food',    icon: '🍽️', href: '/food'    },
   { label: 'Vault',   icon: '🔐', href: '/vault'   },
-  { label: 'Routine', icon: '⚡', href: '/routine' },
 ]
 
 export default function QuickNav() {
